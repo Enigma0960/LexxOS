@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -112,12 +113,33 @@ def common(source, package):
     shutil.copytree(source / 'licenses', package / 'licenses/project')
 
 
+def release_environment(source, epoch):
+    env = os.environ.copy()
+    env['SOURCE_DATE_EPOCH'] = str(epoch)
+    # GCC maps both debug paths and __FILE__; the more specific rule comes last.
+    flags = shlex.join([
+        f'-ffile-prefix-map={Path.home()}=/opt/build-home',
+        f'-ffile-prefix-map={source}=/src/lexxos',
+    ])
+    for key in ('CFLAGS', 'CXXFLAGS', 'ASMFLAGS'):
+        env[key] = (env.get(key, '') + ' ' + flags).strip()
+    return env
+
+
+def check_private_paths(package):
+    private = (str(Path.home()).encode(), str(ROOT).encode())
+    for path in sorted(package.rglob('*')):
+        if path.is_file() and any(value in path.read_bytes() for value in private):
+            raise RuntimeError('Local build path in release payload: ' + path.relative_to(package).as_posix())
+
+
 def archive(package, archive_path, metadata, epoch):
     files = {p.relative_to(package).as_posix(): sha(p)
              for p in sorted(package.rglob('*')) if p.is_file()}
     write_json(package / 'manifest.json', dict(metadata, packager_sha256=sha(Path(__file__)), files=files))
     files['manifest.json'] = sha(package / 'manifest.json')
     (package / 'SHA256SUMS').write_text(''.join(f'{value}  {name}\n' for name, value in sorted(files.items())))
+    check_private_paths(package)
     stamp = time.gmtime(max(epoch, 315532800))[:6]
     with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for p in sorted(package.rglob('*')):
@@ -227,7 +249,7 @@ def main():
     destination = args.output.resolve() / ('LexxOS-' + label)
     if destination.exists():
         raise RuntimeError('Output already exists; choose another --output: ' + str(destination))
-    env = os.environ.copy();env['SOURCE_DATE_EPOCH'] = str(epoch)
+    env = release_environment(source, epoch)
     staged = work / 'archives';staged.mkdir()
     meta = {'version':version, 'commit':commit, 'dirty':bool(dirty), 'source_sha256':digest,
             'source_date_epoch':epoch, 'cmake':output(['cmake','--version']).splitlines()[0]}

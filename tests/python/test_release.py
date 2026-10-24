@@ -14,6 +14,28 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_archive_rejects_private_paths_in_binary_and_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root / 'package'
+            package.mkdir()
+            (package / 'firmware.elf').write_bytes(b'\x00' + str(Path.home()).encode() + b'/source.c\x00')
+            with self.assertRaisesRegex(RuntimeError, 'firmware.elf'):
+                release.archive(package, root / 'bad.zip', {}, 1700000000)
+            self.assertFalse((root / 'bad.zip').exists())
+            (package / 'firmware.elf').write_bytes(b'\x00/src/lexxos/source.c\x00')
+            (package / 'manifest.json').unlink()
+            (package / 'SHA256SUMS').unlink()
+            with self.assertRaisesRegex(RuntimeError, 'manifest.json'):
+                release.archive(package, root / 'bad.zip', {'path': str(ROOT)}, 1700000000)
+
+    def test_release_environment_maps_source_and_sdk_paths(self):
+        env = release.release_environment(Path('/tmp/source snapshot'), 1700000000)
+        self.assertEqual(env['SOURCE_DATE_EPOCH'], '1700000000')
+        import shlex
+        for key in ('CFLAGS', 'CXXFLAGS', 'ASMFLAGS'):
+            self.assertIn('-ffile-prefix-map=/tmp/source snapshot=/src/lexxos', shlex.split(env[key]))
+
     def test_license_fallback_requires_explicit_matching_spdx(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
