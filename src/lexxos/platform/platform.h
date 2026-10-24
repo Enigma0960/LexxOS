@@ -20,6 +20,9 @@ void initialize();
 BoardDescriptor const& board();
 void writeConsole(std::string_view text);
 bool readConsoleChar(char& value);
+#if defined(LEXXOS_PLATFORM_HOST)
+bool isConsoleInteractive();
+#endif
 std::size_t readConsoleAvailable(char* buffer, std::size_t capacity);
 void sleepMs(std::uint32_t milliseconds);
 std::uint32_t uptimeMs();

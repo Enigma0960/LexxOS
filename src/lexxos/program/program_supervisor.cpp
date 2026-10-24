@@ -9,6 +9,7 @@
 
 #include <lexxos/kernel/scheduler.h>
 #include <lexxos/os/app_context.h>
+#include <lexxos/platform/platform.h>
 #include <lexxos/program/cancellation_token.h>
 #include <lexxos/program/detail/program_supervisor_process.h>
 #include <lexxos/program/program_manager.h>
@@ -415,6 +416,17 @@ namespace {
 			ProgramMemoryArena::freeDetachedInternalStorage(failedStartMemory);
 			return failed(ProgramSupervisorStatus::TaskCreateFailed);
 		}
+
+#if defined(LEXXOS_PLATFORM_HOST)
+		// A redirected host stdin is a command script. Keep the shell's remaining
+		// input batch (and redirection streams) until this foreground task exits.
+		// Interactive consoles still route keys to the focused program immediately.
+		if (startMode == ProcessStartMode::Foreground && !lexxos::platform::isConsoleInteractive()) {
+			while (loadState(*slot) != ProgramProcessState::Finished) {
+				lexxos::kernel::sleepMs(1);
+			}
+		}
+#endif
 
 		ProgramProcessState finalState = ProgramProcessState::Starting;
 		ProgramExitResult exitResult{};

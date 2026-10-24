@@ -9,6 +9,9 @@
 	#include <cerrno>
 	#include <poll.h>
 	#include <unistd.h>
+#elif defined(_WIN32)
+	#include <io.h>
+	#include <cstdio>
 #endif
 
 using lexxos::platform::BoardDescriptor;
@@ -50,6 +53,16 @@ BoardDescriptor const& lexxos::platform::board() {
 void lexxos::platform::writeConsole(std::string_view text) {
 	std::cout.write(text.data(), static_cast<std::streamsize>(text.size()));
 	std::cout.flush();
+}
+
+bool lexxos::platform::isConsoleInteractive() {
+#if defined(__unix__) || defined(__APPLE__)
+	return ::isatty(STDIN_FILENO) != 0;
+#elif defined(_WIN32)
+	return ::_isatty(::_fileno(stdin)) != 0;
+#else
+	return true;
+#endif
 }
 
 bool lexxos::platform::readConsoleChar(char& value) {

@@ -40,13 +40,29 @@ if "help" in expected:
 # Exercise the alias through the real launcher: sharing only mv's handler loses
 # its workspace quota and fails before reaching the filesystem.
 if {"echo", "rename", "cat", "exit"} <= expected:
-    result = subprocess.run(
-        [sys.argv[1]],
-        input="echo rename-workspace-ok > /tmp/rename-source\n"
-              "rename /tmp/rename-source /tmp/rename-target\n"
-              "cat /tmp/rename-target\nexit\n",
-        text=True, capture_output=True, timeout=5,
-    )
-    assert result.returncode == 0, result.stderr
-    assert "arena is unavailable" not in result.stdout, result.stdout
-    assert re.search(r"^rename-workspace-ok\r?$", result.stdout, re.MULTILINE), result.stdout
+    # Several task launches and more than one input batch must preserve every
+    # following command, both through a pipe and a redirected regular file.
+    script = "".join(
+        f"echo rename-workspace-{index} > /tmp/rename-source\n"
+        "rename /tmp/rename-source /tmp/rename-target\n"
+        "cat /tmp/rename-target\n"
+        "rm /tmp/rename-target\n"
+        for index in range(20)
+    ) + "exit\n"
+
+    def check_script(result):
+        assert result.returncode == 0, result.stderr
+        assert "arena is unavailable" not in result.stdout, result.stdout
+        assert "unknown program:" not in result.stdout, result.stdout
+        actual = re.findall(r"^rename-workspace-(\d+)\r?$", result.stdout, re.MULTILINE)
+        assert actual == [str(index) for index in range(20)], result.stdout
+
+    check_script(subprocess.run(
+        [sys.argv[1]], input=script, text=True, capture_output=True, timeout=5,
+    ))
+    with tempfile.TemporaryFile(mode="w+") as stream:
+        stream.write(script)
+        stream.seek(0)
+        check_script(subprocess.run(
+            [sys.argv[1]], stdin=stream, text=True, capture_output=True, timeout=5,
+        ))
