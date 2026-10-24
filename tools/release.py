@@ -257,7 +257,13 @@ def main():
     for profile in profiles:
         board = profile.split('-', 1)[1]
         build = source / 'build' / profile
-        run(['cmake', '--preset', profile, '-DLEXXOS_APPS=OFF'], source, work / (profile+'-configure.log'), env)
+        configure = ['cmake', '--preset', profile, '-DLEXXOS_APPS=OFF']
+        if not board.startswith('picocalc'):
+            # IDF 6 creates toolchain response files before CMake imports CFLAGS.
+            # Explicit flags are also inherited by its bootloader subproject.
+            configure += [f'-DCMAKE_{lang}_FLAGS={env[key]}' for lang, key in
+                          (('C', 'CFLAGS'), ('CXX', 'CXXFLAGS'), ('ASM', 'ASMFLAGS'))]
+        run(configure, source, work / (profile+'-configure.log'), env)
         run(['cmake', '--build', build, '--parallel', args.jobs], source, work / (profile+'-build.log'), env)
         package = work / ('LexxOS-'+label+'-'+profile);package.mkdir()
         detail = dict(meta, profile=profile, board=board)
