@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+script_path="${BASH_SOURCE[0]}"
+
+while [ -L "$script_path" ]; do
+    script_dir="$(cd -P "$(dirname "$script_path")" >/dev/null 2>&1 && pwd)"
+    link_target="$(readlink "$script_path")"
+    if [[ "$link_target" == /* ]]; then
+        script_path="$link_target"
+    else
+        script_path="$script_dir/$link_target"
+    fi
+done
+
+script_dir="$(cd -P "$(dirname "$script_path")" >/dev/null 2>&1 && pwd)"
+repo_root="$(cd "$script_dir/.." >/dev/null 2>&1 && pwd)"
+
+if [ ! -f "$repo_root/CMakeLists.txt" ]; then
+    echo "lexxos-cmake: CMakeLists.txt was not found in repository root: $repo_root" >&2
+    exit 1
+fi
+
+if [ ! -f "$repo_root/CMakePresets.json" ]; then
+    echo "lexxos-cmake: CMakePresets.json was not found in repository root: $repo_root" >&2
+    exit 1
+fi
+
+if [ "$#" -eq 0 ]; then
+    cat >&2 <<'USAGE'
+Usage:
+  tools/lexxos-cmake --list-presets
+  tools/lexxos-cmake --preset debug-pico
+  tools/lexxos-cmake --build --preset lexxos-pico
+  tools/lexxos-cmake --preset debug-esp32
+  tools/lexxos-cmake --build --preset lexxos-esp32
+
+The wrapper always runs cmake from the LexxOS repository root, so CMake uses
+the root CMakePresets.json even when the shell is currently inside src,
+ports/espidf, docs, or another subdirectory.
+USAGE
+    exit 2
+fi
+
+cd "$repo_root"
+exec "${LEXXOS_CMAKE_BIN:-cmake}" "$@"

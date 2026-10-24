@@ -1,0 +1,1662 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "_minimal",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "BUILD_TESTING": "OFF",
+        "LEXXOS_BUILD_FLAVOR": "minimal",
+        "LEXXOS_FEATURE_DEBUG_DISPLAY": "OFF",
+        "LEXXOS_FEATURE_HEALTH": "OFF",
+        "LEXXOS_FEATURE_MIDI": "OFF",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_TEST_COMMANDS": "OFF",
+        "LEXXOS_COMMANDS_TESTS": "OFF",
+        "LEXXOS_COMMANDS_EXPERIMENTAL": "OFF"
+      }
+    },
+    {
+      "name": "minimal-host_native",
+      "inherits": "_minimal",
+      "displayName": "host_native / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-host_native",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "host_native",
+        "LEXXOS_PLATFORM": "host",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "minimal-dev-sim",
+      "inherits": "_minimal",
+      "displayName": "dev-sim / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-dev-sim",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev-sim",
+        "LEXXOS_PLATFORM": "sim",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "minimal-dev_pico",
+      "inherits": "_minimal",
+      "displayName": "dev_pico / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-dev_pico",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev_pico",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "32",
+        "LEXXOS_PICO_FREERTOS_HEAP_KB": "126"
+      },
+      "description": "Experimental board: settings and IO assignments may change."
+    },
+    {
+      "name": "minimal-dev_pico_sdio",
+      "inherits": "_minimal",
+      "displayName": "dev_pico_sdio / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-dev_pico_sdio",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev_pico_sdio",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "32",
+        "LEXXOS_PICO_FREERTOS_HEAP_KB": "126",
+        "LEXXOS_SD_BACKEND": "sdio",
+        "LEXXOS_ENABLE_EXPERIMENTAL_RP2040_SDIO": "ON"
+      },
+      "description": "Experimental board: settings and IO assignments may change."
+    },
+    {
+      "name": "minimal-dev_pico2w",
+      "inherits": "_minimal",
+      "displayName": "dev_pico2w / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-dev_pico2w",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev_pico2w",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico2_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "32"
+      },
+      "description": "Experimental board: settings and IO assignments may change."
+    },
+    {
+      "name": "minimal-picocalc_pico_w",
+      "inherits": "_minimal",
+      "displayName": "picocalc_pico_w / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-picocalc_pico_w",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico_w",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "4",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_MIDI": "OFF"
+      }
+    },
+    {
+      "name": "minimal-picocalc_pico2w",
+      "inherits": "_minimal",
+      "displayName": "picocalc_pico2w / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-picocalc_pico2w",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico2w",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico2_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "32",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000"
+      }
+    },
+    {
+      "name": "minimal-euse_m4_demo_stm32f407",
+      "inherits": "_minimal",
+      "displayName": "euse_m4_demo_stm32f407 / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-euse_m4_demo_stm32f407",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "euse_m4_demo_stm32f407",
+        "LEXXOS_PLATFORM": "stm32f4",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "LEXXOS_ARM_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "minimal-m5stack_basic_v1",
+      "inherits": "_minimal",
+      "displayName": "m5stack_basic_v1 / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-m5stack_basic_v1",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "m5stack_basic_v1",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "minimal-m5stack_cardputer",
+      "inherits": "_minimal",
+      "displayName": "m5stack_cardputer / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-m5stack_cardputer",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "m5stack_cardputer",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32s3",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "minimal-m5stack_cardputer_adv",
+      "inherits": "_minimal",
+      "displayName": "m5stack_cardputer_adv / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-m5stack_cardputer_adv",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "m5stack_cardputer_adv",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32s3",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "minimal-jc_esp32p4_m3_dev",
+      "inherits": "_minimal",
+      "displayName": "jc_esp32p4_m3_dev / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-jc_esp32p4_m3_dev",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "jc_esp32p4_m3_dev",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32p4",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_SD_BACKEND": "sdio",
+        "LEXXOS_ESPIDF_USB_HOST_PORT": "hs",
+        "LEXXOS_ESPIDF_ENABLE_HOSTED": "ON",
+        "LEXXOS_ESPIDF_ENABLE_WIFI_BACKEND": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "_full",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "BUILD_TESTING": "OFF",
+        "LEXXOS_BUILD_FLAVOR": "full",
+        "LEXXOS_FEATURE_DEBUG_DISPLAY": "OFF",
+        "LEXXOS_FEATURE_HEALTH": "ON",
+        "LEXXOS_FEATURE_MIDI": "ON",
+        "LEXXOS_FEATURE_GAMEBOY": "ON",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_FEATURE_TEST_COMMANDS": "ON",
+        "LEXXOS_COMMANDS_TESTS": "ON",
+        "LEXXOS_COMMANDS_EXPERIMENTAL": "ON"
+      }
+    },
+    {
+      "name": "full-host_native",
+      "inherits": "_full",
+      "displayName": "host_native / full",
+      "binaryDir": "${sourceDir}/build/full-host_native",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "host_native",
+        "LEXXOS_PLATFORM": "host",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "full-dev-sim",
+      "inherits": "_full",
+      "displayName": "dev-sim / full",
+      "binaryDir": "${sourceDir}/build/full-dev-sim",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev-sim",
+        "LEXXOS_PLATFORM": "sim",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "full-dev_pico",
+      "inherits": "_full",
+      "displayName": "dev_pico / full",
+      "binaryDir": "${sourceDir}/build/full-dev_pico",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev_pico",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16",
+        "LEXXOS_PICO_FREERTOS_HEAP_KB": "96"
+      },
+      "description": "Experimental board: settings and IO assignments may change."
+    },
+    {
+      "name": "full-dev_pico_sdio",
+      "inherits": "_full",
+      "displayName": "dev_pico_sdio / full",
+      "binaryDir": "${sourceDir}/build/full-dev_pico_sdio",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev_pico_sdio",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16",
+        "LEXXOS_PICO_FREERTOS_HEAP_KB": "96",
+        "LEXXOS_SD_BACKEND": "sdio",
+        "LEXXOS_ENABLE_EXPERIMENTAL_RP2040_SDIO": "ON"
+      },
+      "description": "Experimental board: settings and IO assignments may change."
+    },
+    {
+      "name": "full-dev_pico2w",
+      "inherits": "_full",
+      "displayName": "dev_pico2w / full",
+      "binaryDir": "${sourceDir}/build/full-dev_pico2w",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "dev_pico2w",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "PICO_BOARD": "pico2_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      },
+      "description": "Experimental board: settings and IO assignments may change."
+    },
+    {
+      "name": "full-picocalc_pico_w",
+      "inherits": "_full",
+      "displayName": "picocalc_pico_w / full",
+      "binaryDir": "${sourceDir}/build/full-picocalc_pico_w",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico_w",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "4",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_MIDI": "OFF"
+      },
+      "description": "Full supported RP2040 profile; Game Boy/MIDI/GPIO analyzer excluded by SRAM policy."
+    },
+    {
+      "name": "full-picocalc_pico2w",
+      "inherits": "_full",
+      "displayName": "picocalc_pico2w / full",
+      "binaryDir": "${sourceDir}/build/full-picocalc_pico2w",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico2w",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "PICO_BOARD": "pico2_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000"
+      }
+    },
+    {
+      "name": "full-euse_m4_demo_stm32f407",
+      "inherits": "_full",
+      "displayName": "euse_m4_demo_stm32f407 / full",
+      "binaryDir": "${sourceDir}/build/full-euse_m4_demo_stm32f407",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "euse_m4_demo_stm32f407",
+        "LEXXOS_PLATFORM": "stm32f4",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "LEXXOS_ARM_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "full-m5stack_basic_v1",
+      "inherits": "_full",
+      "displayName": "m5stack_basic_v1 / full",
+      "binaryDir": "${sourceDir}/build/full-m5stack_basic_v1",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "m5stack_basic_v1",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "full-m5stack_cardputer",
+      "inherits": "_full",
+      "displayName": "m5stack_cardputer / full",
+      "binaryDir": "${sourceDir}/build/full-m5stack_cardputer",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "m5stack_cardputer",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32s3",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "full-m5stack_cardputer_adv",
+      "inherits": "_full",
+      "displayName": "m5stack_cardputer_adv / full",
+      "binaryDir": "${sourceDir}/build/full-m5stack_cardputer_adv",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "m5stack_cardputer_adv",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32s3",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "full-jc_esp32p4_m3_dev",
+      "inherits": "_full",
+      "displayName": "jc_esp32p4_m3_dev / full",
+      "binaryDir": "${sourceDir}/build/full-jc_esp32p4_m3_dev",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "jc_esp32p4_m3_dev",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "IDF_TARGET": "esp32p4",
+        "ESP_PLATFORM": "1",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_SD_BACKEND": "sdio",
+        "LEXXOS_ESPIDF_USB_HOST_PORT": "hs",
+        "LEXXOS_ESPIDF_ENABLE_HOSTED": "ON",
+        "LEXXOS_ESPIDF_ENABLE_WIFI_BACKEND": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "debug-host",
+      "displayName": "Debug-Host",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/host",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "host",
+        "LEXXOS_BOARD": "host_native",
+        "LEXXOS_BOARD_HOST_NATIVE": "ON",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      }
+    },
+    {
+      "name": "debug-pico",
+      "displayName": "Debug-Pico",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/pico",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_BOARD": "dev_pico",
+        "LEXXOS_BOARD_DEV_PICO": "ON",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_GAMEBOY_ROM_CACHE_BANKS": "2",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "32"
+      }
+    },
+    {
+      "name": "debug-picocalc-pico-w",
+      "displayName": "Debug-PicoCalc / Raspberry Pi Pico W",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/picocalc-pico-w",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_BOARD": "picocalc_pico_w",
+        "LEXXOS_BOARD_PICOCALC_PICO_W": "ON",
+        "PICO_BOARD": "pico_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_DEBUG_DISPLAY": "OFF",
+        "LEXXOS_FEATURE_KEYBOARD": "OFF",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      }
+    },
+    {
+      "name": "debug-picocalc-pico2w",
+      "displayName": "Debug-PicoCalc / Raspberry Pi Pico 2 W",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/picocalc-pico2w",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_BOARD": "picocalc_pico2w",
+        "LEXXOS_BOARD_PICOCALC_PICO2W": "ON",
+        "PICO_BOARD": "pico2_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_DEBUG_DISPLAY": "OFF",
+        "LEXXOS_FEATURE_KEYBOARD": "OFF",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      }
+    },
+    {
+      "name": "debug-sim",
+      "displayName": "Debug-Sim",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/sim",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "sim",
+        "LEXXOS_BOARD": "dev-sim",
+        "LEXXOS_BOARD_DEV_SIM": "ON",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      }
+    },
+    {
+      "name": "debug-stm32f407",
+      "displayName": "Debug-STM32F407",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/stm32f407",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "LEXXOS_PLATFORM": "stm32f4",
+        "LEXXOS_BOARD": "euse_m4_demo_stm32f407",
+        "LEXXOS_BOARD_EUSE_M4_DEMO_STM32F407": "ON",
+        "LEXXOS_ARM_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_STM32F4_BRINGUP_ONLY": "OFF",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      }
+    },
+    {
+      "name": "debug-host-full",
+      "displayName": "Debug-Host Full",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/host-full",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "host",
+        "LEXXOS_BOARD": "host_native",
+        "LEXXOS_BOARD_HOST_NATIVE": "ON",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_BUILD_FLAVOR": "full"
+      }
+    },
+    {
+      "name": "debug-sim-full",
+      "displayName": "Debug-Sim Full",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/sim-full",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "sim",
+        "LEXXOS_BOARD": "dev-sim",
+        "LEXXOS_BOARD_DEV_SIM": "ON",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_BUILD_FLAVOR": "full",
+        "LEXXOS_FEATURE_MIDI": "ON"
+      }
+    },
+    {
+      "name": "debug-pico-full",
+      "displayName": "Debug-Pico Full",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/pico-full",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_BOARD": "dev_pico",
+        "LEXXOS_BOARD_DEV_PICO": "ON",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_GAMEBOY_ROM_CACHE_BANKS": "2",
+        "LEXXOS_BUILD_FLAVOR": "full",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16",
+        "LEXXOS_FAT_DISK_WRITE_MAX_SECTORS": "8"
+      }
+    },
+    {
+      "name": "debug-stm32f407-full",
+      "displayName": "Debug-STM32F407 Full",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/stm32f407-full",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "LEXXOS_PLATFORM": "stm32f4",
+        "LEXXOS_BOARD": "euse_m4_demo_stm32f407",
+        "LEXXOS_BOARD_EUSE_M4_DEMO_STM32F407": "ON",
+        "LEXXOS_ARM_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_STM32F4_BRINGUP_ONLY": "OFF",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_BUILD_FLAVOR": "full"
+      }
+    },
+    {
+      "name": "debug-esp32",
+      "displayName": "Debug-ESP32 / ESP-IDF",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/esp32",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_BOARD": "m5stack_basic_v1",
+        "LEXXOS_BOARD_M5STACK_BASIC_V1": "ON",
+        "IDF_TARGET": "esp32",
+        "ESP_PLATFORM": "1",
+        "PYTHON_DEPS_CHECKED": "1",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "CCACHE_ENABLE": "False"
+      }
+    },
+    {
+      "name": "debug-cardputer",
+      "displayName": "Debug-M5Stack Cardputer / ESP-IDF",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cardputer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_BOARD": "m5stack_cardputer",
+        "LEXXOS_BOARD_M5STACK_CARDPUTER": "ON",
+        "IDF_TARGET": "esp32s3",
+        "ESP_PLATFORM": "1",
+        "PYTHON_DEPS_CHECKED": "1",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "CCACHE_ENABLE": "False"
+      }
+    },
+    {
+      "name": "debug-cardputer-adv",
+      "displayName": "Debug-M5Stack Cardputer-Adv / ESP-IDF",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cardputer-adv",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_BOARD": "m5stack_cardputer_adv",
+        "LEXXOS_BOARD_M5STACK_CARDPUTER_ADV": "ON",
+        "IDF_TARGET": "esp32s3",
+        "ESP_PLATFORM": "1",
+        "PYTHON_DEPS_CHECKED": "1",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_SD_BACKEND": "spi",
+        "LEXXOS_CARDPUTER_SD_SPI_BAUDRATE": "10000000",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16",
+        "LEXXOS_FAT_DISK_WRITE_MAX_SECTORS": "4",
+        "CCACHE_ENABLE": "False"
+      }
+    },
+    {
+      "name": "debug-jc-esp32p4-m3-dev",
+      "displayName": "Debug-Guition JC-ESP32P4-M3-DEV / ESP-IDF",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/jc-esp32p4-m3-dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_BOARD": "jc_esp32p4_m3_dev",
+        "LEXXOS_BOARD_JC_ESP32P4_M3_DEV": "ON",
+        "IDF_TARGET": "esp32p4",
+        "ESP_PLATFORM": "1",
+        "PYTHON_DEPS_CHECKED": "1",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_FEATURE_DISPLAY": "OFF",
+        "LEXXOS_FEATURE_DEBUG_DISPLAY": "OFF",
+        "LEXXOS_FEATURE_KEYBOARD": "OFF",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_SD_BACKEND": "sdio",
+        "LEXXOS_ESPIDF_ENABLE_HOSTED": "ON",
+        "LEXXOS_ESPIDF_ENABLE_WIFI_BACKEND": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "OFF",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "OFF",
+        "CCACHE_ENABLE": "False"
+      },
+      "environment": {
+        "ESPPORT": "/dev/cu.usbserial-2130",
+        "ESPBAUD": "115200"
+      }
+    },
+    {
+      "name": "perf-pico-gb",
+      "displayName": "Performance-Pico Game Boy",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/pico-gb-perf",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_BOARD": "dev_pico",
+        "LEXXOS_BOARD_DEV_PICO": "ON",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_GAMEBOY_OPTIMIZE_HOTPATH": "ON",
+        "LEXXOS_GAMEBOY_ENABLE_LTO": "OFF",
+        "LEXXOS_GAMEBOY_ROM_CACHE_BANKS": "2",
+        "LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES": "8192",
+        "LEXXOS_PICO_FREERTOS_CORES": "2",
+        "LEXXOS_SD_IO_WORKER_CORE": "0",
+        "LEXXOS_PICO_SYS_CLOCK_KHZ": "",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "perf-pico-gb-250",
+      "displayName": "Performance-Pico Game Boy 250MHz",
+      "inherits": "perf-pico-gb",
+      "binaryDir": "${sourceDir}/build/pico-gb-perf-250",
+      "cacheVariables": {
+        "LEXXOS_PICO_SYS_CLOCK_KHZ": "250000",
+        "LEXXOS_ST7735_SPI_BAUDRATE": "50000000"
+      }
+    },
+    {
+      "name": "perf-pico-gb-250-spi62",
+      "displayName": "Performance-Pico Game Boy 250MHz / ST7735 62MHz",
+      "inherits": "perf-pico-gb-250",
+      "binaryDir": "${sourceDir}/build/pico-gb-perf-250-spi62",
+      "cacheVariables": {
+        "LEXXOS_ST7735_SPI_BAUDRATE": "62500000"
+      }
+    },
+    {
+      "name": "perf-pico-gb-266",
+      "displayName": "Performance-Pico Game Boy 266MHz",
+      "inherits": "perf-pico-gb-250",
+      "binaryDir": "${sourceDir}/build/pico-gb-perf-266",
+      "cacheVariables": {
+        "LEXXOS_PICO_SYS_CLOCK_KHZ": "266000",
+        "LEXXOS_ST7735_SPI_BAUDRATE": "62500000"
+      }
+    },
+    {
+      "name": "perf-picocalc-pico2w-gb",
+      "displayName": "Performance-PicoCalc Pico 2 W Game Boy",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/picocalc-pico2w-gb-perf",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_BOARD": "picocalc_pico2w",
+        "LEXXOS_BOARD_PICOCALC_PICO2W": "ON",
+        "PICO_BOARD": "pico2_w",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_PICO_FREERTOS_CORES": "2",
+        "LEXXOS_EXPERIMENTAL_RP2350_SMP_FREERTOS": "ON",
+        "LEXXOS_SD_IO_WORKER_CORE": "0",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_WIFI_AUTOCONNECT": "1",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_DEBUG_DISPLAY": "OFF",
+        "LEXXOS_FEATURE_KEYBOARD": "OFF",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_GAMEBOY_OPTIMIZE_HOTPATH": "ON",
+        "LEXXOS_GAMEBOY_ENABLE_LTO": "OFF",
+        "LEXXOS_GAMEBOY_ROM_CACHE_BANKS": "2",
+        "LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES": "8192",
+        "LEXXOS_PICO_SYS_CLOCK_KHZ": "250000",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+      }
+    },
+    {
+      "name": "perf-picocalc-pico2w-gb-1core",
+      "displayName": "Performance-PicoCalc Pico 2 W Game Boy (1 core)",
+      "inherits": "perf-picocalc-pico2w-gb",
+      "binaryDir": "${sourceDir}/build/picocalc-pico2w-gb-perf-1core",
+      "cacheVariables": {
+        "LEXXOS_PICO_FREERTOS_CORES": "1",
+        "LEXXOS_EXPERIMENTAL_RP2350_SMP_FREERTOS": "OFF",
+        "LEXXOS_SD_IO_WORKER_CORE": "0"
+      }
+    },
+    {
+      "name": "apps",
+      "displayName": "Standalone RV32I applications",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/apps-cmake",
+      "cacheVariables": {
+        "LEXXOS_APPS_ONLY": "ON"
+      }
+    },
+    {
+      "name": "minimal-picocalc_pico",
+      "inherits": "_minimal",
+      "displayName": "picocalc_pico / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-picocalc_pico",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "4",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_MIDI": "OFF"
+      }
+    },
+    {
+      "name": "minimal-picocalc_pico2",
+      "inherits": "_minimal",
+      "displayName": "picocalc_pico2 / minimal",
+      "binaryDir": "${sourceDir}/build/minimal-picocalc_pico2",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico2",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico2",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "32",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000"
+      }
+    },
+    {
+      "name": "full-picocalc_pico",
+      "inherits": "_full",
+      "displayName": "picocalc_pico / full",
+      "binaryDir": "${sourceDir}/build/full-picocalc_pico",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
+        "PICO_BOARD": "pico",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "4",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_GAMEBOY": "OFF",
+        "LEXXOS_FEATURE_MIDI": "OFF"
+      },
+      "description": "Full supported RP2040 profile; Game Boy/MIDI/GPIO analyzer excluded by SRAM policy."
+    },
+    {
+      "name": "full-picocalc_pico2",
+      "inherits": "_full",
+      "displayName": "picocalc_pico2 / full",
+      "binaryDir": "${sourceDir}/build/full-picocalc_pico2",
+      "cacheVariables": {
+        "LEXXOS_BOARD": "picocalc_pico2",
+        "LEXXOS_PLATFORM": "pico",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
+        "PICO_BOARD": "pico2",
+        "PICO_SDK_PATH": "$env{HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
+        "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
+        "LEXXOS_PICO_USE_FREERTOS": "ON",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "16",
+        "LEXXOS_FEATURE_PSRAM": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
+        "LEXXOS_PICOCALC_SD_SPI_BAUDRATE": "25000000"
+      }
+    },
+    {
+      "name": "release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "LEXXOS_RELEASE_ONLY": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "minimal-host_native",
+      "configurePreset": "minimal-host_native",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-dev-sim",
+      "configurePreset": "minimal-dev-sim",
+      "targets": [
+        "lexxos_sim"
+      ]
+    },
+    {
+      "name": "minimal-dev_pico",
+      "configurePreset": "minimal-dev_pico",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-dev_pico_sdio",
+      "configurePreset": "minimal-dev_pico_sdio",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-dev_pico2w",
+      "configurePreset": "minimal-dev_pico2w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-picocalc_pico_w",
+      "configurePreset": "minimal-picocalc_pico_w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-picocalc_pico2w",
+      "configurePreset": "minimal-picocalc_pico2w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-euse_m4_demo_stm32f407",
+      "configurePreset": "minimal-euse_m4_demo_stm32f407",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_basic_v1",
+      "configurePreset": "minimal-m5stack_basic_v1",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_basic_v1-flash",
+      "configurePreset": "minimal-m5stack_basic_v1",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_basic_v1-app-flash",
+      "configurePreset": "minimal-m5stack_basic_v1",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_cardputer",
+      "configurePreset": "minimal-m5stack_cardputer",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_cardputer-flash",
+      "configurePreset": "minimal-m5stack_cardputer",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_cardputer-app-flash",
+      "configurePreset": "minimal-m5stack_cardputer",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_cardputer_adv",
+      "configurePreset": "minimal-m5stack_cardputer_adv",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_cardputer_adv-flash",
+      "configurePreset": "minimal-m5stack_cardputer_adv",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "minimal-m5stack_cardputer_adv-app-flash",
+      "configurePreset": "minimal-m5stack_cardputer_adv",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "minimal-jc_esp32p4_m3_dev",
+      "configurePreset": "minimal-jc_esp32p4_m3_dev",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "minimal-jc_esp32p4_m3_dev-flash",
+      "configurePreset": "minimal-jc_esp32p4_m3_dev",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "minimal-jc_esp32p4_m3_dev-app-flash",
+      "configurePreset": "minimal-jc_esp32p4_m3_dev",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "full-host_native",
+      "configurePreset": "full-host_native",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-dev-sim",
+      "configurePreset": "full-dev-sim",
+      "targets": [
+        "lexxos_sim"
+      ]
+    },
+    {
+      "name": "full-dev_pico",
+      "configurePreset": "full-dev_pico",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-dev_pico_sdio",
+      "configurePreset": "full-dev_pico_sdio",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-dev_pico2w",
+      "configurePreset": "full-dev_pico2w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-picocalc_pico_w",
+      "configurePreset": "full-picocalc_pico_w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-picocalc_pico2w",
+      "configurePreset": "full-picocalc_pico2w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-euse_m4_demo_stm32f407",
+      "configurePreset": "full-euse_m4_demo_stm32f407",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-m5stack_basic_v1",
+      "configurePreset": "full-m5stack_basic_v1",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "full-m5stack_basic_v1-flash",
+      "configurePreset": "full-m5stack_basic_v1",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "full-m5stack_basic_v1-app-flash",
+      "configurePreset": "full-m5stack_basic_v1",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "full-m5stack_cardputer",
+      "configurePreset": "full-m5stack_cardputer",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "full-m5stack_cardputer-flash",
+      "configurePreset": "full-m5stack_cardputer",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "full-m5stack_cardputer-app-flash",
+      "configurePreset": "full-m5stack_cardputer",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "full-m5stack_cardputer_adv",
+      "configurePreset": "full-m5stack_cardputer_adv",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "full-m5stack_cardputer_adv-flash",
+      "configurePreset": "full-m5stack_cardputer_adv",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "full-m5stack_cardputer_adv-app-flash",
+      "configurePreset": "full-m5stack_cardputer_adv",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "full-jc_esp32p4_m3_dev",
+      "configurePreset": "full-jc_esp32p4_m3_dev",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "full-jc_esp32p4_m3_dev-flash",
+      "configurePreset": "full-jc_esp32p4_m3_dev",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "full-jc_esp32p4_m3_dev-app-flash",
+      "configurePreset": "full-jc_esp32p4_m3_dev",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "debug-host",
+      "configurePreset": "debug-host"
+    },
+    {
+      "name": "debug-sim",
+      "configurePreset": "debug-sim"
+    },
+    {
+      "name": "debug-pico",
+      "configurePreset": "debug-pico"
+    },
+    {
+      "name": "debug-picocalc-pico-w",
+      "configurePreset": "debug-picocalc-pico-w"
+    },
+    {
+      "name": "lexxos-picocalc-pico-w",
+      "displayName": "Build PicoCalc / Raspberry Pi Pico W",
+      "configurePreset": "debug-picocalc-pico-w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "lexxos-picocalc-pico2w",
+      "displayName": "Build PicoCalc / Raspberry Pi Pico 2 W",
+      "configurePreset": "debug-picocalc-pico2w",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "lexxos-pico",
+      "configurePreset": "debug-pico",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "debug-host-full",
+      "configurePreset": "debug-host-full"
+    },
+    {
+      "name": "debug-sim-full",
+      "configurePreset": "debug-sim-full"
+    },
+    {
+      "name": "debug-pico-full",
+      "configurePreset": "debug-pico-full"
+    },
+    {
+      "name": "debug-stm32f407-full",
+      "configurePreset": "debug-stm32f407-full"
+    },
+    {
+      "name": "lexxos-pico-full",
+      "configurePreset": "debug-pico-full",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "lexxos-sim-full",
+      "configurePreset": "debug-sim-full",
+      "targets": [
+        "lexxos_sim"
+      ]
+    },
+    {
+      "name": "lexxos-stm32f407-full",
+      "configurePreset": "debug-stm32f407-full",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "lexxos-sim",
+      "configurePreset": "debug-sim",
+      "targets": [
+        "lexxos_sim"
+      ]
+    },
+    {
+      "name": "debug-stm32f407",
+      "configurePreset": "debug-stm32f407"
+    },
+    {
+      "name": "lexxos-stm32f407",
+      "configurePreset": "debug-stm32f407",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "debug-esp32",
+      "configurePreset": "debug-esp32"
+    },
+    {
+      "name": "lexxos-esp32",
+      "displayName": "Build ESP32 / M5Stack Basic v1",
+      "configurePreset": "debug-esp32",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "lexxos-esp32-flash",
+      "displayName": "Flash ESP32 / M5Stack Basic v1",
+      "configurePreset": "debug-esp32",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "lexxos-esp32-app-flash",
+      "displayName": "Flash ESP32 app only / M5Stack Basic v1",
+      "configurePreset": "debug-esp32",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "debug-cardputer",
+      "configurePreset": "debug-cardputer"
+    },
+    {
+      "name": "lexxos-cardputer",
+      "displayName": "Build M5Stack Cardputer",
+      "configurePreset": "debug-cardputer",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "lexxos-cardputer-flash",
+      "displayName": "Flash M5Stack Cardputer",
+      "configurePreset": "debug-cardputer",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "lexxos-cardputer-app-flash",
+      "displayName": "Flash M5Stack Cardputer app only",
+      "configurePreset": "debug-cardputer",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "debug-jc-esp32p4-m3-dev",
+      "configurePreset": "debug-jc-esp32p4-m3-dev"
+    },
+    {
+      "name": "lexxos-jc-esp32p4-m3-dev",
+      "displayName": "Build Guition JC-ESP32P4-M3-DEV",
+      "configurePreset": "debug-jc-esp32p4-m3-dev",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "lexxos-jc-esp32p4-m3-dev-flash",
+      "displayName": "Flash Guition JC-ESP32P4-M3-DEV",
+      "configurePreset": "debug-jc-esp32p4-m3-dev",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "lexxos-jc-esp32p4-m3-dev-app-flash",
+      "displayName": "Flash app only / Guition JC-ESP32P4-M3-DEV",
+      "configurePreset": "debug-jc-esp32p4-m3-dev",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "perf-pico-gb",
+      "configurePreset": "perf-pico-gb",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "perf-pico-gb-250",
+      "configurePreset": "perf-pico-gb-250",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "perf-pico-gb-250-spi62",
+      "configurePreset": "perf-pico-gb-250-spi62",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "perf-pico-gb-266",
+      "configurePreset": "perf-pico-gb-266",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "perf-picocalc-pico2w-gb",
+      "configurePreset": "perf-picocalc-pico2w-gb",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "perf-picocalc-pico2w-gb-1core",
+      "configurePreset": "perf-picocalc-pico2w-gb-1core",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "apps",
+      "configurePreset": "apps",
+      "targets": [
+        "apps"
+      ]
+    },
+    {
+      "name": "minimal-picocalc_pico",
+      "configurePreset": "minimal-picocalc_pico",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "minimal-picocalc_pico2",
+      "configurePreset": "minimal-picocalc_pico2",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-picocalc_pico",
+      "configurePreset": "full-picocalc_pico",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "full-picocalc_pico2",
+      "configurePreset": "full-picocalc_pico2",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "targets": [
+        "release-archives"
+      ]
+    }
+  ]
+}

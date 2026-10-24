@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.apps.fileman",
+  "name": "File Manager",
+  "version": "1.0.0",
+  "description": "File manager",
+  "author": "Igor Supryadkin",
+  "license": "Apache License",
+  "contacts": {
+    "repository": "https://github.com/Enigma0960/LexxOS"
+  }
+}

@@ -1,0 +1,99 @@
+Checks: >
+  bugprone-*,
+  clang-analyzer-*,
+  clazy-*,
+  cppcoreguidelines-*,
+  google-build-namespaces,
+  google-default-arguments,
+  google-explicit-constructor,
+  google-global-names-in-headers,
+  google-readability-avoid-underscore-in-googletest-name,
+  google-readability-braces-around-statements,
+  google-readability-casting,
+  google-readability-todo,
+  google-runtime-operator,
+  llvm-namespace-comment,
+  misc-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-throwing-static-initialization,
+  -bugprone-unused-return-value,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-missing-std-forward,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-rvalue-reference-param-not-moved,
+  -cppcoreguidelines-special-member-functions,
+  -misc-include-cleaner,
+  -misc-multiple-inheritance,
+  -misc-no-recursion,
+  -modernize-avoid-c-arrays,
+  -modernize-use-auto,
+  -modernize-use-nodiscard,
+  -modernize-use-trailing-return-type,
+  -modernize-use-using,
+  -performance-avoid-endl,
+  -performance-enum-size,
+  -readability-avoid-nested-conditional-operator,
+  -readability-avoid-return-with-void-value,
+  -readability-convert-member-functions-to-static,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-magic-numbers,
+  -readability-math-missing-parentheses,
+  -readability-redundant-access-specifiers,
+  -readability-use-anyofallof,
+  -readability-use-concise-preprocessor-directives,
+  -readability-use-std-min-max,
+
+FormatStyle: file
+CheckOptions:
+  - { key: readability-identifier-naming.AggressiveDependentMemberLookup, value: 1 }
+  - { key: readability-identifier-naming.ClassCase, value: CamelCase }
+  - { key: readability-identifier-naming.ClassConstantCase, value: camelBack }
+  - { key: readability-identifier-naming.ClassConstantPrefix, value: sc_ }
+  - { key: readability-identifier-naming.ClassMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ClassMemberPrefix, value: s_ }
+  - { key: readability-identifier-naming.ClassMethodCase, value: camelBack }
+  - { key: readability-identifier-naming.EnumCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.FunctionCase, value: camelBack }
+  - { key: readability-identifier-naming.LocalVariableCase, value: camelBack }
+  - { key: readability-identifier-naming.LocalVariableIgnoredRegexp, value: '^[a-z][a-zA-Z0-9]*_$' }
+  - { key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE }
+  - { key: readability-identifier-naming.MemberCase, value: camelBack }
+  - { key: readability-identifier-naming.MethodCase, value: camelBack }
+  - { key: readability-identifier-naming.NamespaceCase, value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.PrivateMemberPrefix, value: _ }
+  - { key: readability-identifier-naming.PrivateMethodCase, value: camelBack }
+  - { key: readability-identifier-naming.PrivateMethodPrefix, value: _ }
+  - { key: readability-identifier-naming.ProtectedMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ProtectedMethodCase, value: camelBack }
+  - { key: readability-identifier-naming.PublicMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.PublicMethodCase, value: camelBack }
+  - { key: readability-identifier-naming.StaticConstantCase, value: camelBack }
+  - { key: readability-identifier-naming.StaticConstantPrefix, value: sc_ }
+  - { key: readability-identifier-naming.StaticVariableCase, value: camelBack }
+  - { key: readability-identifier-naming.StaticVariablePrefix, value: s_ }
+  - { key: readability-identifier-naming.StructCase, value: CamelCase }
+  - { key: readability-identifier-naming.TemplateParameterCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypeAliasCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypedefCase, value: CamelCase }
+  - { key: readability-identifier-naming.ValueTemplateParameterCase, value: camelBack }
+  - { key: readability-identifier-naming.VariableCase, value: camelBack }
+  - { key: bugprone-signed-bitwise.IgnorePositiveIntegerLiterals, value: 1 }
+  - { key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic, value: 1 }
+  - { key: google-readability-todo.Style, value: Parentheses }

@@ -1,0 +1,10 @@
+# Compatibility shim for esp_wifi_remote versions that ship IDF-specific Kconfig
+# files for "6.0", while ESP-IDF reports the patch version as "6.0.1".
+if ESP_WIFI_REMOTE_ENABLED && !ESP_WIFI_REMOTE_IDF_SPECIFIC_ADDED
+    orsource "../../../../managed_components/espressif__esp_wifi_remote/idf_v6.0/Kconfig.slave_select.in"
+    orsource "../../../../managed_components/espressif__esp_wifi_remote/idf_v6.0/Kconfig.soc_wifi_caps.in"
+
+    menu "Wi-Fi Remote configuration"
+        orsource "../../../../managed_components/espressif__esp_wifi_remote/idf_v6.0/Kconfig.wifi.in"
+    endmenu
+endif

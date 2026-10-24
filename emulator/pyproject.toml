@@ -1,0 +1,11 @@
+[project]
+name = "lexxos-emulator"
+version = "0.1.0"
+description = "LexxOS desktop simulator and peripheral emulator"
+license = "Apache-2.0"
+requires-python = ">=3.14"
+dependencies = [
+    "PySide6>=6.7",
+    "pytest>=8.4.2",
+    "sounddevice>=0.5",
+]

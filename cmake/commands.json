@@ -1,0 +1,1616 @@
+[
+  {
+    "name": "append",
+    "type": "lexxos::apps::filesystem_programs::AppendProgram",
+    "header": "lexxos/apps/fs/append_program.h",
+    "sources": [
+      "lexxos/apps/fs/append_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/append.md"
+  },
+  {
+    "name": "audio",
+    "type": "lexxos::apps::utility_programs::AudioProgram",
+    "header": "lexxos/apps/utility/audio_program.h",
+    "sources": [],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "AUDIO"
+    ],
+    "doc": "docs/commands/audio.md"
+  },
+  {
+    "name": "backlight",
+    "type": "lexxos::apps::utility_programs::BacklightProgram",
+    "header": "lexxos/apps/utility/backlight_program.h",
+    "sources": [
+      "lexxos/apps/utility/backlight_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "BACKLIGHT"
+    ],
+    "doc": "docs/commands/backlight.md"
+  },
+  {
+    "name": "beep",
+    "type": "lexxos::apps::picocalc_programs::BeepProgram",
+    "header": "lexxos/apps/picocalc/beep_program.h",
+    "sources": [
+      "lexxos/apps/picocalc/beep_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "PICOCALC",
+      "AUDIO"
+    ],
+    "doc": "docs/commands/beep.md"
+  },
+  {
+    "name": "beep",
+    "type": "lexxos::apps::utility_programs::BeepProgram",
+    "header": "lexxos/apps/utility/beep_program.h",
+    "sources": [],
+    "group": "TESTS",
+    "requires": [
+      "PORTABLE_BEEP",
+      "AUDIO"
+    ],
+    "doc": "docs/commands/beep.md"
+  },
+  {
+    "name": "bench",
+    "type": "lexxos::apps::system_programs::BenchmarkProgram",
+    "header": "lexxos/apps/core/benchmark_program.h",
+    "sources": [
+      "lexxos/apps/core/benchmark_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [],
+    "doc": "docs/commands/bench.md"
+  },
+  {
+    "name": "block-devs",
+    "type": "lexxos::apps::storage_programs::BlockDevicesProgram",
+    "header": "lexxos/apps/storage/block_devices_program.h",
+    "sources": [
+      "lexxos/apps/storage/block_devices_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "SD_CARD"
+    ],
+    "doc": "docs/commands/block-devs.md"
+  },
+  {
+    "name": "board",
+    "type": "lexxos::apps::system_programs::BoardProgram",
+    "header": "lexxos/apps/core/board_program.h",
+    "sources": [
+      "lexxos/apps/core/board_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/board.md"
+  },
+  {
+    "name": "bootsel",
+    "type": "lexxos::apps::utility_programs::BootselProgram",
+    "header": "lexxos/apps/utility/bootsel_program.h",
+    "sources": [
+      "lexxos/apps/utility/bootsel_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "PICO"
+    ],
+    "doc": "docs/commands/bootsel.md"
+  },
+  {
+    "name": "cat",
+    "type": "lexxos::apps::filesystem_programs::CatProgram",
+    "header": "lexxos/apps/fs/cat_program.h",
+    "sources": [
+      "lexxos/apps/fs/cat_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/cat.md"
+  },
+  {
+    "name": "cd",
+    "type": "lexxos::apps::filesystem_programs::CdProgram",
+    "header": "lexxos/apps/fs/cd_program.h",
+    "sources": [
+      "lexxos/apps/fs/cd_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/cd.md"
+  },
+  {
+    "name": "clear",
+    "type": "lexxos::apps::utility_programs::ClearProgram",
+    "header": "lexxos/apps/utility/clear_program.h",
+    "sources": [
+      "lexxos/apps/utility/clear_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/clear.md"
+  },
+  {
+    "name": "console-info",
+    "type": "lexxos::apps::device_programs::ConsoleInfoProgram",
+    "header": "lexxos/apps/devices/console_info_program.h",
+    "sources": [
+      "lexxos/apps/devices/console_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "LCD_CONSOLE"
+    ],
+    "doc": "docs/commands/console-info.md"
+  },
+  {
+    "name": "console-palette",
+    "type": "lexxos::apps::utility_programs::ConsolePaletteProgram",
+    "header": "lexxos/apps/utility/console_palette_program.h",
+    "sources": [
+      "lexxos/apps/utility/console_palette_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [],
+    "doc": "docs/commands/console-palette.md"
+  },
+  {
+    "name": "cp",
+    "type": "lexxos::apps::filesystem_programs::CopyProgram",
+    "header": "lexxos/apps/fs/copy_program.h",
+    "sources": [
+      "lexxos/apps/fs/copy_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/cp.md"
+  },
+  {
+    "name": "devices",
+    "type": "lexxos::apps::device_programs::DevicesProgram",
+    "header": "lexxos/apps/devices/devices_program.h",
+    "sources": [
+      "lexxos/apps/devices/devices_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [],
+    "doc": "docs/commands/devices.md"
+  },
+  {
+    "name": "devs",
+    "type": "lexxos::apps::storage_programs::DevicesProgram",
+    "header": "lexxos/apps/storage/devices_program.h",
+    "sources": [
+      "lexxos/apps/storage/devices_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "SD_CARD"
+    ],
+    "doc": "docs/commands/devs.md"
+  },
+  {
+    "name": "display-bars",
+    "type": "lexxos::apps::device_programs::DisplayBarsProgram",
+    "header": "lexxos/apps/devices/display_bars_program.h",
+    "sources": [
+      "lexxos/apps/devices/display_bars_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "DISPLAY",
+      "DISPLAY_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/display-bars.md"
+  },
+  {
+    "name": "display-fill",
+    "type": "lexxos::apps::device_programs::DisplayFillProgram",
+    "header": "lexxos/apps/devices/display_fill_program.h",
+    "sources": [
+      "lexxos/apps/devices/display_fill_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "DISPLAY",
+      "DISPLAY_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/display-fill.md"
+  },
+  {
+    "name": "display-info",
+    "type": "lexxos::apps::device_programs::DisplayInfoProgram",
+    "header": "lexxos/apps/devices/display_info_program.h",
+    "sources": [
+      "lexxos/apps/devices/display_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "DISPLAY"
+    ],
+    "doc": "docs/commands/display-info.md"
+  },
+  {
+    "name": "display-power",
+    "type": "lexxos::apps::device_programs::DisplayPowerProgram",
+    "header": "lexxos/apps/devices/display_power_program.h",
+    "sources": [
+      "lexxos/apps/devices/display_power_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "DISPLAY"
+    ],
+    "doc": "docs/commands/display-power.md"
+  },
+  {
+    "name": "display-rect",
+    "type": "lexxos::apps::device_programs::DisplayRectProgram",
+    "header": "lexxos/apps/devices/display_rect_program.h",
+    "sources": [
+      "lexxos/apps/devices/display_rect_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "DISPLAY",
+      "DISPLAY_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/display-rect.md"
+  },
+  {
+    "name": "display-test",
+    "type": "lexxos::apps::device_programs::DisplayTestProgram",
+    "header": "lexxos/apps/devices/display_test_program.h",
+    "sources": [
+      "lexxos/apps/devices/display_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "DISPLAY",
+      "DISPLAY_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/display-test.md"
+  },
+  {
+    "name": "display-text",
+    "type": "lexxos::apps::device_programs::DisplayTextProgram",
+    "header": "lexxos/apps/devices/display_text_program.h",
+    "sources": [
+      "lexxos/apps/devices/display_text_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "DISPLAY",
+      "DISPLAY_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/display-text.md"
+  },
+  {
+    "name": "echo",
+    "type": "lexxos::apps::utility_programs::EchoProgram",
+    "header": "lexxos/apps/utility/echo_program.h",
+    "sources": [
+      "lexxos/apps/utility/echo_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/echo.md"
+  },
+  {
+    "name": "edit",
+    "type": "lexxos::apps::text_editor_programs::EditProgram",
+    "header": "lexxos/apps/editor/edit_program.h",
+    "sources": [
+      "lexxos/apps/editor/edit_program.cpp",
+      "lexxos/apps/editor/detail/text_buffer.cpp",
+      "lexxos/apps/editor/detail/editor_controller.cpp",
+      "lexxos/apps/editor/detail/editor_file_service.cpp",
+      "lexxos/apps/editor/detail/editor_renderer.cpp"
+    ],
+    "group": "APPLICATIONS",
+    "requires": [],
+    "doc": "docs/commands/edit.md"
+  },
+  {
+    "name": "esp32-info",
+    "type": "lexxos::apps::system_programs::Esp32InfoProgram",
+    "header": "lexxos/apps/core/esp32_info_program.h",
+    "sources": [
+      "lexxos/apps/core/esp32_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "ESPIDF"
+    ],
+    "doc": "docs/commands/esp32-info.md"
+  },
+  {
+    "name": "esp32-spi-test",
+    "type": "lexxos::apps::system_programs::Esp32SpiTestProgram",
+    "header": "lexxos/apps/core/esp32_spi_test_program.h",
+    "sources": [
+      "lexxos/apps/core/esp32_spi_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "ESPIDF",
+      "ESP_SPI"
+    ],
+    "doc": "docs/commands/esp32-spi-test.md"
+  },
+  {
+    "name": "eth",
+    "type": "lexxos::apps::network_programs::EthernetProgram",
+    "header": "lexxos/apps/network/ethernet_program.h",
+    "sources": [
+      "lexxos/apps/network/ethernet_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "JC"
+    ],
+    "doc": "docs/commands/eth.md"
+  },
+  {
+    "name": "exit",
+    "type": "lexxos::apps::utility_programs::ExitProgram",
+    "header": "lexxos/apps/utility/exit_program.h",
+    "sources": [
+      "lexxos/apps/utility/exit_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [
+      "DESKTOP"
+    ],
+    "doc": "docs/commands/exit.md"
+  },
+  {
+    "name": "fat-cache",
+    "type": "lexxos::apps::storage_programs::FatCacheProgram",
+    "header": "lexxos/apps/storage/fat_cache_program.h",
+    "sources": [
+      "lexxos/apps/storage/fat_cache_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "SD_CARD",
+      "FATFS"
+    ],
+    "doc": "docs/commands/fat-cache.md"
+  },
+  {
+    "name": "fs-info",
+    "type": "lexxos::apps::filesystem_programs::FsInfoProgram",
+    "header": "lexxos/apps/fs/fs_info_program.h",
+    "sources": [
+      "lexxos/apps/fs/fs_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [],
+    "doc": "docs/commands/fs-info.md"
+  },
+  {
+    "name": "fs-smoke",
+    "type": "lexxos::apps::filesystem_programs::FsSmokeProgram",
+    "header": "lexxos/apps/fs/fs_smoke_program.h",
+    "sources": [
+      "lexxos/apps/fs/fs_smoke_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [],
+    "doc": "docs/commands/fs-smoke.md"
+  },
+  {
+    "name": "gamepad-live",
+    "type": "lexxos::apps::device_programs::GamepadLiveTestProgram",
+    "header": "lexxos/apps/devices/gamepad_live_test_program.h",
+    "sources": [
+      "lexxos/apps/devices/gamepad_live_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "KEYBOARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/gamepad-live.md"
+  },
+  {
+    "name": "gamepad-test",
+    "type": "lexxos::apps::device_programs::GamepadTestProgram",
+    "header": "lexxos/apps/devices/gamepad_test_program.h",
+    "sources": [
+      "lexxos/apps/devices/gamepad_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "KEYBOARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/gamepad-test.md"
+  },
+  {
+    "name": "gb-bus",
+    "type": "lexxos::apps::gameboy_programs::GbBusProgram",
+    "header": "lexxos/apps/gameboy/gb_bus_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_bus_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-bus.md"
+  },
+  {
+    "name": "gb-cart",
+    "type": "lexxos::apps::gameboy_programs::GbCartProgram",
+    "header": "lexxos/apps/gameboy/gb_cart_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_cart_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-cart.md"
+  },
+  {
+    "name": "gb-cpu-step",
+    "type": "lexxos::apps::gameboy_programs::GbCpuStepProgram",
+    "header": "lexxos/apps/gameboy/gb_cpu_step_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_cpu_step_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-cpu-step.md"
+  },
+  {
+    "name": "gb-info",
+    "type": "lexxos::apps::gameboy_programs::GbInfoProgram",
+    "header": "lexxos/apps/gameboy/gb_info_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-info.md"
+  },
+  {
+    "name": "gb-io",
+    "type": "lexxos::apps::gameboy_programs::GbIoProgram",
+    "header": "lexxos/apps/gameboy/gb_io_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_io_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-io.md"
+  },
+  {
+    "name": "gb-irq",
+    "type": "lexxos::apps::gameboy_programs::GbIrqProgram",
+    "header": "lexxos/apps/gameboy/gb_irq_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_irq_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-irq.md"
+  },
+  {
+    "name": "gb-ppu-test",
+    "type": "lexxos::apps::gameboy_programs::GbPpuTestProgram",
+    "header": "lexxos/apps/gameboy/gb_ppu_test_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_ppu_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-ppu-test.md"
+  },
+  {
+    "name": "gb-rom-check",
+    "type": "lexxos::apps::gameboy_programs::GbRomCheckProgram",
+    "header": "lexxos/apps/gameboy/gb_rom_check_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_rom_check_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-rom-check.md"
+  },
+  {
+    "name": "gb-test-run",
+    "type": "lexxos::apps::gameboy_programs::GbTestRunProgram",
+    "header": "lexxos/apps/gameboy/gb_test_run_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_test_run_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-test-run.md"
+  },
+  {
+    "name": "gb-test-suite",
+    "type": "lexxos::apps::gameboy_programs::GbTestSuiteProgram",
+    "header": "lexxos/apps/gameboy/gb_test_suite_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_test_suite_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-test-suite.md"
+  },
+  {
+    "name": "gb-vram-view",
+    "type": "lexxos::apps::gameboy_programs::GbVramViewProgram",
+    "header": "lexxos/apps/gameboy/gb_vram_view_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_vram_view_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gb-vram-view.md"
+  },
+  {
+    "name": "gbemu",
+    "type": "lexxos::apps::gameboy_programs::GbEmuProgram",
+    "header": "lexxos/apps/gameboy/gb_emu_program.h",
+    "sources": [
+      "lexxos/apps/gameboy/gb_emu_program.cpp"
+    ],
+    "group": "APPLICATIONS",
+    "requires": [
+      "GAMEBOY",
+      "GB_RUNTIME"
+    ],
+    "doc": "docs/commands/gbemu.md"
+  },
+  {
+    "name": "gbemu-config",
+    "type": "lexxos::apps::gameboy_programs::GbEmuConfigProgram",
+    "header": "lexxos/apps/gameboy/gb_emu_config_program.h",
+    "sources": [],
+    "group": "APPLICATIONS",
+    "requires": [
+      "GAMEBOY"
+    ],
+    "doc": "docs/commands/gbemu-config.md"
+  },
+  {
+    "name": "gpio-analyzer",
+    "type": "lexxos::apps::device_programs::GpioAnalyzerProgram",
+    "header": "lexxos/apps/devices/gpio_analyzer_program.h",
+    "sources": [
+      "lexxos/apps/devices/gpio_analyzer_program.cpp"
+    ],
+    "group": "EXPERIMENTAL",
+    "requires": [
+      "GPIO_ANALYZER",
+      "FULL"
+    ],
+    "doc": "docs/commands/gpio-analyzer.md"
+  },
+  {
+    "name": "help",
+    "type": "lexxos::apps::system_programs::HelpProgram",
+    "header": "lexxos/apps/core/help_program.h",
+    "sources": [
+      "lexxos/apps/core/help_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/help.md"
+  },
+  {
+    "name": "hexdump",
+    "type": "lexxos::apps::filesystem_programs::HexdumpProgram",
+    "header": "lexxos/apps/fs/hexdump_program.h",
+    "sources": [
+      "lexxos/apps/fs/hexdump_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/hexdump.md"
+  },
+  {
+    "name": "hosted-info",
+    "type": "lexxos::apps::network_programs::HostedInfoProgram",
+    "header": "lexxos/apps/network/hosted_info_program.h",
+    "sources": [
+      "lexxos/apps/network/hosted_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "ESPIDF",
+      "HOSTED"
+    ],
+    "doc": "docs/commands/hosted-info.md"
+  },
+  {
+    "name": "hosted-ota",
+    "type": "lexxos::apps::network_programs::HostedOtaProgram",
+    "header": "lexxos/apps/network/hosted_ota_program.h",
+    "sources": [
+      "lexxos/apps/network/hosted_ota_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "ESPIDF",
+      "HOSTED"
+    ],
+    "doc": "docs/commands/hosted-ota.md"
+  },
+  {
+    "name": "hosted-ota-rx",
+    "type": "lexxos::apps::network_programs::HostedOtaRxProgram",
+    "header": "lexxos/apps/network/hosted_ota_program.h",
+    "sources": [
+      "lexxos/apps/network/hosted_ota_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "ESPIDF",
+      "HOSTED"
+    ],
+    "doc": "docs/commands/hosted-ota-rx.md"
+  },
+  {
+    "name": "i2c-buses",
+    "type": "lexxos::apps::i2c_programs::I2cBusesProgram",
+    "header": "lexxos/apps/i2c_buses_program.h",
+    "sources": [
+      "lexxos/apps/i2c_buses_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "I2C"
+    ],
+    "doc": "docs/commands/i2c-buses.md"
+  },
+  {
+    "name": "i2c-scan",
+    "type": "lexxos::apps::i2c_programs::I2cScanProgram",
+    "header": "lexxos/apps/i2c_scan_program.h",
+    "sources": [
+      "lexxos/apps/i2c_scan_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "I2C"
+    ],
+    "doc": "docs/commands/i2c-scan.md"
+  },
+  {
+    "name": "imu",
+    "type": "lexxos::apps::device_programs::ImuProgram",
+    "header": "lexxos/apps/devices/imu_program.h",
+    "sources": [
+      "lexxos/apps/devices/imu_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "CARDPUTER_ADV"
+    ],
+    "doc": "docs/commands/imu.md"
+  },
+  {
+    "name": "info",
+    "type": "lexxos::apps::filesystem_programs::InfoProgram",
+    "header": "lexxos/apps/fs/info_program.h",
+    "sources": [
+      "lexxos/apps/fs/info_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/info.md"
+  },
+  {
+    "name": "input-test",
+    "type": "lexxos::apps::device_programs::InputTestProgram",
+    "header": "lexxos/apps/devices/input_test_program.h",
+    "sources": [
+      "lexxos/apps/devices/input_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "KEYBOARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/input-test.md"
+  },
+  {
+    "name": "ir",
+    "type": "lexxos::apps::device_programs::IrProgram",
+    "header": "lexxos/apps/devices/ir_program.h",
+    "sources": [
+      "lexxos/apps/devices/ir_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [
+      "CARDPUTER_ADV"
+    ],
+    "doc": "docs/commands/ir.md"
+  },
+  {
+    "name": "jobs",
+    "type": "lexxos::apps::system_programs::JobsProgram",
+    "header": "lexxos/apps/core/jobs_program.h",
+    "sources": [
+      "lexxos/apps/core/jobs_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/jobs.md"
+  },
+  {
+    "name": "keyboard-live",
+    "type": "lexxos::apps::device_programs::KeyboardLiveTestProgram",
+    "header": "lexxos/apps/devices/keyboard_live_test_program.h",
+    "sources": [
+      "lexxos/apps/devices/keyboard_live_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "KEYBOARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/keyboard-live.md"
+  },
+  {
+    "name": "keyboard-raw",
+    "type": "lexxos::apps::device_programs::KeyboardRawTestProgram",
+    "header": "lexxos/apps/devices/keyboard_raw_test_program.h",
+    "sources": [
+      "lexxos/apps/devices/keyboard_raw_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "KEYBOARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/keyboard-raw.md"
+  },
+  {
+    "name": "led",
+    "type": "lexxos::apps::utility_programs::LedProgram",
+    "header": "lexxos/apps/utility/led_program.h",
+    "sources": [
+      "lexxos/apps/utility/led_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [
+      "LED"
+    ],
+    "doc": "docs/commands/led.md"
+  },
+  {
+    "name": "lexx-info",
+    "type": "lexxos::apps::lexx_programs::LexxInfoProgram",
+    "header": "lexxos/apps/lexx/lexx_info_program.h",
+    "sources": [
+      "lexxos/apps/lexx/lexx_info_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/lexx-info.md"
+  },
+  {
+    "name": "lexx-run",
+    "type": "lexxos::apps::lexx_programs::LexxRunProgram",
+    "header": "lexxos/apps/lexx/lexx_run_program.h",
+    "sources": [
+      "lexxos/apps/lexx/lexx_run_program.cpp"
+    ],
+    "group": "APPLICATIONS",
+    "requires": [],
+    "doc": "docs/commands/lexx-run.md"
+  },
+  {
+    "name": "ls",
+    "type": "lexxos::apps::filesystem_programs::LsProgram",
+    "header": "lexxos/apps/fs/ls_program.h",
+    "sources": [
+      "lexxos/apps/fs/ls_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/ls.md"
+  },
+  {
+    "name": "mem",
+    "type": "lexxos::apps::system_programs::MemoryProgram",
+    "header": "lexxos/apps/core/memory_program.h",
+    "sources": [
+      "lexxos/apps/core/memory_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [],
+    "doc": "docs/commands/mem.md"
+  },
+  {
+    "name": "mic",
+    "type": "lexxos::apps::device_programs::MicProgram",
+    "header": "lexxos/apps/devices/mic_program.h",
+    "sources": [
+      "lexxos/apps/devices/mic_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "MIC"
+    ],
+    "doc": "docs/commands/mic.md"
+  },
+  {
+    "name": "mkdir",
+    "type": "lexxos::apps::filesystem_programs::MakeDirectoryProgram",
+    "header": "lexxos/apps/fs/make_directory_program.h",
+    "sources": [
+      "lexxos/apps/fs/make_directory_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/mkdir.md"
+  },
+  {
+    "name": "mount",
+    "type": "lexxos::apps::filesystem_programs::MountProgram",
+    "header": "lexxos/apps/fs/mount_program.h",
+    "sources": [
+      "lexxos/apps/fs/mount_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "FATFS"
+    ],
+    "doc": "docs/commands/mount.md"
+  },
+  {
+    "name": "mouse-info",
+    "type": "lexxos::apps::device_programs::MouseInfoProgram",
+    "header": "lexxos/apps/devices/mouse_programs.h",
+    "sources": [
+      "lexxos/apps/devices/mouse_programs.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "JC"
+    ],
+    "doc": "docs/commands/mouse-info.md"
+  },
+  {
+    "name": "mouse-live",
+    "type": "lexxos::apps::device_programs::MouseLiveProgram",
+    "header": "lexxos/apps/devices/mouse_programs.h",
+    "sources": [
+      "lexxos/apps/devices/mouse_programs.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "JC"
+    ],
+    "doc": "docs/commands/mouse-live.md"
+  },
+  {
+    "name": "mouse-reset",
+    "type": "lexxos::apps::device_programs::MouseResetProgram",
+    "header": "lexxos/apps/devices/mouse_programs.h",
+    "sources": [
+      "lexxos/apps/devices/mouse_programs.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "JC"
+    ],
+    "doc": "docs/commands/mouse-reset.md"
+  },
+  {
+    "name": "mplay",
+    "type": "lexxos::apps::music::midi::MidiPlayProgram",
+    "header": "lexxos/apps/music/midi/midi_play_program.h",
+    "sources": [
+      "lexxos/apps/music/midi/midi_play_program.cpp",
+      "lexxos/apps/music/midi/detail/midi_file_loader.cpp",
+      "lexxos/apps/music/midi/detail/midi_renderer.cpp"
+    ],
+    "group": "APPLICATIONS",
+    "requires": [
+      "MIDI",
+      "AUDIO"
+    ],
+    "doc": "docs/commands/mplay.md"
+  },
+  {
+    "name": "mv",
+    "type": "lexxos::apps::filesystem_programs::MoveProgram",
+    "header": "lexxos/apps/fs/move_program.h",
+    "sources": [
+      "lexxos/apps/fs/move_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/mv.md"
+  },
+  {
+    "name": "net-status",
+    "type": "lexxos::apps::network_programs::NetStatusProgram",
+    "header": "lexxos/apps/network/net_status_program.h",
+    "sources": [
+      "lexxos/apps/network/net_status_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "NET"
+    ],
+    "doc": "docs/commands/net-status.md"
+  },
+  {
+    "name": "picocalc-info",
+    "type": "lexxos::apps::i2c_programs::PicoCalcInfoProgram",
+    "header": "lexxos/apps/picocalc/picocalc_info_program.h",
+    "sources": [
+      "lexxos/apps/picocalc/picocalc_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "PICOCALC"
+    ],
+    "doc": "docs/commands/picocalc-info.md"
+  },
+  {
+    "name": "picocalc-sb",
+    "type": "lexxos::apps::i2c_programs::PicoCalcSouthbridgeProgram",
+    "header": "lexxos/apps/picocalc/picocalc_southbridge_program.h",
+    "sources": [
+      "lexxos/apps/picocalc/picocalc_southbridge_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "PICOCALC"
+    ],
+    "doc": "docs/commands/picocalc-sb.md"
+  },
+  {
+    "name": "ping",
+    "type": "lexxos::apps::network_programs::PingProgram",
+    "header": "lexxos/apps/network/ping_program.h",
+    "sources": [
+      "lexxos/apps/network/ping_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [
+      "NET"
+    ],
+    "doc": "docs/commands/ping.md"
+  },
+  {
+    "name": "power",
+    "type": "lexxos::apps::utility_programs::PowerProgram",
+    "header": "lexxos/apps/utility/power_program.h",
+    "sources": [
+      "lexxos/apps/utility/power_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [],
+    "doc": "docs/commands/power.md"
+  },
+  {
+    "name": "poweroff",
+    "type": "lexxos::apps::utility_programs::PoweroffProgram",
+    "header": "lexxos/apps/utility/poweroff_program.h",
+    "sources": [
+      "lexxos/apps/utility/poweroff_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/poweroff.md"
+  },
+  {
+    "name": "psram-info",
+    "type": "lexxos::apps::picocalc_programs::PsramInfoProgram",
+    "header": "lexxos/apps/picocalc/psram_info_program.h",
+    "sources": [
+      "lexxos/apps/picocalc/psram_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "PICOCALC",
+      "PSRAM"
+    ],
+    "doc": "docs/commands/psram-info.md"
+  },
+  {
+    "name": "psram-test",
+    "type": "lexxos::apps::picocalc_programs::PsramTestProgram",
+    "header": "lexxos/apps/picocalc/psram_test_program.h",
+    "sources": [
+      "lexxos/apps/picocalc/psram_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "PICOCALC",
+      "PSRAM"
+    ],
+    "doc": "docs/commands/psram-test.md"
+  },
+  {
+    "name": "pwd",
+    "type": "lexxos::apps::filesystem_programs::PwdProgram",
+    "header": "lexxos/apps/fs/pwd_program.h",
+    "sources": [
+      "lexxos/apps/fs/pwd_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/pwd.md"
+  },
+  {
+    "name": "reboot",
+    "type": "lexxos::apps::utility_programs::RebootProgram",
+    "header": "lexxos/apps/utility/reboot_program.h",
+    "sources": [
+      "lexxos/apps/utility/reboot_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/reboot.md"
+  },
+  {
+    "name": "rename",
+    "type": "lexxos::apps::filesystem_programs::RenameProgram",
+    "header": "lexxos/apps/fs/rename_program.h",
+    "sources": [
+      "lexxos/apps/fs/rename_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/rename.md"
+  },
+  {
+    "name": "rm",
+    "type": "lexxos::apps::filesystem_programs::RemoveProgram",
+    "header": "lexxos/apps/fs/remove_program.h",
+    "sources": [
+      "lexxos/apps/fs/remove_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/rm.md"
+  },
+  {
+    "name": "rmdir",
+    "type": "lexxos::apps::filesystem_programs::RemoveDirectoryProgram",
+    "header": "lexxos/apps/fs/remove_directory_program.h",
+    "sources": [
+      "lexxos/apps/fs/remove_directory_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/rmdir.md"
+  },
+  {
+    "name": "rtc-config",
+    "type": "lexxos::apps::rtc_programs::RtcConfigProgram",
+    "header": "lexxos/apps/rtc/rtc_config_program.h",
+    "sources": [
+      "lexxos/apps/rtc/rtc_config_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [],
+    "doc": "docs/commands/rtc-config.md"
+  },
+  {
+    "name": "rtc-get",
+    "type": "lexxos::apps::rtc_programs::RtcGetProgram",
+    "header": "lexxos/apps/rtc/rtc_get_program.h",
+    "sources": [
+      "lexxos/apps/rtc/rtc_get_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [],
+    "doc": "docs/commands/rtc-get.md"
+  },
+  {
+    "name": "rtc-set",
+    "type": "lexxos::apps::rtc_programs::RtcSetProgram",
+    "header": "lexxos/apps/rtc/rtc_set_program.h",
+    "sources": [
+      "lexxos/apps/rtc/rtc_set_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [],
+    "doc": "docs/commands/rtc-set.md"
+  },
+  {
+    "name": "rtc-status",
+    "type": "lexxos::apps::rtc_programs::RtcStatusProgram",
+    "header": "lexxos/apps/rtc/rtc_status_program.h",
+    "sources": [
+      "lexxos/apps/rtc/rtc_status_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [],
+    "doc": "docs/commands/rtc-status.md"
+  },
+  {
+    "name": "rtc-sync",
+    "type": "lexxos::apps::rtc_programs::RtcSyncProgram",
+    "header": "lexxos/apps/rtc/rtc_sync_program.h",
+    "sources": [
+      "lexxos/apps/rtc/rtc_sync_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "NET"
+    ],
+    "doc": "docs/commands/rtc-sync.md"
+  },
+  {
+    "name": "run",
+    "type": "lexxos::apps::system_programs::RunProgram",
+    "header": "lexxos/apps/core/run_program.h",
+    "sources": [
+      "lexxos/apps/core/run_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/run.md"
+  },
+  {
+    "name": "sd-baud",
+    "type": "lexxos::apps::storage_programs::SdBaudProgram",
+    "header": "lexxos/apps/storage/sd_baud_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_baud_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "SD_CARD",
+      "SD_SPI"
+    ],
+    "doc": "docs/commands/sd-baud.md"
+  },
+  {
+    "name": "sd-bench",
+    "type": "lexxos::apps::storage_programs::SdBenchProgram",
+    "header": "lexxos/apps/storage/sd_bench_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_bench_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/sd-bench.md"
+  },
+  {
+    "name": "sd-debug",
+    "type": "lexxos::apps::storage_programs::SdDebugProgram",
+    "header": "lexxos/apps/storage/sd_debug_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_debug_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/sd-debug.md"
+  },
+  {
+    "name": "sd-multiblock",
+    "type": "lexxos::apps::storage_programs::SdMultiBlockProgram",
+    "header": "lexxos/apps/storage/sd_multi_block_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_multi_block_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/sd-multiblock.md"
+  },
+  {
+    "name": "sd-multiwrite",
+    "type": "lexxos::apps::storage_programs::SdMultiWriteProgram",
+    "header": "lexxos/apps/storage/sd_multi_write_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_multi_write_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/sd-multiwrite.md"
+  },
+  {
+    "name": "sd-profile",
+    "type": "lexxos::apps::storage_programs::SdProfileProgram",
+    "header": "lexxos/apps/storage/sd_profile_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_profile_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "SD_CARD",
+      "SD_SPI"
+    ],
+    "doc": "docs/commands/sd-profile.md"
+  },
+  {
+    "name": "sd-read-crc",
+    "type": "lexxos::apps::storage_programs::SdReadCrcProgram",
+    "header": "lexxos/apps/storage/sd_read_crc_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_read_crc_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/sd-read-crc.md"
+  },
+  {
+    "name": "sd-speed-scan",
+    "type": "lexxos::apps::storage_programs::SdSpeedScanProgram",
+    "header": "lexxos/apps/storage/sd_speed_scan_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_speed_scan_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS",
+      "SD_SPI"
+    ],
+    "doc": "docs/commands/sd-speed-scan.md"
+  },
+  {
+    "name": "sd-spi-mode",
+    "type": "lexxos::apps::storage_programs::SdSpiModeProgram",
+    "header": "lexxos/apps/storage/sd_spi_mode_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_spi_mode_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS",
+      "SD_SPI"
+    ],
+    "doc": "docs/commands/sd-spi-mode.md"
+  },
+  {
+    "name": "sd-stress",
+    "type": "lexxos::apps::storage_programs::SdStressProgram",
+    "header": "lexxos/apps/storage/sd_stress_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_stress_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/sd-stress.md"
+  },
+  {
+    "name": "sd-test",
+    "type": "lexxos::apps::storage_programs::SdTestProgram",
+    "header": "lexxos/apps/storage/sd_test_program.h",
+    "sources": [
+      "lexxos/apps/storage/sd_test_program.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "SD_CARD",
+      "SD_CARD_TEST_COMMANDS"
+    ],
+    "doc": "docs/commands/sd-test.md"
+  },
+  {
+    "name": "shell-config",
+    "type": "lexxos::apps::utility_programs::ShellConfigProgram",
+    "header": "lexxos/apps/utility/shell_config_program.h",
+    "sources": [
+      "lexxos/apps/utility/shell_config_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [],
+    "doc": "docs/commands/shell-config.md"
+  },
+  {
+    "name": "stat",
+    "type": "lexxos::apps::filesystem_programs::StatProgram",
+    "header": "lexxos/apps/fs/stat_program.h",
+    "sources": [
+      "lexxos/apps/fs/stat_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/stat.md"
+  },
+  {
+    "name": "stop",
+    "type": "lexxos::apps::system_programs::StopProgram",
+    "header": "lexxos/apps/core/stop_program.h",
+    "sources": [
+      "lexxos/apps/core/stop_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/stop.md"
+  },
+  {
+    "name": "storage",
+    "type": "lexxos::apps::storage_programs::StorageProgram",
+    "header": "lexxos/apps/storage/storage_program.h",
+    "sources": [
+      "lexxos/apps/storage/storage_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "SD_CARD"
+    ],
+    "doc": "docs/commands/storage.md"
+  },
+  {
+    "name": "sync",
+    "type": "lexxos::apps::filesystem_programs::SyncProgram",
+    "header": "lexxos/apps/fs/sync_program.h",
+    "sources": [
+      "lexxos/apps/fs/sync_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/sync.md"
+  },
+  {
+    "name": "tasks",
+    "type": "lexxos::apps::system_programs::TasksProgram",
+    "header": "lexxos/apps/core/tasks_program.h",
+    "sources": [
+      "lexxos/apps/core/tasks_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [],
+    "doc": "docs/commands/tasks.md"
+  },
+  {
+    "name": "tmp-info",
+    "type": "lexxos::apps::filesystem_programs::TmpInfoProgram",
+    "header": "lexxos/apps/fs/tmp_info_program.h",
+    "sources": [
+      "lexxos/apps/fs/tmp_info_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [],
+    "doc": "docs/commands/tmp-info.md"
+  },
+  {
+    "name": "top",
+    "type": "lexxos::apps::system_programs::TopProgram",
+    "header": "lexxos/apps/core/top_program.h",
+    "sources": [
+      "lexxos/apps/core/top_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [],
+    "doc": "docs/commands/top.md"
+  },
+  {
+    "name": "touch",
+    "type": "lexxos::apps::filesystem_programs::TouchProgram",
+    "header": "lexxos/apps/fs/touch_program.h",
+    "sources": [
+      "lexxos/apps/fs/touch_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/touch.md"
+  },
+  {
+    "name": "touch-calibrate",
+    "type": "lexxos::apps::device_programs::TouchCalibrateProgram",
+    "header": "lexxos/apps/devices/touch_programs.h",
+    "sources": [
+      "lexxos/apps/devices/touch_programs.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "JC",
+      "DISPLAY"
+    ],
+    "doc": "docs/commands/touch-calibrate.md"
+  },
+  {
+    "name": "touch-draw",
+    "type": "lexxos::apps::device_programs::TouchDrawProgram",
+    "header": "lexxos/apps/devices/touch_programs.h",
+    "sources": [
+      "lexxos/apps/devices/touch_programs.cpp"
+    ],
+    "group": "TESTS",
+    "requires": [
+      "JC",
+      "DISPLAY"
+    ],
+    "doc": "docs/commands/touch-draw.md"
+  },
+  {
+    "name": "touch-info",
+    "type": "lexxos::apps::device_programs::TouchInfoProgram",
+    "header": "lexxos/apps/devices/touch_programs.h",
+    "sources": [
+      "lexxos/apps/devices/touch_programs.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "JC",
+      "DISPLAY"
+    ],
+    "doc": "docs/commands/touch-info.md"
+  },
+  {
+    "name": "umount",
+    "type": "lexxos::apps::filesystem_programs::UmountProgram",
+    "header": "lexxos/apps/fs/umount_program.h",
+    "sources": [
+      "lexxos/apps/fs/umount_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "FATFS"
+    ],
+    "doc": "docs/commands/umount.md"
+  },
+  {
+    "name": "uptime",
+    "type": "lexxos::apps::system_programs::UptimeProgram",
+    "header": "lexxos/apps/core/uptime_program.h",
+    "sources": [
+      "lexxos/apps/core/uptime_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/uptime.md"
+  },
+  {
+    "name": "usb-hid-info",
+    "type": "lexxos::apps::device_programs::UsbHidInfoProgram",
+    "header": "lexxos/apps/devices/mouse_programs.h",
+    "sources": [
+      "lexxos/apps/devices/mouse_programs.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "JC"
+    ],
+    "doc": "docs/commands/usb-hid-info.md"
+  },
+  {
+    "name": "version",
+    "type": "lexxos::apps::system_programs::VersionProgram",
+    "header": "lexxos/apps/core/version_program.h",
+    "sources": [
+      "lexxos/apps/core/version_program.cpp"
+    ],
+    "group": "SYSTEM",
+    "requires": [],
+    "doc": "docs/commands/version.md"
+  },
+  {
+    "name": "wifi-config",
+    "type": "lexxos::apps::network_programs::WifiConfigProgram",
+    "header": "lexxos/apps/network/wifi_config_program.h",
+    "sources": [
+      "lexxos/apps/network/wifi_config_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "WIFI"
+    ],
+    "doc": "docs/commands/wifi-config.md"
+  },
+  {
+    "name": "wifi-connect",
+    "type": "lexxos::apps::network_programs::WifiConnectProgram",
+    "header": "lexxos/apps/network/wifi_connect_program.h",
+    "sources": [
+      "lexxos/apps/network/wifi_connect_program.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [
+      "WIFI"
+    ],
+    "doc": "docs/commands/wifi-connect.md"
+  },
+  {
+    "name": "wifi-scan",
+    "type": "lexxos::apps::network_programs::WifiScanProgram",
+    "header": "lexxos/apps/network/wifi_scan_program.h",
+    "sources": [
+      "lexxos/apps/network/wifi_scan_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [
+      "WIFI"
+    ],
+    "doc": "docs/commands/wifi-scan.md"
+  },
+  {
+    "name": "wifi-status",
+    "type": "lexxos::apps::network_programs::WifiStatusProgram",
+    "header": "lexxos/apps/network/wifi_status_program.h",
+    "sources": [
+      "lexxos/apps/network/wifi_status_program.cpp"
+    ],
+    "group": "DIAGNOSTICS",
+    "requires": [
+      "WIFI"
+    ],
+    "doc": "docs/commands/wifi-status.md"
+  },
+  {
+    "name": "write",
+    "type": "lexxos::apps::filesystem_programs::WriteProgram",
+    "header": "lexxos/apps/fs/write_program.h",
+    "sources": [
+      "lexxos/apps/fs/write_program.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/write.md"
+  },
+  {
+    "name": "yrx",
+    "type": "lexxos::apps::filesystem_programs::YmodemReceiveProgram",
+    "header": "lexxos/apps/fs/ymodem_transfer_programs.h",
+    "sources": [
+      "lexxos/apps/fs/ymodem_transfer_programs.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/yrx.md"
+  },
+  {
+    "name": "ysend",
+    "type": "lexxos::apps::filesystem_programs::YmodemSendProgram",
+    "header": "lexxos/apps/fs/ymodem_transfer_programs.h",
+    "sources": [
+      "lexxos/apps/fs/ymodem_transfer_programs.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/ysend.md"
+  }
+]

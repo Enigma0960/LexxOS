@@ -1,0 +1,30 @@
+#pragma once
+
+namespace lexxos {
+
+inline constexpr char version[] = "@LEXXOS_BUILD_VERSION@";
+inline constexpr char milestone[] = "fat-minimal-v1";
+inline constexpr char filesystemMilestone[] = "FAT32 read/write + ASCII LFN";
+inline constexpr char buildDate[] = __DATE__;
+inline constexpr char buildTime[] = __TIME__;
+inline constexpr char buildFlavor[] = "@LEXXOS_BUILD_FLAVOR@";
+inline constexpr char buildHostSystem[] = "@LEXXOS_BUILD_HOST_SYSTEM_NAME@";
+inline constexpr char buildHostProcessor[] = "@LEXXOS_BUILD_HOST_SYSTEM_PROCESSOR@";
+inline constexpr char buildTargetSystem[] = "@LEXXOS_BUILD_TARGET_SYSTEM_NAME@";
+inline constexpr char buildTargetProcessor[] = "@LEXXOS_BUILD_TARGET_PROCESSOR@";
+
+#if defined(LEXXOS_PLATFORM_PICO)
+inline constexpr char platformName[] = "pico";
+#elif defined(LEXXOS_PLATFORM_HOST)
+inline constexpr char platformName[] = "host";
+#elif defined(LEXXOS_PLATFORM_STM32F4)
+inline constexpr char platformName[] = "stm32f4";
+#elif defined(LEXXOS_PLATFORM_SIM)
+inline constexpr char platformName[] = "sim";
+#elif defined(LEXXOS_PLATFORM_ESPIDF)
+inline constexpr char platformName[] = "espidf";
+#else
+inline constexpr char platformName[] = "unknown";
+#endif
+
+} // namespace lexxos

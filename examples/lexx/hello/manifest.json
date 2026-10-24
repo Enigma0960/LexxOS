@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.examples.hello",
+  "name": "Hello",
+  "version": "0.1.0",
+  "description": "Пример внешней программы LexxOS с консольным вводом",
+  "author": "Igor Supryadkin",
+  "license": "Apache License",
+  "contacts": {
+    "repository": "https://github.com/Enigma0960/LexxOS"
+  }
+}

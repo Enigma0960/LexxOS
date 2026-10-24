@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.examples.cat",
+  "name": "Cat",
+  "version": "0.1.0",
+  "description": "Пример чтения файлов через guest API LexxOS",
+  "author": "Igor Supryadkin",
+  "license": "Apache License",
+  "contacts": {
+    "repository": "https://github.com/Enigma0960/LexxOS"
+  }
+}

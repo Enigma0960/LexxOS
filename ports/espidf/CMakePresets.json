@@ -1,0 +1,59 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "debug-m5stack-basic-v1",
+      "displayName": "Debug-M5Stack Basic v1",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/m5stack-basic-v1",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "IDF_TARGET": "esp32",
+        "ESP_PLATFORM": "1",
+        "PYTHON_DEPS_CHECKED": "1",
+        "LEXXOS_PLATFORM": "espidf",
+        "LEXXOS_BOARD": "m5stack_basic_v1",
+        "CCACHE_ENABLE": "False"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "m5stack-basic-v1",
+      "displayName": "Build M5Stack Basic v1",
+      "configurePreset": "debug-m5stack-basic-v1",
+      "targets": [
+        "all"
+      ]
+    },
+    {
+      "name": "m5stack-basic-v1-flash",
+      "displayName": "Flash M5Stack Basic v1",
+      "configurePreset": "debug-m5stack-basic-v1",
+      "targets": [
+        "flash"
+      ]
+    },
+    {
+      "name": "m5stack-basic-v1-app-flash",
+      "displayName": "Flash app only M5Stack Basic v1",
+      "configurePreset": "debug-m5stack-basic-v1",
+      "targets": [
+        "app-flash"
+      ]
+    },
+    {
+      "name": "m5stack-basic-v1-menuconfig",
+      "displayName": "menuconfig M5Stack Basic v1",
+      "configurePreset": "debug-m5stack-basic-v1",
+      "targets": [
+        "menuconfig"
+      ]
+    }
+  ]
+}

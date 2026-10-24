@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.apps.snake",
+  "name": "Lexx Snake",
+  "version": "1.0.0",
+  "description": "Classic console snake arcade game",
+  "author": "Igor Supryadkin",
+  "license": "Apache License",
+  "contacts": {
+    "repository": "https://github.com/Enigma0960/LexxOS"
+  }
+}

@@ -1,0 +1,45 @@
+include_guard(GLOBAL)
+include("${CMAKE_CURRENT_LIST_DIR}/Version.cmake")
+
+# The ESP-IDF component may be configured in a separate requirements pass,
+# before CMake's PROJECT_VERSION is populated. Use ESP-IDF's PROJECT_VER when
+# available, falling back to the version shared with native builds.
+if (LEXXOS_PLATFORM STREQUAL "espidf" AND DEFINED PROJECT_VER AND NOT "${PROJECT_VER}" STREQUAL "")
+    set(LEXXOS_BUILD_VERSION "${PROJECT_VER}")
+else ()
+    set(LEXXOS_BUILD_VERSION "${LEXXOS_VERSION}")
+endif ()
+if (LEXXOS_BUILD_VERSION STREQUAL "")
+    message(FATAL_ERROR "LexxOS build version is empty")
+endif ()
+
+set(LEXXOS_BUILD_INFO_DIR "${LEXXOS_GENERATED_INCLUDE_DIR}/lexxos")
+set(LEXXOS_BUILD_INFO_FILE "${LEXXOS_BUILD_INFO_DIR}/build_info.h")
+set(LEXXOS_BUILD_HOST_SYSTEM_NAME "${CMAKE_HOST_SYSTEM_NAME}")
+set(LEXXOS_BUILD_HOST_SYSTEM_PROCESSOR "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+set(LEXXOS_BUILD_TARGET_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
+set(LEXXOS_BUILD_TARGET_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR}")
+
+if (CMAKE_OSX_ARCHITECTURES)
+    string(REPLACE ";" "," LEXXOS_BUILD_TARGET_PROCESSOR "${CMAKE_OSX_ARCHITECTURES}")
+endif ()
+
+if (LEXXOS_BUILD_HOST_SYSTEM_NAME STREQUAL "")
+    set(LEXXOS_BUILD_HOST_SYSTEM_NAME "unknown")
+endif ()
+if (LEXXOS_BUILD_HOST_SYSTEM_PROCESSOR STREQUAL "")
+    set(LEXXOS_BUILD_HOST_SYSTEM_PROCESSOR "unknown")
+endif ()
+if (LEXXOS_BUILD_TARGET_SYSTEM_NAME STREQUAL "")
+    set(LEXXOS_BUILD_TARGET_SYSTEM_NAME "unknown")
+endif ()
+if (LEXXOS_BUILD_TARGET_PROCESSOR STREQUAL "")
+    set(LEXXOS_BUILD_TARGET_PROCESSOR "unknown")
+endif ()
+
+file(MAKE_DIRECTORY "${LEXXOS_BUILD_INFO_DIR}")
+configure_file(
+        "${CMAKE_CURRENT_LIST_DIR}/build_info.h.in"
+        "${LEXXOS_BUILD_INFO_FILE}"
+        @ONLY
+)

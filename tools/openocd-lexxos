@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+OPENOCD_HOME="${LEXXOS_OPENOCD_HOME:-${HOME}/.pico-sdk/openocd-dev/_install}"
+OPENOCD_SOURCE_HOME="${LEXXOS_OPENOCD_SOURCE_HOME:-${HOME}/.pico-sdk/openocd-dev}"
+
+OPENOCD_BIN="${LEXXOS_OPENOCD_BIN:-}"
+OPENOCD_SCRIPTS="${LEXXOS_OPENOCD_SCRIPTS:-}"
+if [[ -z "${OPENOCD_BIN}" ]]; then
+    if [[ -x "${OPENOCD_HOME}/bin/openocd" ]]; then
+        OPENOCD_BIN="${OPENOCD_HOME}/bin/openocd"
+        OPENOCD_SCRIPTS="${OPENOCD_SCRIPTS:-${OPENOCD_HOME}/share/openocd/scripts}"
+    elif [[ -x "${OPENOCD_SOURCE_HOME}/build/src/openocd" ]]; then
+        OPENOCD_BIN="${OPENOCD_SOURCE_HOME}/build/src/openocd"
+        OPENOCD_SCRIPTS="${OPENOCD_SCRIPTS:-${OPENOCD_SOURCE_HOME}/tcl}"
+    elif command -v openocd >/dev/null 2>&1; then
+        OPENOCD_BIN="$(command -v openocd)"
+    else
+        cat >&2 <<MESSAGE
+openocd was not found.
+Set one of these variables or install OpenOCD:
+  LEXXOS_OPENOCD_HOME=/path/to/openocd/install
+  LEXXOS_OPENOCD_BIN=/path/to/openocd
+  LEXXOS_OPENOCD_SOURCE_HOME=/path/to/openocd/source
+MESSAGE
+        exit 127
+    fi
+fi
+if [[ -n "${OPENOCD_SCRIPTS}" ]]; then
+    exec "${OPENOCD_BIN}" -s "${OPENOCD_SCRIPTS}" "$@"
+fi
+exec "${OPENOCD_BIN}" "$@"

@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import runpy
+from pathlib import Path
+
+_ENTRY_POINT = Path(__file__).resolve().parent / "build-tool" / "lexxos_build_tool" / "main.py"
+runpy.run_path(str(_ENTRY_POINT), run_name="__main__")

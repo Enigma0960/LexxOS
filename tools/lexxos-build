@@ -1,0 +1,513 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import os
+import json
+import sys
+import shlex
+import shutil
+import argparse
+import subprocess
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable
+
+
+@dataclass(frozen=True)
+class BuildProfile:
+    name: str
+    configure_preset: str
+    build_preset: str
+    description: str
+    platform: str
+    board: str
+    features: tuple[str, ...] = ()
+    requires_espidf: bool = False
+    flash_preset: str | None = None
+    app_flash_preset: str | None = None
+
+
+@dataclass(frozen=True)
+class PreflightCheck:
+    name: str
+    ok: bool
+    detail: str
+
+
+PLATFORMS: dict[str, str] = {
+    "host": "Native host backend",
+    "pico": "Raspberry Pi Pico SDK backend",
+    "sim": "Host simulator backend",
+    "stm32f4": "STM32F4 bare-metal/FreeRTOS backend",
+    "espidf": "ESP-IDF backend",
+}
+
+BOARDS: dict[str, str] = {
+    "host_native": "Native host process",
+    "dev_pico": "Raspberry Pi Pico / RP2040 development board",
+    "dev_pico_sdio": "Raspberry Pi Pico experimental SDIO profile",
+    "dev_pico2w": "Raspberry Pi Pico 2 W / RP2350 development board",
+    "picocalc_pico_w": "ClockworkPi PicoCalc with Raspberry Pi Pico W",
+    "picocalc_pico2w": "ClockworkPi PicoCalc with Raspberry Pi Pico 2 W",
+    "dev-sim": "Host-side Pico simulation profile",
+    "euse_m4_demo_stm32f407": "Euse M4 DEMO Large / STM32F407ZGT6",
+    "m5stack_basic_v1": "M5Stack Basic Core v1 / ESP32",
+    "m5stack_cardputer": "M5Stack Cardputer / ESP32-S3",
+    "m5stack_cardputer_adv": "M5Stack Cardputer-Adv / ESP32-S3",
+    "jc_esp32p4_m3_dev": "Guition JC-ESP32P4-M3-DEV / ESP32-P4",
+}
+
+FEATURES: tuple[str, ...] = (
+    "DEBUG_DISPLAY",
+    "HEALTH",
+    "SD_CARD",
+    "FATFS",
+    "MIDI",
+    "DISPLAY",
+    "KEYBOARD",
+    "SD_CARD_TEST_COMMANDS",
+    "DISPLAY_TEST_COMMANDS",
+    "KEYBOARD_TEST_COMMANDS",
+    "DS3231_RTC",
+    "GAMEBOY",
+    "PICO_CALC",
+    "CARDPUTER",
+    "PSRAM",
+)
+
+PROFILES: dict[str, BuildProfile] = {
+    "host": BuildProfile("host", "debug-host", "debug-host", "host-native debug build",
+                         "host", "host_native"),
+    "host-full": BuildProfile("host-full", "debug-host-full", "debug-host-full",
+                              "host-native full feature debug build",
+                              "host", "host_native", ("GAMEBOY",)),
+    "sim": BuildProfile("sim", "debug-sim", "lexxos-sim", "host simulator shared library",
+                        "sim", "dev-sim"),
+    "sim-full": BuildProfile("sim-full", "debug-sim-full", "lexxos-sim-full",
+                             "host simulator full feature shared library",
+                             "sim", "dev-sim", ("GAMEBOY",)),
+    "pico": BuildProfile("pico", "debug-pico", "lexxos-pico", "Raspberry Pi Pico debug build",
+                         "pico", "dev_pico", ("SD_CARD", "FATFS", "GAMEBOY")),
+    "pico-full": BuildProfile("pico-full", "debug-pico-full", "lexxos-pico-full",
+                              "Raspberry Pi Pico full feature build",
+                              "pico", "dev_pico", ("SD_CARD", "FATFS", "GAMEBOY")),
+    "picocalc-pico-w": BuildProfile("picocalc-pico-w", "debug-picocalc-pico-w", "lexxos-picocalc-pico-w",
+                                    "ClockworkPi PicoCalc / Raspberry Pi Pico W debug build",
+                                    "pico", "picocalc_pico_w",
+                                    ("DISPLAY", "DISPLAY_TEST_COMMANDS", "PICO_CALC", "SD_CARD_TEST_COMMANDS")),
+    "picocalc-pico2w": BuildProfile("picocalc-pico2w", "debug-picocalc-pico2w", "lexxos-picocalc-pico2w",
+                                    "ClockworkPi PicoCalc / Raspberry Pi Pico 2 W debug build",
+                                    "pico", "picocalc_pico2w",
+                                    ("DISPLAY", "DISPLAY_TEST_COMMANDS", "PICO_CALC", "SD_CARD_TEST_COMMANDS")),
+    "stm32": BuildProfile("stm32", "debug-stm32f407", "lexxos-stm32f407", "STM32F407 debug build",
+                          "stm32f4", "euse_m4_demo_stm32f407"),
+    "stm32-full": BuildProfile("stm32-full", "debug-stm32f407-full", "lexxos-stm32f407-full",
+                               "STM32F407 full feature build",
+                               "stm32f4", "euse_m4_demo_stm32f407", ("GAMEBOY",)),
+    "esp32": BuildProfile("esp32", "debug-esp32", "lexxos-esp32", "ESP32 / M5Stack Basic v1 debug build",
+                          "espidf", "m5stack_basic_v1", ("DISPLAY", "KEYBOARD", "SD_CARD", "FATFS"),
+                          True, "lexxos-esp32-flash", "lexxos-esp32-app-flash"),
+    "cardputer": BuildProfile("cardputer", "debug-cardputer", "lexxos-cardputer",
+                              "M5Stack Cardputer / ESP32-S3 bring-up build",
+                              "espidf", "m5stack_cardputer", ("CARDPUTER", "DISPLAY", "KEYBOARD"),
+                              True, "lexxos-cardputer-flash", "lexxos-cardputer-app-flash"),
+    "jc-esp32p4": BuildProfile("jc-esp32p4", "debug-jc-esp32p4-m3-dev", "lexxos-jc-esp32p4-m3-dev",
+                               "Guition JC-ESP32P4-M3-DEV ESP32-P4 bring-up build",
+                               "espidf", "jc_esp32p4_m3_dev", ("PSRAM", "SD_CARD", "FATFS", "SD_CARD_TEST_COMMANDS"),
+                               True, "lexxos-jc-esp32p4-m3-dev-flash",
+                               "lexxos-jc-esp32p4-m3-dev-app-flash"),
+    "pico-gb-perf": BuildProfile("pico-gb-perf", "perf-pico-gb", "perf-pico-gb",
+                                 "Pico Game Boy performance build",
+                                 "pico", "dev_pico", ("GAMEBOY",)),
+    "pico-gb-250": BuildProfile("pico-gb-250", "perf-pico-gb-250", "perf-pico-gb-250",
+                                "Pico Game Boy 250 MHz performance build",
+                                "pico", "dev_pico", ("GAMEBOY",)),
+    "pico-gb-250-spi62": BuildProfile("pico-gb-250-spi62", "perf-pico-gb-250-spi62", "perf-pico-gb-250-spi62",
+                                      "Pico Game Boy 250 MHz / ST7735 62 MHz build",
+                                      "pico", "dev_pico", ("GAMEBOY",)),
+    "pico-gb-266": BuildProfile("pico-gb-266", "perf-pico-gb-266", "perf-pico-gb-266",
+                                "Pico Game Boy 266 MHz performance build",
+                                "pico", "dev_pico", ("GAMEBOY",)),
+}
+
+ALIASES: dict[str, list[str]] = {
+    "all": ["host", "sim", "pico", "picocalc-pico-w", "stm32", "esp32", "cardputer", "jc-esp32p4"],
+    "all-full": ["host-full", "sim-full", "pico-full", "stm32-full"],
+    "all-native": ["host", "sim", "pico", "picocalc-pico-w", "stm32"],
+    "native": ["host", "sim", "pico", "picocalc-pico-w", "stm32"],
+    "pico-boards": ["pico", "picocalc-pico-w", "picocalc-pico2w"],
+    "picocalc": ["picocalc-pico-w", "picocalc-pico2w"],
+    "stm32f407": ["stm32"],
+    "m5stack-basic": ["esp32"],
+    "m5stack": ["esp32"],
+    "m5stack-all": ["esp32", "cardputer"],
+    "espidf": ["esp32", "cardputer", "jc-esp32p4"],
+    "esp32s3": ["cardputer"],
+    "esp32p4": ["jc-esp32p4"],
+    "jc-esp32p4-m3-dev": ["jc-esp32p4"],
+    "gb-perf": ["pico-gb-perf"],
+}
+
+
+
+def register_public_profiles() -> None:
+    """Use the public preset catalog as the source of board/flavor targets."""
+    root = Path(__file__).resolve().parent.parent
+    catalog = json.loads((root / "CMakePresets.json").read_text())
+    for preset in catalog["configurePresets"]:
+        name = preset["name"]
+        if preset.get("hidden") or not name.startswith(("minimal-", "full-")):
+            continue
+        variables = preset["cacheVariables"]
+        platform = variables["LEXXOS_PLATFORM"]
+        espidf = platform == "espidf"
+        PROFILES[name] = BuildProfile(name, name, name, preset["displayName"],
+                                     platform, variables["LEXXOS_BOARD"], requires_espidf=espidf,
+                                     flash_preset=name + "-flash" if espidf else None,
+                                     app_flash_preset=name + "-app-flash" if espidf else None)
+    ALIASES["all-minimal"] = [name for name in PROFILES if name.startswith("minimal-")]
+    ALIASES["all-full"] = [name for name in PROFILES if name.startswith("full-")]
+    for board in BOARDS:
+        ALIASES.setdefault(board, [f"minimal-{board}"])
+    ALIASES["all"] = ALIASES["all-minimal"]
+    ALIASES["all-native"] = [name for name in ALIASES["all"] if not PROFILES[name].requires_espidf]
+    ALIASES["native"] = ALIASES["all-native"]
+
+
+register_public_profiles()
+
+
+def repository_root() -> Path:
+    script_path = Path(__file__).resolve()
+    root = script_path.parent.parent
+    if not (root / "CMakeLists.txt").is_file() or not (root / "CMakePresets.json").is_file():
+        raise SystemExit(f"lexxos-build: repository root was not found near {script_path}")
+    return root
+
+
+def expand_targets(targets: Iterable[str], skip_esp32: bool) -> list[BuildProfile]:
+    expanded_names: list[str] = []
+    for target in targets:
+        if target in ALIASES:
+            expanded_names.extend(ALIASES[target])
+        elif target in PROFILES:
+            expanded_names.append(target)
+        else:
+            known = ", ".join(sorted([*PROFILES.keys(), *ALIASES.keys()]))
+            raise SystemExit(f"lexxos-build: unknown target '{target}'. Known targets: {known}")
+
+    result: list[BuildProfile] = []
+    seen: set[str] = set()
+    for name in expanded_names:
+        profile = PROFILES[name]
+        if skip_esp32 and profile.requires_espidf:
+            continue
+        if profile.name in seen:
+            continue
+        seen.add(profile.name)
+        result.append(profile)
+
+    if not result:
+        raise SystemExit("lexxos-build: no targets selected")
+    return result
+
+
+def print_profiles() -> None:
+    width = max(len(name) for name in [*PROFILES.keys(), *ALIASES.keys()])
+    print("Targets:")
+    for name in sorted(PROFILES):
+        profile = PROFILES[name]
+        extra: list[str] = []
+        if profile.requires_espidf:
+            extra.append("requires ESP-IDF")
+        if profile.features:
+            extra.append("features: " + ",".join(profile.features))
+        suffix = f" [{' | '.join(extra)}]" if extra else ""
+        print(f"  {name:<{width}}  {profile.platform:<7} {profile.board:<26} {profile.description}{suffix}")
+    print("\nAliases:")
+    for alias in sorted(ALIASES):
+        print(f"  {alias:<{width}}  {', '.join(ALIASES[alias])}")
+    print("\nPlatforms:")
+    for name in sorted(PLATFORMS):
+        print(f"  {name:<{width}}  {PLATFORMS[name]}")
+    print("\nBoards:")
+    for name in sorted(BOARDS):
+        print(f"  {name:<{width}}  {BOARDS[name]}")
+    print("\nFeature flags:")
+    for feature in FEATURES:
+        print(f"  LEXXOS_FEATURE_{feature}")
+
+
+def default_espidf_paths() -> list[Path]:
+    home = Path.home()
+    return [
+        home / ".espressif" / "v6.0.2" / "esp-idf",
+        home / ".espressif" / "esp-idf",
+        home / "esp" / "esp-idf",
+    ]
+
+
+def resolve_espidf_export_script(args: argparse.Namespace) -> Path:
+    candidates: list[Path] = []
+    for value in [args.idf_path, os.environ.get("LEXXOS_IDF_PATH"), os.environ.get("IDF_PATH")]:
+        if value:
+            candidates.append(Path(value).expanduser() / "export.sh")
+    candidates.extend(path / "export.sh" for path in default_espidf_paths())
+
+    for export_script in candidates:
+        if export_script.is_file():
+            return export_script
+
+    candidate_text = "\n".join(f"  {path}" for path in candidates)
+    raise SystemExit(
+        "lexxos-build: ESP32 build requires ESP-IDF export.sh, but it was not found.\n"
+        "Set IDF_PATH or LEXXOS_IDF_PATH to the ESP-IDF directory, or pass --idf-path.\n"
+        "Checked:\n"
+        f"{candidate_text}"
+    )
+
+
+def require_active_espidf_environment() -> None:
+    if os.environ.get("IDF_PATH"):
+        return
+    raise SystemExit(
+        "lexxos-build: ESP32 build requires an active ESP-IDF environment when --no-espidf-export is used.\n"
+        "Load it first, for example:\n"
+        "  . \"$IDF_PATH/export.sh\""
+    )
+
+
+def resolve_executable(command: str) -> str | None:
+    if os.sep in command or (os.altsep and os.altsep in command):
+        path = Path(command).expanduser()
+        if path.is_file() and os.access(path, os.X_OK):
+            return str(path)
+        return None
+    return shutil.which(command)
+
+
+def check_file(name: str, path: Path) -> PreflightCheck:
+    path = path.expanduser()
+    if path.is_file():
+        return PreflightCheck(name, True, str(path))
+    return PreflightCheck(name, False, f"not found: {path}")
+
+
+def check_directory(name: str, path: Path) -> PreflightCheck:
+    path = path.expanduser()
+    if path.is_dir():
+        return PreflightCheck(name, True, str(path))
+    return PreflightCheck(name, False, f"not found: {path}")
+
+
+def check_executable(name: str, command: str) -> PreflightCheck:
+    resolved = resolve_executable(command)
+    if resolved:
+        return PreflightCheck(name, True, resolved)
+    return PreflightCheck(name, False, f"not found in PATH: {command}")
+
+
+def default_pico_sdk_path() -> Path:
+    return Path(os.environ.get("PICO_SDK_PATH", Path.home() / ".pico-sdk" / "sdk" / "2.2.0"))
+
+
+def default_pico_toolchain_path() -> Path:
+    return Path(os.environ.get(
+        "PICO_TOOLCHAIN_PATH",
+        os.environ.get("LEXXOS_ARM_TOOLCHAIN_PATH", str(Path.home() / ".pico-sdk" / "toolchain" / "14_2_Rel1")),
+    ))
+
+
+def run_preflight(root: Path, profiles: list[BuildProfile], args: argparse.Namespace) -> bool:
+    checks: list[PreflightCheck] = [
+        check_file("root CMakeLists.txt", root / "CMakeLists.txt"),
+        check_file("root CMakePresets.json", root / "CMakePresets.json"),
+        check_executable("cmake", args.cmake_bin),
+        check_executable("ninja", "ninja"),
+    ]
+
+    if any(profile.platform in ("pico", "stm32f4") for profile in profiles):
+        checks.append(check_directory("FreeRTOS", root / "third_party" / "FreeRTOS"))
+
+    if any(profile.platform == "pico" for profile in profiles):
+        checks.append(check_directory("Pico SDK", default_pico_sdk_path()))
+        checks.append(check_directory("Pico toolchain", default_pico_toolchain_path()))
+
+    if any(profile.platform == "stm32f4" for profile in profiles):
+        checks.append(check_directory("ARM toolchain", default_pico_toolchain_path()))
+
+    if any(profile.requires_espidf for profile in profiles):
+        if args.no_espidf_export:
+            idf_path = os.environ.get("IDF_PATH")
+            checks.append(PreflightCheck("active ESP-IDF", bool(idf_path), idf_path or "IDF_PATH is not set"))
+        else:
+            try:
+                checks.append(PreflightCheck("ESP-IDF export.sh", True, str(resolve_espidf_export_script(args))))
+            except SystemExit as error:
+                checks.append(PreflightCheck("ESP-IDF export.sh", False, str(error).splitlines()[0]))
+
+    print("Preflight checks:")
+    print("  targets:", ", ".join(profile.name for profile in profiles))
+    for check in checks:
+        status = "ok" if check.ok else "missing"
+        print(f"  [{status:<7}] {check.name:<24} {check.detail}")
+    return all(check.ok for check in checks)
+
+
+def shell_command(command: list[str]) -> str:
+    return " ".join(shlex.quote(part) for part in command)
+
+
+def run_commands(commands: list[list[str]], cwd: Path, dry_run: bool, espidf_export_script: Path | None = None) -> None:
+    if espidf_export_script is None:
+        for command in commands:
+            print("+", " ".join(command))
+            if dry_run:
+                continue
+            subprocess.run(command, cwd=cwd, check=True)
+        return
+
+    print("+", f". {espidf_export_script}")
+    for command in commands:
+        print("+", " ".join(command))
+    if dry_run:
+        return
+
+    shell_parts = [f". {shlex.quote(str(espidf_export_script))}"]
+    shell_parts.extend(shell_command(command) for command in commands)
+    shell = os.environ.get("SHELL") or "/bin/sh"
+    subprocess.run([shell, "-lc", " && ".join(shell_parts)], cwd=cwd, check=True)
+
+
+def build_commands(profile: BuildProfile, args: argparse.Namespace) -> list[list[str]]:
+    commands: list[list[str]] = []
+
+    cmake = args.cmake_bin
+    if not args.build_only:
+        commands.append([cmake, "--preset", profile.configure_preset])
+
+    if not args.configure_only:
+        command = [cmake, "--build", "--preset", profile.build_preset]
+        if args.clean_first:
+            command.append("--clean-first")
+        commands.append(command)
+
+    if args.flash:
+        if profile.flash_preset is None:
+            raise SystemExit(f"lexxos-build: --flash is not supported for the {profile.name} target")
+        commands.append([cmake, "--build", "--preset", profile.flash_preset])
+
+    if args.app_flash:
+        if profile.app_flash_preset is None:
+            raise SystemExit(f"lexxos-build: --app-flash is not supported for the {profile.name} target")
+        commands.append([cmake, "--build", "--preset", profile.app_flash_preset])
+
+    return commands
+
+
+def configure_and_build(profile: BuildProfile, args: argparse.Namespace, root: Path) -> None:
+    espidf_export_script: Path | None = None
+    if profile.requires_espidf:
+        if args.no_espidf_export:
+            require_active_espidf_environment()
+        else:
+            espidf_export_script = resolve_espidf_export_script(args)
+
+    run_commands(build_commands(profile, args), root, args.dry_run, espidf_export_script)
+
+
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="lexxos-build",
+        description="Build LexxOS root CMake presets from any repository subdirectory.",
+    )
+    parser.add_argument(
+        "targets",
+        nargs="*",
+        help="Targets or aliases to build. Use 'list' to show targets, platforms, boards and features, or 'check [targets...]' to run preflight checks. Default: all-native.",
+    )
+    parser.add_argument("--flavor", choices=("minimal", "full"), help="Select a public flavor for every requested board")
+    parser.add_argument("--keep-going", action="store_true", help="Build all selected targets and report failures at the end")
+    parser.add_argument("--configure-only", action="store_true", help="Run only cmake --preset for selected targets.")
+    parser.add_argument("--build-only", action="store_true",
+                        help="Run only cmake --build --preset for selected targets.")
+    parser.add_argument("--clean-first", action="store_true", help="Pass --clean-first to cmake --build.")
+    parser.add_argument("--skip-esp32", action="store_true",
+                        help="Compatibility alias for --skip-espidf.")
+    parser.add_argument("--skip-espidf", action="store_true",
+                        help="Skip ESP-IDF targets when an alias expands to them.")
+    parser.add_argument("--flash", action="store_true",
+                        help="After building a supported ESP-IDF target, run its flash preset.")
+    parser.add_argument("--app-flash", action="store_true",
+                        help="After building a supported ESP-IDF target, run its app-flash preset.")
+    parser.add_argument("--dry-run", action="store_true", help="Print commands without running them.")
+    parser.add_argument(
+        "--idf-path",
+        default=os.environ.get("LEXXOS_IDF_PATH") or os.environ.get("IDF_PATH"),
+        help="ESP-IDF directory used to source export.sh. Defaults to LEXXOS_IDF_PATH, IDF_PATH, or common install paths.",
+    )
+    parser.add_argument(
+        "--no-espidf-export",
+        action="store_true",
+        help="Do not source ESP-IDF export.sh automatically; require the current shell environment to be active.",
+    )
+    parser.add_argument(
+        "--cmake-bin",
+        default=os.environ.get("LEXXOS_CMAKE_BIN", "cmake"),
+        help="CMake executable to use. Defaults to LEXXOS_CMAKE_BIN or cmake.",
+    )
+    args = parser.parse_args()
+
+    if args.configure_only and args.build_only:
+        parser.error("--configure-only and --build-only cannot be used together")
+    if (args.flash or args.app_flash) and args.configure_only:
+        parser.error("--flash/--app-flash cannot be used together with --configure-only")
+    return args
+
+
+def main() -> int:
+    args = parse_arguments()
+    targets = args.targets or ["all-native"]
+    if targets == ["list"]:
+        print_profiles()
+        return 0
+
+    if targets[0] == "check":
+        check_targets = targets[1:] or ["all-native"]
+        root = repository_root()
+        skip_espidf = args.skip_esp32 or args.skip_espidf
+        profiles = expand_targets(check_targets, skip_espidf)
+        if args.flavor:
+            profiles = list({p.board: PROFILES[f"{args.flavor}-{p.board}"] for p in profiles}.values())
+        if run_preflight(root, profiles, args):
+            return 0
+        return 1
+
+    root = repository_root()
+    skip_espidf = args.skip_esp32 or args.skip_espidf
+    profiles = expand_targets(targets, skip_espidf)
+    if args.flavor:
+        profiles = list({p.board: PROFILES[f"{args.flavor}-{p.board}"] for p in profiles}.values())
+    failures = []
+    for profile in profiles:
+        print(f"\n==> {profile.name}: {profile.configure_preset} / {profile.build_preset}", flush=True)
+        try:
+            configure_and_build(profile, args, root)
+        except (subprocess.CalledProcessError, SystemExit) as error:
+            if not args.keep_going:
+                raise
+            failures.append(profile.name)
+            print(f"FAILED {profile.name}: {error}", file=sys.stderr)
+    if failures:
+        print("Failed targets: " + ", ".join(failures), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except subprocess.CalledProcessError as error:
+        raise SystemExit(error.returncode) from error

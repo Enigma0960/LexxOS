@@ -1,0 +1,40 @@
+name: dev-sim
+
+uart:
+  console:
+    port: 0
+    tx: 0
+    rx: 1
+    baud: 115200
+
+sd:
+  sd0:
+    device_id: 0
+    detect_pin: 22
+    detect_active_low: true
+    block_size: 512
+
+i2c:
+  debug:
+    bus: 0
+    sda: 20
+    scl: 21
+    devices:
+      - address: 0x3C
+        type: ssd1306
+
+display:
+  emu_display:
+    type: rgb565
+    default_width: 320
+    default_height: 320
+
+audio:
+  emu_pwm_audio:
+    mode: pwm
+  emu_adc_audio:
+    mode: adc
+
+gpio:
+  led:
+    pin: 25

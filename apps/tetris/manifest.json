@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.apps.tetris",
+  "name": "Lexx Tetris",
+  "version": "1.0.0",
+  "description": "Classic falling-block puzzle for the console",
+  "author": "Igor Supryadkin",
+  "license": "Apache License",
+  "contacts": {
+    "repository": "https://github.com/Enigma0960/LexxOS"
+  }
+}

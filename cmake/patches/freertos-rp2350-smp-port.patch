@@ -1,0 +1,46 @@
+diff --git a/non_secure/port.c b/non_secure/port.c
+--- a/non_secure/port.c
++++ b/non_secure/port.c
+@@ -156,10 +156,13 @@ typedef void ( * portISR_t )( void );
+  * @brief Constants required to manipulate the FPU.
+  */
+ #define portCPACR               ( ( volatile uint32_t * ) 0xe000ed88 )              /* Coprocessor Access Control Register. */
++#define portNSACR               ( ( volatile uint32_t * ) 0xe000ed8c )              /* Non-secure Access Control Register. */
+ #define portCPACR_CP10_VALUE    ( 3UL )
+ #define portCPACR_CP11_VALUE    portCPACR_CP10_VALUE
+ #define portCPACR_CP10_POS      ( 20UL )
+ #define portCPACR_CP11_POS      ( 22UL )
++#define portNSACR_CP10_BIT      ( 1UL << 10UL )
++#define portNSACR_CP11_BIT      ( 1UL << 11UL )
+ 
+ #define portFPCCR               ( ( volatile uint32_t * ) 0xe000ef34 )              /* Floating Point Context Control Register. */
+ #define portFPCCR_ASPEN_POS     ( 31UL )
+@@ -1003,6 +1011,13 @@ static void prvTaskExitError( void )
+ 
+     static void prvSetupFPU( void ) /* PRIVILEGED_FUNCTION */
+     {
++        #if ( configRUN_FREERTOS_SECURE_ONLY == 1 )
++        {
++            /* Allow Pico SDK task and interrupt contexts to access the FPU. */
++            *( portNSACR ) |= ( portNSACR_CP10_BIT | portNSACR_CP11_BIT );
++        }
++        #endif
++
+         #if ( configENABLE_TRUSTZONE == 1 )
+         {
+             /* Enable non-secure access to the FPU. */
+@@ -1017,6 +1032,9 @@ static void prvTaskExitError( void )
+                             ( portCPACR_CP11_VALUE << portCPACR_CP11_POS )
+                             );
+ 
++        __asm volatile ( "dsb" ::: "memory" );
++        __asm volatile ( "isb" ::: "memory" );
++
+         /* ASPEN = 1 ==> Hardware should automatically preserve floating point
+          * context on exception entry and restore on exception return.
+          * LSPEN = 1 ==> Enable lazy context save of FP state. */
+@@ -1940,4 +1977,3 @@ BaseType_t xPortStartScheduler( void )
+         ucPrimaryCoreNum = configTICK_CORE;
+         configASSERT( get_core_num() == 0 ); /* we must be started on core 0 */
+-        multicore_reset_core1();
+         multicore_launch_core1( prvDisableInterruptsAndPortStartSchedulerOnCore );

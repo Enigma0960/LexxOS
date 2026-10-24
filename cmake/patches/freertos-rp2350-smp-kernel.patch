@@ -1,0 +1,18 @@
+diff --git a/tasks.c b/tasks.c
+--- a/tasks.c
++++ b/tasks.c
+@@ -356,11 +356,8 @@
+         }
+         else                                                                                \
+         {                                                                                   \
+-            /* Request other core to yield if it is not requested before. */                 \
+-            if( pxCurrentTCBs[ ( xCoreID ) ]->xTaskRunState != taskTASK_SCHEDULED_TO_YIELD ) \
+-            {                                                                               \
+-                portYIELD_CORE( xCoreID );                                                  \
+-                pxCurrentTCBs[ ( xCoreID ) ]->xTaskRunState = taskTASK_SCHEDULED_TO_YIELD;  \
+-            }                                                                               \
++            /* A doorbell can be consumed before PendSV runs during core startup. */         \
++            portYIELD_CORE( xCoreID );                                                      \
++            pxCurrentTCBs[ ( xCoreID ) ]->xTaskRunState = taskTASK_SCHEDULED_TO_YIELD;      \
+         }                                                                                   \
+     } while( 0 )

@@ -1,0 +1,11 @@
+LexxOS
+Copyright 2026 Igor Supryadkin and LexxOS contributors
+Project contact: Igor Supryadkin <igorsupr@gmail.com>
+
+Original LexxOS project code is licensed under the Apache License, Version 2.0.
+See LICENSE. Files with their own third-party notices and external dependencies
+remain subject to their respective licenses; see THIRD_PARTY_NOTICES.md.
+
+This product includes BMI270 configuration data from Bosch Sensortec BMI270
+SensorAPI, Copyright (c) 2023 Bosch Sensortec GmbH, licensed under BSD-3-Clause.
+See licenses/BMI270-BSD-3-Clause.txt.
