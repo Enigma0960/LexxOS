@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include <lexxos/vfs/detail/vfs_autostart.h>
 #include <lexxos/vfs/detail/vfs_mount_table.h>
 #include <lexxos/vfs/detail/vfs_pseudo_files.h>
 #include <lexxos/vfs/detail/vfs_string.h>
@@ -292,6 +293,12 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
     OpenMode mode,
     FileHandle& output) {
 	output.close();
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> storage{};
+		if (!detail::autostartStoragePathFor(path, storage)) return OpenStatus::InvalidPath;
+		if (mode != OpenMode::Read) detail::ensureAutostartStorage(*this);
+		return open(storage.data(), mode, output);
+	}
 	if (path.empty() || path[0] != '/' || path.size() + 1 > maxPathLength) {
 		return OpenStatus::InvalidPath;
 	}
@@ -448,6 +455,12 @@ lexxos::vfs::WriteStatus lexxos::vfs::Vfs::writeText(
     std::string_view path,
     std::string_view text,
     WriteMode mode) {
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> storage{};
+		if (!detail::autostartStoragePathFor(path, storage)) return WriteStatus::InvalidPath;
+		detail::ensureAutostartStorage(*this);
+		return writeText(storage.data(), text, mode);
+	}
 	if (path.empty() || path[0] != '/' || path.size() + 1 > maxPathLength) {
 		return WriteStatus::InvalidPath;
 	}
