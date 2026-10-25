@@ -18,6 +18,7 @@
 #include <lexxos/feature.h>
 #include <lexxos/kernel/scheduler.h>
 #include <lexxos/kernel/system.h>
+#include <lexxos/launch/shortcuts.h>
 #include <lexxos/os/operating_system.h>
 #include <lexxos/platform/platform.h>
 #include <lexxos/platform/platform_services.h>
@@ -802,10 +803,12 @@ int shellProgram(lexxos::os::AppContext& context, lexxos::program::ProgramInvoca
 	discardPendingPicoCalcShellInput(context);
 #endif
 
+	lexxos::launch::requestAutostartRun();
 	shell.printPrompt();
 	flushConsoleMirrorForStartup();
 	while (!shell.shouldStop() && !lexxos::kernel::isShutdownRequested()) {
 		bool consumedInput = false;
+		lexxos::launch::pollAutostart(context, platformUptimeMs(context.platform()));
 		auto const focus = currentTaskFocus();
 		if (focus.programFocused()) {
 			// A foreground program owns the terminal input. Do not let the shell
