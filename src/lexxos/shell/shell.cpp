@@ -10,6 +10,7 @@
 #include <lexxos/app/program_input.h>
 #include <lexxos/devices/input_device.h>
 #include <lexxos/io/output_stream.h>
+#include <lexxos/launch/shortcuts.h>
 #include <lexxos/os/operating_system.h>
 #include <lexxos/platform/platform_services.h>
 #include <lexxos/program/program.h>
@@ -643,7 +644,7 @@ void Shell::_executeLine() {
 		return;
 	}
 
-	if (isLexxExecutableToken(_commandArgv[0])) {
+	if (isLexxExecutableToken(_commandArgv[0]) || lexxos::launch::hasShortcutSuffix(_commandArgv[0])) {
 		if (commandArgc >= static_cast<int>(_commandArgv.size())) {
 			writeLine("too many arguments");
 			return;
@@ -651,7 +652,7 @@ void Shell::_executeLine() {
 		for (int index = commandArgc; index > 0; --index) {
 			_commandArgv[static_cast<std::size_t>(index)] = _commandArgv[static_cast<std::size_t>(index - 1)];
 		}
-		_commandArgv[0] = kLexxRunProgramName;
+		_commandArgv[0] = isLexxExecutableToken(_commandArgv[1]) ? kLexxRunProgramName : "link-run";
 		++commandArgc;
 	}
 
