@@ -72,8 +72,9 @@ bool lexxos::vfs::Vfs::list(
 	if (detail::isAutostartPath(path)) {
 		std::array<char, maxPathLength> storage{};
 		if (!detail::autostartStoragePathFor(path, storage)) return false;
-		if (list(storage.data(), visitor, userData)) return true;
-		return path == detail::autostartVirtualPath;
+		Stat backing{};
+		if (!stat(storage.data(), backing)) return path == detail::autostartVirtualPath;
+		return backing.type == NodeType::Directory && list(storage.data(), visitor, userData);
 	}
 	if (auto* mount = findFilesystemByPath(path); mount != nullptr) {
 		return mount->filesystem->list(pathInsideMount(*mount, path), visitor, userData);
@@ -95,6 +96,7 @@ lexxos::vfs::ReadStatus lexxos::vfs::Vfs::readText(
     TextWriter writer,
     void* userData) {
 	if (detail::isAutostartPath(path)) {
+		if (path == detail::autostartVirtualPath) return ReadStatus::IsDirectory;
 		std::array<char, maxPathLength> storage{};
 		if (!detail::autostartStoragePathFor(path, storage)) return ReadStatus::InvalidPath;
 		return readText(storage.data(), writer, userData);
