@@ -70,6 +70,7 @@ set(LEXXOS_PROGRAM_SOURCE_FILES
         lexxos/program/program_manager.cpp
         lexxos/program/program_memory_arena.cpp
         lexxos/program/program_supervisor.cpp
+        lexxos/launch/shortcuts.cpp
         lexxos/external_program/external_program_runner.cpp
         lexxos/apps/programs.cpp
         lexxos/apps/common/core_programs_support.cpp
