@@ -201,7 +201,7 @@ void lexxos::vfs::Vfs::initializePseudoFiles(lexxos::platform::PlatformServices 
 }
 
 bool lexxos::vfs::Vfs::isKnownDirectory(std::string_view path) const {
-	return detail::equals(path, "/") || detail::equals(path, "/dev") || detail::equals(path, "/mnt") || detail::equals(path, "/proc") || detail::equals(path, "/sys") || detail::equals(path, "/tmp");
+	return detail::equals(path, "/") || detail::equals(path, "/dev") || detail::equals(path, "/mnt") || detail::equals(path, "/proc") || detail::equals(path, "/sys") || detail::equals(path, "/sys/autostart") || detail::equals(path, "/tmp");
 }
 
 bool lexxos::vfs::Vfs::isKnownStaticFile(std::string_view path) const {
@@ -233,7 +233,8 @@ bool lexxos::vfs::Vfs::listPseudoDirectory(
 		return listFiles(procFiles, visitor, userData);
 	}
 	if (detail::equals(path, "/sys")) {
-		return listFiles(sysFiles, visitor, userData);
+		return listFiles(sysFiles, visitor, userData)
+		    && detail::visitEntry(visitor, userData, "autostart", NodeType::Directory);
 	}
 	return false;
 }
