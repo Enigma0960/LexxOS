@@ -22,6 +22,17 @@
     "doc": "docs/commands/audio.md"
   },
   {
+    "name": "autostart",
+    "type": "lexxos::apps::filesystem_programs::AutostartProgram",
+    "header": "lexxos/apps/fs/shortcut_programs.h",
+    "sources": [
+      "lexxos/apps/fs/shortcut_programs.cpp"
+    ],
+    "group": "ADMIN",
+    "requires": [],
+    "doc": "docs/commands/autostart.md"
+  },
+  {
     "name": "backlight",
     "type": "lexxos::apps::utility_programs::BacklightProgram",
     "header": "lexxos/apps/utility/backlight_program.h",
@@ -830,6 +841,28 @@
     "group": "APPLICATIONS",
     "requires": [],
     "doc": "docs/commands/lexx-run.md"
+  },
+  {
+    "name": "link-run",
+    "type": "lexxos::apps::filesystem_programs::LinkRunProgram",
+    "header": "lexxos/apps/fs/shortcut_programs.h",
+    "sources": [
+      "lexxos/apps/fs/shortcut_programs.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/link-run.md"
+  },
+  {
+    "name": "ln",
+    "type": "lexxos::apps::filesystem_programs::LinkCreateProgram",
+    "header": "lexxos/apps/fs/shortcut_programs.h",
+    "sources": [
+      "lexxos/apps/fs/shortcut_programs.cpp"
+    ],
+    "group": "UTILITIES",
+    "requires": [],
+    "doc": "docs/commands/ln.md"
   },
   {
     "name": "ls",
