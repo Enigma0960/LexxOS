@@ -26,7 +26,8 @@ inline bool autostartStoragePathFor(std::string_view path,
         return false;
     }
     auto suffix = path.substr(autostartVirtualPath.size());
-    if (suffix.find("//") != std::string_view::npos) {
+    if (suffix.find("//") != std::string_view::npos
+        || suffix.find('\\') != std::string_view::npos) {
         return false;
     }
     for (std::size_t start = 0; start < suffix.size();) {
