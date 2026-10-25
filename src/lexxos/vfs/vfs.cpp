@@ -1,6 +1,7 @@
 #include <lexxos/vfs/vfs.h>
 
 #include <lexxos/platform/platform_services.h>
+#include <lexxos/vfs/detail/vfs_autostart.h>
 #include <lexxos/vfs/detail/vfs_mount_table.h>
 #include <lexxos/vfs/detail/vfs_pseudo_files.h>
 #include <lexxos/vfs/detail/vfs_string.h>
@@ -37,6 +38,10 @@ bool lexxos::vfs::Vfs::isDirectory(std::string_view path) {
 bool lexxos::vfs::Vfs::stat(std::string_view path, Stat& output) {
 	output = {};
 
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> storage{};
+		return detail::autostartStoragePathFor(path, storage) && stat(storage.data(), output);
+	}
 	if (auto* mount = findFilesystemByPath(path); mount != nullptr) {
 		return mount->filesystem->stat(pathInsideMount(*mount, path), output);
 	}
@@ -64,6 +69,12 @@ bool lexxos::vfs::Vfs::list(
     std::string_view path,
     DirectoryVisitor visitor,
     void* userData) {
+	if (detail::isAutostartPath(path)) {
+		std::array<char, maxPathLength> storage{};
+		if (!detail::autostartStoragePathFor(path, storage)) return false;
+		if (list(storage.data(), visitor, userData)) return true;
+		return path == detail::autostartVirtualPath;
+	}
 	if (auto* mount = findFilesystemByPath(path); mount != nullptr) {
 		return mount->filesystem->list(pathInsideMount(*mount, path), visitor, userData);
 	}
@@ -83,6 +94,11 @@ lexxos::vfs::ReadStatus lexxos::vfs::Vfs::readText(
     std::string_view path,
     TextWriter writer,
     void* userData) {
+	if (detail::isAutostartPath(path)) {
+		std::array<char, maxPathLength> storage{};
+		if (!detail::autostartStoragePathFor(path, storage)) return ReadStatus::InvalidPath;
+		return readText(storage.data(), writer, userData);
+	}
 	if (auto* mount = findFilesystemByPath(path); mount != nullptr) {
 		return mount->filesystem->readText(pathInsideMount(*mount, path), writer, userData);
 	}
@@ -101,6 +117,10 @@ lexxos::vfs::ReadStatus lexxos::vfs::Vfs::readText(
 lexxos::vfs::RemoveStatus lexxos::vfs::Vfs::remove(std::string_view path) {
 	if (path.empty() || path[0] != '/') {
 		return RemoveStatus::InvalidPath;
+	}
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> storage{};
+		return detail::autostartStoragePathFor(path, storage) ? remove(storage.data()) : RemoveStatus::InvalidPath;
 	}
 	if (auto* mount = findFilesystemByPath(path); mount != nullptr) {
 		return mount->filesystem->remove(pathInsideMount(*mount, path));
@@ -122,6 +142,12 @@ lexxos::vfs::WriteStatus lexxos::vfs::Vfs::createDirectory(std::string_view path
 		return WriteStatus::InvalidPath;
 	}
 
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> storage{};
+		if (!detail::autostartStoragePathFor(path, storage)) return WriteStatus::InvalidPath;
+		detail::ensureAutostartStorage(*this);
+		return createDirectory(storage.data());
+	}
 	Stat existing{};
 	if (stat(path, existing)) {
 		return existing.type == NodeType::Directory
@@ -143,6 +169,10 @@ lexxos::vfs::WriteStatus lexxos::vfs::Vfs::createDirectory(std::string_view path
 lexxos::vfs::RemoveStatus lexxos::vfs::Vfs::removeDirectory(std::string_view path) {
 	if (path.empty() || path[0] != '/') {
 		return RemoveStatus::InvalidPath;
+	}
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> storage{};
+		return detail::autostartStoragePathFor(path, storage) ? removeDirectory(storage.data()) : RemoveStatus::InvalidPath;
 	}
 	if (auto* mount = findFilesystemByPath(path); mount != nullptr) {
 		return mount->filesystem->removeDirectory(pathInsideMount(*mount, path));
@@ -167,6 +197,22 @@ lexxos::vfs::RenameStatus lexxos::vfs::Vfs::rename(
 	}
 	if (detail::equals(source, target)) {
 		return RenameStatus::Ok;
+	}
+	if (detail::isAutostartPath(source) || detail::isAutostartPath(target)) {
+		if (source == detail::autostartVirtualPath || target == detail::autostartVirtualPath)
+			return RenameStatus::NotWritable;
+		std::array<char, maxPathLength> sourceStore{}, targetStore{};
+		std::string_view from = source, to = target;
+		if (detail::isAutostartPath(source)) {
+			if (!detail::autostartStoragePathFor(source, sourceStore)) return RenameStatus::InvalidPath;
+			from = sourceStore.data();
+		}
+		if (detail::isAutostartPath(target)) {
+			if (!detail::autostartStoragePathFor(target, targetStore)) return RenameStatus::InvalidPath;
+			detail::ensureAutostartStorage(*this);
+			to = targetStore.data();
+		}
+		return rename(from, to);
 	}
 
 	auto* sourceMount = findFilesystemByPath(source);
