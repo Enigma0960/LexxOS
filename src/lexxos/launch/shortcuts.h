@@ -26,7 +26,10 @@ struct Shortcut {
     std::uint32_t delayMs{0};
 };
 
-bool hasShortcutSuffix(std::string_view path);
+inline bool hasShortcutSuffix(std::string_view path) {
+    return path.size() > shortcutSuffix.size()
+        && path.substr(path.size() - shortcutSuffix.size()) == shortcutSuffix;
+}
 bool loadShortcut(lexxos::vfs::Vfs& vfs, std::string_view path, Shortcut& shortcut);
 lexxos::vfs::WriteStatus saveShortcut(lexxos::vfs::Vfs& vfs,
     std::string_view path, Shortcut const& shortcut);
