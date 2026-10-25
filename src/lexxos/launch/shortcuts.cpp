@@ -90,11 +90,6 @@ void match(lexxos::program::ProgramProcessSnapshot const& p, void* userData) {
 }
 }
 
-bool hasShortcutSuffix(std::string_view path) {
-    return path.size() > shortcutSuffix.size()
-        && path.substr(path.size() - shortcutSuffix.size()) == shortcutSuffix;
-}
-
 bool loadShortcut(lexxos::vfs::Vfs& vfs, std::string_view path, Shortcut& shortcut) {
     shortcut = {};
     if (!hasShortcutSuffix(path)) return false;
