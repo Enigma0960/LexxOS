@@ -6,6 +6,8 @@
 #include <string_view>
 
 #include <lexxos/apps/common/core_programs_support.h>
+#include <lexxos/io/file_input_stream.h>
+#include <lexxos/io/input_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/os/app_context.h>
 #include <lexxos/program/program_memory_arena.h>
@@ -27,12 +29,12 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec hexdumpArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "optional readable VFS file; stdin is used when omitted",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = false,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "optional readable VFS file; stdin is used when omitted",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = false,
 	     },
 	};
 
@@ -73,6 +75,7 @@ namespace {
 				context.writeLine(": read failed");
 				return false;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
@@ -86,6 +89,7 @@ namespace {
 				} else {
 					context.write("  ");
 				}
+
 				context.write(index == 7 ? "  " : " ");
 			}
 
@@ -96,10 +100,12 @@ namespace {
 				char const character = isPrintableAscii(value) ? static_cast<char>(value) : '.';
 				context.write(std::string_view{&character, 1});
 			}
+
 			context.writeLine("|");
 
 			offset += static_cast<std::uint32_t>(bytesRead);
 		}
+
 		return true;
 	}
 
@@ -155,6 +161,7 @@ int HexdumpProgram::run(
 		context.writeLine(lexxos::vfs::toString(input.status()));
 		return 1;
 	}
+
 	return dumpInputStream(context, "hexdump", input, *buffer) ? 0 : 1;
 }
 

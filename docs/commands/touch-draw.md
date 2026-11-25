@@ -1,6 +1,6 @@
 # `touch-draw`
 
-draw with one or more fingers.
+Рисует по событиям сенсорного экрана.
 
 ## Справка shell
 

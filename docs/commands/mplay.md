@@ -1,6 +1,6 @@
 # `mplay`
 
-MIDI player.
+Проигрывает MIDI.
 
 ## Поведение
 

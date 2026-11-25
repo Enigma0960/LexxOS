@@ -4,64 +4,72 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <lexxos/app/console_input.h>
+#include <lexxos/app/console_input_service.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/kernel/scheduler.h>
 #include <lexxos/kernel/system.h>
+#include <lexxos/os/app_context.h>
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::terminal {
+
 namespace {
 
-	bool readConsoleCharBlocking(char& value) {
-		auto const& platform = lexxos::platform::services();
-		if (platform.console.readChar == nullptr && lexxos::app::console_input::pendingInjected() == 0) {
+	bool readConsoleCharBlocking(lexxos::platform::PlatformServices const& platform, lexxos::app::ConsoleInputService& input, char& value) {
+		if (platform.console.readChar == nullptr && input.pendingInjected() == 0) {
 			return false;
 		}
+
 		while (!lexxos::kernel::isShutdownRequested()) {
-			if (lexxos::app::console_input::readChar(platform, value)) {
+			if (input.readChar(platform, value)) {
 				return true;
 			}
+
 			lexxos::kernel::sleepMs(1);
 		}
+
 		return false;
 	}
 
-	bool readConsoleCharWithTimeout(char& value, std::uint32_t timeoutMs) {
-		auto const& platform = lexxos::platform::services();
+	bool readConsoleCharWithTimeout(lexxos::platform::PlatformServices const& platform, lexxos::app::ConsoleInputService& input, char& value, std::uint32_t timeoutMs) {
 		if (platform.clock.uptimeMs == nullptr) {
 			return false;
 		}
 
 		auto const start = platform.clock.uptimeMs();
 		while (!lexxos::kernel::isShutdownRequested()) {
-			if (lexxos::app::console_input::readChar(platform, value)) {
+			if (input.readChar(platform, value)) {
 				return true;
 			}
+
 			if ((platform.clock.uptimeMs() - start) >= timeoutMs) {
 				return false;
 			}
+
 			lexxos::kernel::sleepMs(1);
 		}
+
 		return false;
 	}
 
-	Key readCsiSequence() {
+	Key readCsiSequence(lexxos::platform::PlatformServices const& platform, lexxos::app::ConsoleInputService& input) {
 		char value{};
-		if (!readConsoleCharWithTimeout(value, 20)) {
+		if (!readConsoleCharWithTimeout(platform, input, value, 20)) {
 			return {.code = KeyCode::Escape};
 		}
 
 		if (value >= '0' && value <= '9') {
 			std::uint16_t parameter = static_cast<std::uint16_t>(value - '0');
-			while (readConsoleCharWithTimeout(value, 20)) {
+			while (readConsoleCharWithTimeout(platform, input, value, 20)) {
 				if (value >= '0' && value <= '9') {
 					parameter = static_cast<std::uint16_t>((parameter * 10U) + static_cast<std::uint16_t>(value - '0'));
 					continue;
 				}
+
 				if (value == ';') {
 					continue;
 				}
+
 				if (value != '~') {
 					return {.code = KeyCode::Unknown};
 				}
@@ -83,6 +91,7 @@ namespace {
 						return {.code = KeyCode::Unknown};
 				}
 			}
+
 			return {.code = KeyCode::Unknown};
 		}
 
@@ -104,9 +113,9 @@ namespace {
 		}
 	}
 
-	Key readSs3Sequence() {
+	Key readSs3Sequence(lexxos::platform::PlatformServices const& platform, lexxos::app::ConsoleInputService& input) {
 		char value{};
-		if (!readConsoleCharWithTimeout(value, 20)) {
+		if (!readConsoleCharWithTimeout(platform, input, value, 20)) {
 			return {.code = KeyCode::Escape};
 		}
 
@@ -152,9 +161,9 @@ bool isPrintableAscii(Key const& key) {
 	return key.code == KeyCode::Character && value >= 0x20U && value <= 0x7EU;
 }
 
-Key readKey() {
+Key readKey(lexxos::platform::PlatformServices const& platform, lexxos::app::ConsoleInputService& input) {
 	char value{};
-	if (!readConsoleCharBlocking(value)) {
+	if (!readConsoleCharBlocking(platform, input, value)) {
 		return {.code = KeyCode::Unknown};
 	}
 
@@ -175,15 +184,18 @@ Key readKey() {
 			return {.code = KeyCode::Backspace};
 		case '\x1B': {
 			char next{};
-			if (!readConsoleCharWithTimeout(next, 20)) {
+			if (!readConsoleCharWithTimeout(platform, input, next, 20)) {
 				return {.code = KeyCode::Escape};
 			}
+
 			if (next == '[') {
-				return readCsiSequence();
+				return readCsiSequence(platform, input);
 			}
+
 			if (next == 'O') {
-				return readSs3Sequence();
+				return readSs3Sequence(platform, input);
 			}
+
 			return {.code = KeyCode::Escape};
 		}
 		default:
@@ -217,6 +229,14 @@ void hideCursor(lexxos::io::OutputStream& output) {
 
 void showCursor(lexxos::io::OutputStream& output) {
 	output.write("\x1B[?25h");
+}
+
+Key readKey() {
+	return readKey(lexxos::platform::services(), lexxos::app::console_input::defaultService());
+}
+
+Key readKey(lexxos::os::AppContext& context) {
+	return readKey(context.platform(), context.consoleInput());
 }
 
 } // namespace lexxos::terminal

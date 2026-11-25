@@ -91,7 +91,7 @@ DerivePointerAlignment: false
 EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: Always
 EnumTrailingComma: Leave # 21
-FixNamespaceComments: true
+FixNamespaceComments: false # CodeUnifier preserves fully qualified namespace comments.
 ForEachMacros: [ ]
 IncludeBlocks: Preserve
 IndentAccessModifiers: false

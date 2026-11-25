@@ -1,7 +1,15 @@
 #include <lexxos/app/detail/picocalc_lcd_console_renderer.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
+
+#include <lexxos/feature.h>
+#include <lexxos/platform/platform_services.h>
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	#include <lexxos/platform/platform.h>
+#endif
 
 namespace {
 
@@ -37,6 +45,10 @@ void fillRgb888Solid(std::uint8_t* output, int pixels, std::uint16_t color) {
 namespace lexxos::app::picocalc_lcd_console::detail {
 
 void LcdConsoleRenderer::initialize(lexxos::os::OperatingSystem& operatingSystem) {
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] initialize entered\n");
+#endif
+
 	_operatingSystem = &operatingSystem;
 	_display = operatingSystem.devices().displayDevice(consoleDisplayName);
 	if (_display == nullptr) {
@@ -48,28 +60,63 @@ void LcdConsoleRenderer::initialize(lexxos::os::OperatingSystem& operatingSystem
 		return;
 	}
 
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] display found; configure layout\n");
+#endif
+
 	if (!_layout.configure(*_display)) {
 		return;
 	}
 
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] reset terminal\n");
+#endif
+
 	_terminal.setRenderHooks(_terminalHooks());
 	_terminal.reset(_layout);
+
+	// The 320px PicoCalc LCD shows only ~53 characters per row. In the
+	// FreeRTOS console, wrap long output instead of moving the entire
+	// horizontal viewport while 'help' is being printed.
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	_terminal.setWrapToVisibleColumns(true);
+#endif
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] terminal reset OK\n");
+#endif
+
 	_markAllRowsDirty();
+
 	_queue.reset();
 	_scrollRedrawRow = invalidRow;
 	_hardwareScroll.resetState(_layout.rows());
 	_statusBar.markDirty();
+
 	_clearDirtyRows();
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] locking display\n");
+#endif
 
 	auto lock = _lockDisplay();
 	if (!lock) {
 		return;
 	}
 
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] clearing display\n");
+#endif
+
 	if (!_display->clear(backgroundColor)) {
 		return;
 	}
+
 	// _hardwareScroll.configure(_display, _layout.rows());
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] configure scroll/status bar\n");
+#endif
 
 	(void) _ensureHardwareScrollConfigured();
 	if (_display->beginFrame()) {
@@ -77,22 +124,31 @@ void LcdConsoleRenderer::initialize(lexxos::os::OperatingSystem& operatingSystem
 		_display->endFrame();
 		(void) _statusBar.takeDirty();
 	}
+
 	_ready = true;
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-renderer] READY\n");
+#endif
 }
 
 void LcdConsoleRenderer::write(std::string_view text) {
 	if (!_ready || text.empty() || _display == nullptr || _operatingSystem == nullptr) {
 		return;
 	}
+
 	if (!_textMode) {
 		return;
 	}
 
+	// Keep each output chunk contiguous and avoid entering/exiting a FreeRTOS
+	// critical section for every character of long commands such as 'help'.
+	_lockState();
 	for (char const value : text) {
-		_lockState();
 		_queue.enqueue(value);
-		_unlockState();
 	}
+
+	_unlockState();
 }
 
 void LcdConsoleRenderer::setStatusBarInfo(lexxos::app::picocalc_lcd_console::StatusBarInfo const& info) {
@@ -112,6 +168,25 @@ void LcdConsoleRenderer::flush() {
 		return;
 	}
 
+	auto const flushStarted = _uptimeMs();
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	_lockState();
+	bool const clearRequested = _clearRequested;
+	_clearRequested = false;
+	bool const refreshRequested = _refreshRequested;
+	_refreshRequested = false;
+	_unlockState();
+	if (refreshRequested) {
+		++_stats.refreshCalls;
+	}
+
+	if (clearRequested && !_clearNow(false)) {
+		_lockState();
+		_clearRequested = true;
+		_unlockState();
+		return;
+	}
+#endif
 	auto lock = _lockDisplay();
 	if (!lock) {
 		++_stats.displayLockFailures;
@@ -128,6 +203,7 @@ void LcdConsoleRenderer::flush() {
 		++_stats.beginFrameFailures;
 		return;
 	}
+
 	++_stats.flushCalls;
 
 	bool didWork = false;
@@ -141,7 +217,11 @@ void LcdConsoleRenderer::flush() {
 		didWork = true;
 	}
 
-	for (int index = 0; index < maxCharactersPerFlush; ++index) {
+	_lockState();
+	auto const characterBudget = charactersPerFlush(_queue.count(), _scrollRedrawRow != invalidRow);
+	_unlockState();
+	auto const parseStarted = _uptimeMs();
+	for (int index = 0; index < characterBudget; ++index) {
 		char value{};
 		_lockState();
 		bool const hasValue = _textMode && _queue.dequeue(value);
@@ -159,7 +239,16 @@ void LcdConsoleRenderer::flush() {
 		++_stats.charactersProcessed;
 		_terminal.writeCharacterWithoutCursor(value);
 		didWork = true;
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+		// Guarantee useful progress even when a presenter preempts this task.
+		// Sample the soft time budget after a minimum batch, not per character.
+		if (index + 1 >= maxCharactersPerFlush && (index + 1) % 64 == 0 && _uptimeMs() - parseStarted >= 4U) {
+			break;
+		}
+#endif
 	}
+
+	_stats.maxParseMs = std::max(_stats.maxParseMs, _uptimeMs() - parseStarted);
 
 	_lockState();
 	bool const queueEmpty = !_queue.hasCharacters();
@@ -179,6 +268,12 @@ void LcdConsoleRenderer::flush() {
 
 	_display->endFrame();
 	_drawCursor = drawCursor;
+	_stats.maxFlushMs = std::max(_stats.maxFlushMs, _uptimeMs() - flushStarted);
+}
+
+std::uint32_t LcdConsoleRenderer::_uptimeMs() const {
+	auto const clock = _operatingSystem->platform().clock.uptimeMs;
+	return clock ? clock() : 0U;
 }
 
 bool LcdConsoleRenderer::update() {
@@ -189,6 +284,11 @@ bool LcdConsoleRenderer::update() {
 void LcdConsoleRenderer::setTextModeEnabled(bool enabled) {
 	bool resetScroll = false;
 	_lockState();
+	if (_textMode == enabled) {
+		_unlockState();
+		return;
+	}
+
 	_textMode = enabled;
 	if (!enabled) {
 		_queue.reset();
@@ -199,6 +299,7 @@ void LcdConsoleRenderer::setTextModeEnabled(bool enabled) {
 		_terminal.onTextModeEnabled();
 		resetScroll = true;
 	}
+
 	_unlockState();
 	// _hardwareScroll.reset(_display, resetScroll);
 
@@ -211,14 +312,29 @@ void LcdConsoleRenderer::setTextModeEnabled(bool enabled) {
 }
 
 void LcdConsoleRenderer::clear() {
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	// Drop text before clear, preserve the new prompt queued after this request.
+	_lockState();
+	_queue.reset();
+	_clearRequested = true;
+	_unlockState();
+#else
+	(void) _clearNow(true);
+#endif
+}
+
+bool LcdConsoleRenderer::_clearNow(bool discardQueuedText) {
 	if (!_ready || _display == nullptr || _operatingSystem == nullptr) {
-		return;
+		return false;
 	}
 
 	++_stats.clearCalls;
 
 	_lockState();
-	_queue.reset();
+	if (discardQueuedText) {
+		_queue.reset();
+	}
+
 	_scrollRedrawRow = invalidRow;
 	_terminal.clear();
 	_unlockState();
@@ -237,6 +353,7 @@ void LcdConsoleRenderer::clear() {
 			if (clearedOnDisplay) {
 				clearedPixels = _textAreaPixelCount();
 			}
+
 			_display->endFrame();
 		} else {
 			++_stats.beginFrameFailures;
@@ -253,7 +370,7 @@ void LcdConsoleRenderer::clear() {
 	}
 
 	if (!clearedOnDisplay) {
-		return;
+		return false;
 	}
 
 	_lockState();
@@ -264,9 +381,17 @@ void LcdConsoleRenderer::clear() {
 	_terminal.screen().clearDirtyCells();
 	_terminal.markCursorDirty(_textMode);
 	_unlockState();
+	return true;
 }
 
 void LcdConsoleRenderer::refresh() {
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	// Focus/input tasks only request work. Rendering stays in console-mirror.
+	_lockState();
+	_refreshRequested = true;
+	_unlockState();
+	return;
+#endif
 	if (!_ready || _display == nullptr || _operatingSystem == nullptr) {
 		return;
 	}
@@ -289,6 +414,7 @@ void LcdConsoleRenderer::refresh() {
 		++_stats.beginFrameFailures;
 		return;
 	}
+
 	++_stats.refreshCalls;
 
 	if (statusBarDirty) {
@@ -308,6 +434,7 @@ void LcdConsoleRenderer::refresh() {
 				if (!_terminal.screen().dirtyCell(logicalColumn, y)) {
 					continue;
 				}
+
 				_drawCell(x, y);
 				_terminal.screen().dirtyCell(logicalColumn, y) = false;
 				++drawn;
@@ -318,6 +445,7 @@ void LcdConsoleRenderer::refresh() {
 			}
 		}
 	}
+
 	_display->endFrame();
 }
 
@@ -329,6 +457,7 @@ void LcdConsoleRenderer::scrollbackUp(int lines) {
 	if (lines <= 0) {
 		return;
 	}
+
 	_lockState();
 	auto const change = _terminal.moveScrollbackView(-lines);
 	_applyViewChange(change);
@@ -340,6 +469,7 @@ void LcdConsoleRenderer::scrollbackDown(int lines) {
 	if (lines <= 0) {
 		return;
 	}
+
 	_lockState();
 	auto const change = _terminal.moveScrollbackView(lines);
 	_applyViewChange(change);
@@ -367,6 +497,7 @@ void LcdConsoleRenderer::scrollbackLeft(int columns) {
 	if (columns <= 0) {
 		return;
 	}
+
 	_lockState();
 	auto const change = _terminal.moveHorizontalView(-columns);
 	_applyViewChange(change);
@@ -378,6 +509,7 @@ void LcdConsoleRenderer::scrollbackRight(int columns) {
 	if (columns <= 0) {
 		return;
 	}
+
 	_lockState();
 	auto const change = _terminal.moveHorizontalView(columns);
 	_applyViewChange(change);
@@ -521,6 +653,7 @@ bool LcdConsoleRenderer::_terminalAdvanceHardwareScroll(void* context, int pixel
 		++renderer._stats.hardwareScrollAdvanceCalls;
 		renderer._stats.hardwareScrollPixels += static_cast<std::uint32_t>(pixels > 0 ? pixels : 0);
 	}
+
 	return advanced;
 }
 
@@ -534,6 +667,7 @@ void LcdConsoleRenderer::_applyViewChange(LcdConsoleScrollbackViewChange const& 
 	if (!change.hideStatusBar) {
 		return;
 	}
+
 	lexxos::app::picocalc_lcd_console::StatusBarInfo bootStatus{};
 	bootStatus.visible = false;
 	_statusBar.set(bootStatus);
@@ -543,17 +677,23 @@ bool LcdConsoleRenderer::_ensureHardwareScrollConfigured() {
 	if (_display == nullptr || _hardwareScroll.enabled()) {
 		return _hardwareScroll.enabled();
 	}
+
 	++_stats.hardwareScrollConfigureCalls;
 	_hardwareScroll.configure(_display, _layout.rows());
 	if (!_hardwareScroll.enabled()) {
 		++_stats.hardwareScrollConfigureFailures;
 	}
+
 	return _hardwareScroll.enabled();
 }
 
 void LcdConsoleRenderer::_lockState() {
 #if defined(LEXXOS_KERNEL_FREERTOS)
 	taskENTER_CRITICAL();
+#elif defined(LEXXOS_PLATFORM_RK3506)
+	// CPU0-only cooperative scheduler: the timer IRQ does not switch tasks.
+	// Exclusive ARM atomics are not safe until normal-memory attributes
+	// are configured by the RK3506 memory-management bootstrap.
 #else
 	while (_stateLock.test_and_set(std::memory_order_acquire)) {
 	}
@@ -563,6 +703,9 @@ void LcdConsoleRenderer::_lockState() {
 void LcdConsoleRenderer::_unlockState() {
 #if defined(LEXXOS_KERNEL_FREERTOS)
 	taskEXIT_CRITICAL();
+#elif defined(LEXXOS_PLATFORM_RK3506)
+	// No task switch occurs inside the renderer's short state updates.
+	// This path must not be called concurrently from IRQ handlers.
 #else
 	_stateLock.clear(std::memory_order_release);
 #endif
@@ -620,11 +763,13 @@ bool LcdConsoleRenderer::_flushPendingScroll(int maxRows) {
 
 bool LcdConsoleRenderer::_drawDirtyRows(int maxRows) {
 	int rowsDrawn = 0;
+	auto const scanStart = _dirtyScanRow;
 	for (int pass = 0; pass < _layout.rows() && rowsDrawn < maxRows; ++pass) {
-		int const row = (_dirtyScanRow + pass) % _layout.rows();
+		int const row = (scanStart + pass) % _layout.rows();
 		if (!_dirtyRows[static_cast<std::size_t>(row)]) {
 			continue;
 		}
+
 		_drawRow(row);
 		_dirtyRows[static_cast<std::size_t>(row)] = false;
 		_dirtyScanRow = (row + 1) % _layout.rows();
@@ -651,6 +796,7 @@ void LcdConsoleRenderer::_shiftDirtyRowsAfterHardwareScroll(int rows) {
 	for (int row = 1; row < rows; ++row) {
 		_dirtyRows[static_cast<std::size_t>(row - 1)] = _dirtyRows[static_cast<std::size_t>(row)];
 	}
+
 	_dirtyRows[static_cast<std::size_t>(rows - 1)] = false;
 	_dirtyScanRow = 0;
 
@@ -708,6 +854,7 @@ int LcdConsoleRenderer::_visibleRowsNeedingClear() const {
 			}
 		}
 	}
+
 	return lastRow + 1;
 }
 
@@ -733,6 +880,7 @@ std::uint32_t LcdConsoleRenderer::_textRowsPixelCount(int rows) const {
 	if (_display == nullptr || rows <= 0) {
 		return 0;
 	}
+
 	if (rows > _layout.rows()) {
 		rows = _layout.rows();
 	}
@@ -741,6 +889,7 @@ std::uint32_t LcdConsoleRenderer::_textRowsPixelCount(int rows) const {
 	if (width <= 0) {
 		return 0;
 	}
+
 	if (width > maxStatusBarPixelWidth) {
 		width = maxStatusBarPixelWidth;
 	}
@@ -752,6 +901,7 @@ bool LcdConsoleRenderer::_clearTextRowsBackground(int rows) {
 	if (_display == nullptr || rows <= 0) {
 		return false;
 	}
+
 	if (rows >= _layout.rows()) {
 		return _clearTextAreaBackground();
 	}
@@ -760,6 +910,7 @@ bool LcdConsoleRenderer::_clearTextRowsBackground(int rows) {
 	if (width <= 0) {
 		return false;
 	}
+
 	if (width > maxStatusBarPixelWidth) {
 		width = maxStatusBarPixelWidth;
 	}
@@ -775,6 +926,7 @@ bool LcdConsoleRenderer::_clearTextRowsBackground(int rows) {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -788,6 +940,7 @@ bool LcdConsoleRenderer::_clearTextAreaBackground() {
 	if (width <= 0 || height <= 0) {
 		return false;
 	}
+
 	if (width > maxStatusBarPixelWidth) {
 		width = maxStatusBarPixelWidth;
 	}
@@ -814,6 +967,7 @@ bool LcdConsoleRenderer::_clearTextAreaBackground() {
 				break;
 			}
 		}
+
 		_display->endRgb565Stream();
 		if (ok) {
 			return true;
@@ -825,15 +979,18 @@ bool LcdConsoleRenderer::_clearTextAreaBackground() {
 	for (int index = 0; index < width; ++index) {
 		row[static_cast<std::size_t>(index)] = backgroundColor;
 	}
+
 	if (!_display->beginRgb565Stream(rect)) {
 		return false;
 	}
+
 	for (int y = 0; y < height; ++y) {
 		if (!_display->writeRgb565Stream(row.data(), width)) {
 			_display->endRgb565Stream();
 			return false;
 		}
 	}
+
 	return _display->endRgb565Stream();
 }
 

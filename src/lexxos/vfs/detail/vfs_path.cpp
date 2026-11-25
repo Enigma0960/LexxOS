@@ -1,9 +1,8 @@
-#include <lexxos/vfs/vfs.h>
-
 #include <array>
 #include <string_view>
 
 #include <lexxos/vfs/detail/vfs_string.h>
+#include <lexxos/vfs/vfs.h>
 #include <lexxos/vfs/vfs_internal_types.h>
 
 namespace {
@@ -29,15 +28,19 @@ bool normalizeOne(
 		if (component.empty() || component == ".") {
 			return true;
 		}
+
 		if (component == "..") {
 			if (componentCount > 0) {
 				--componentCount;
 			}
+
 			return true;
 		}
+
 		if (componentCount >= components.size()) {
 			return false;
 		}
+
 		components[componentCount++] = component;
 		return true;
 	};
@@ -48,15 +51,19 @@ bool normalizeOne(
 			while (start < text.size() && isSlash(text[start])) {
 				++start;
 			}
+
 			std::size_t end = start;
 			while (end < text.size() && !isSlash(text[end])) {
 				++end;
 			}
+
 			if (!addComponent(text.substr(start, end - start))) {
 				return false;
 			}
+
 			start = end;
 		}
+
 		return true;
 	};
 
@@ -68,6 +75,7 @@ bool normalizeOne(
 		if (!scan(base)) {
 			return false;
 		}
+
 		if (!scan(input)) {
 			return false;
 		}
@@ -82,10 +90,12 @@ bool normalizeOne(
 		if (index > 0 && !output.append('/')) {
 			return false;
 		}
+
 		if (!output.append(components[index])) {
 			return false;
 		}
 	}
+
 	return true;
 }
 

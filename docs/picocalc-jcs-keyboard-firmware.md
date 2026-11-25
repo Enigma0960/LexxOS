@@ -1,4 +1,4 @@
-# PicoCalc JCS keyboard/southbridge firmware
+# Прошивка JCS для клавиатуры и STM32 PicoCalc
 
 Ссылка на прошивку [picocalc_BIOS](https://git.jcsmith.fr/jackcartersmith/picocalc_BIOS).
 Зеркало [picocalc_southbridge](https://github.com/shtirlic/picocalc_southbridge)

@@ -7,26 +7,27 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::picocalc_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec beepArguments[] = {
 	    {
-         .name = "frequency",
-         .shortName = 'f',
-         .valueName = "hz",
-         .help = "PWM beep frequency in Hz",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "frequency",
+	     .shortName = 'f',
+	     .valueName = "hz",
+	     .help = "PWM beep frequency in Hz",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	    {
-         .name = "duration",
-         .shortName = 'd',
-         .valueName = "ms",
-         .help = "beep duration in milliseconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "duration",
+	     .shortName = 'd',
+	     .valueName = "ms",
+	     .help = "beep duration in milliseconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	};
 
@@ -62,6 +63,7 @@ int BeepProgram::run(lexxos::os::AppContext& context,
 		context.writeErrorLine("beep: invalid --frequency");
 		return 2;
 	}
+
 	if (!parseOptionalUnsignedArgument(arguments, "duration", durationMs)
 	    || durationMs == 0
 	    || durationMs > detail::maxBeepDurationMs) {

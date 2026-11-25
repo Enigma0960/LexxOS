@@ -7,6 +7,7 @@
 #include <lexxos/platform/platform.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint8_t bmi270ChipId = 0x24;
@@ -72,6 +73,7 @@ bool Bmi270Sensor::initialize() {
 		_state = SensorState::Fault;
 		return false;
 	}
+
 	_state = SensorState::Ready;
 	return poll();
 }
@@ -110,6 +112,7 @@ bool Bmi270Sensor::poll() {
 		auto const raw = readLeSigned16(temperature);
 		sample.temperatureCentiC = static_cast<std::int16_t>(2300 + (static_cast<int>(raw) * 100) / 512);
 	}
+
 	sample.valid = true;
 	_lastSample = sample;
 	return true;
@@ -139,6 +142,7 @@ bool Bmi270Sensor::_writeConfigFile() {
 	if (!_writeRegister(registerPowerConfig, 0x00)) {
 		return false;
 	}
+
 	_sleepMs(1);
 	if (!_writeRegister(registerInitControl, 0x00)) {
 		return false;
@@ -155,12 +159,14 @@ bool Bmi270Sensor::_writeConfigFile() {
 	if (!_writeRegister(registerInitControl, 0x01)) {
 		return false;
 	}
+
 	_sleepMs(20);
 
 	std::uint8_t internalStatus = 0;
 	if (!_readInternalStatus(internalStatus)) {
 		return false;
 	}
+
 	_lastSample.status = internalStatus;
 	return (internalStatus & configLoadStatusMask) == configLoadSuccess;
 }
@@ -169,6 +175,7 @@ bool Bmi270Sensor::_uploadConfigChunk(std::uint16_t index, std::uint8_t const* d
 	if (data == nullptr || size == 0 || size > configUploadChunkBytes || (size % 2U) != 0) {
 		return false;
 	}
+
 	auto const wordIndex = static_cast<std::uint16_t>(index / 2U);
 	std::uint8_t const address[] = {
 	    static_cast<std::uint8_t>(wordIndex & 0x0FU),
@@ -201,11 +208,13 @@ bool Bmi270Sensor::_writeBlock(std::uint8_t reg, std::uint8_t const* data, std::
 	if (data == nullptr || size == 0 || size > configUploadChunkBytes) {
 		return false;
 	}
+
 	std::uint8_t payload[configUploadChunkBytes + 1]{};
 	payload[0] = reg;
 	for (std::size_t index = 0; index < size; ++index) {
 		payload[index + 1] = data[index];
 	}
+
 	I2cBusTransaction transaction{_bus};
 	return transaction && _bus.write(_config.i2cAddress, payload, size + 1);
 }
@@ -214,6 +223,7 @@ bool Bmi270Sensor::_configureBasicSampling() {
 	if (!_writeRegister(registerPowerConfig, 0x00)) {
 		return false;
 	}
+
 	_sleepMs(2);
 	if (!_writeRegister(registerAccelConfig, 0xA8)
 	    || !_writeRegister(registerAccelRange, 0x03)
@@ -222,6 +232,7 @@ bool Bmi270Sensor::_configureBasicSampling() {
 	    || !_writeRegister(registerPowerControl, 0x0E)) {
 		return false;
 	}
+
 	_sleepMs(50);
 	return true;
 }

@@ -1,6 +1,10 @@
 #include <lexxos/lifecycle/event_bus.h>
 
-#if defined(LEXXOS_KERNEL_FREERTOS)
+#if defined(LEXXOS_EDITION_CE)
+	#include <lexxos/kernel/synchronization.h>
+#elif defined(LEXXOS_KERNEL_ESPIDF)
+	#include <freertos/task.h>
+#elif defined(LEXXOS_KERNEL_FREERTOS)
 	#include <FreeRTOS.h>
 	#include <task.h>
 #endif
@@ -13,7 +17,13 @@ EventBus& defaultEventBus() {
 }
 
 void EventBus::lock() {
-#if defined(LEXXOS_KERNEL_FREERTOS)
+#if defined(LEXXOS_EDITION_CE)
+	while (_guard.test_and_set(std::memory_order_acquire)) {
+		lexxos::kernel::synchronizationBackoff();
+	}
+#elif defined(LEXXOS_KERNEL_ESPIDF)
+	taskENTER_CRITICAL(&_mux);
+#elif defined(LEXXOS_KERNEL_FREERTOS)
 	taskENTER_CRITICAL();
 #elif defined(LEXXOS_PLATFORM_HOST) || defined(LEXXOS_PLATFORM_SIM)
 	_lock.lock();
@@ -21,7 +31,11 @@ void EventBus::lock() {
 }
 
 void EventBus::unlock() {
-#if defined(LEXXOS_KERNEL_FREERTOS)
+#if defined(LEXXOS_EDITION_CE)
+	_guard.clear(std::memory_order_release);
+#elif defined(LEXXOS_KERNEL_ESPIDF)
+	taskEXIT_CRITICAL(&_mux);
+#elif defined(LEXXOS_KERNEL_FREERTOS)
 	taskEXIT_CRITICAL();
 #elif defined(LEXXOS_PLATFORM_HOST) || defined(LEXXOS_PLATFORM_SIM)
 	_lock.unlock();
@@ -44,9 +58,11 @@ void EventBus::resetAfterSequenceWrap() {
 	for (auto& sequence : _sequences) {
 		sequence = 0;
 	}
+
 	for (auto& event : _events) {
 		event = {};
 	}
+
 	_nextSequence = 1U;
 }
 
@@ -70,7 +86,20 @@ bool EventBus::publish(Event const& event) {
 }
 
 bool EventBus::publishFromIsr(Event const& event) {
-#if defined(LEXXOS_KERNEL_FREERTOS)
+#if defined(LEXXOS_EDITION_CE)
+	if (_guard.test_and_set(std::memory_order_acquire)) {
+		return false;
+	}
+
+	bool const pushed = pushUnlocked(event);
+	_guard.clear(std::memory_order_release);
+	return pushed;
+#elif defined(LEXXOS_KERNEL_ESPIDF)
+	taskENTER_CRITICAL_ISR(&_mux);
+	bool const pushed = pushUnlocked(event);
+	taskEXIT_CRITICAL_ISR(&_mux);
+	return pushed;
+#elif defined(LEXXOS_KERNEL_FREERTOS)
 	UBaseType_t const previousMask = taskENTER_CRITICAL_FROM_ISR();
 	bool const pushed = pushUnlocked(event);
 	taskEXIT_CRITICAL_FROM_ISR(previousMask);
@@ -105,6 +134,7 @@ bool EventBus::poll(EventCursor& cursor, Event& event) {
 		if (cursor.nextSequence == 0U || cursor.nextSequence < oldest) {
 			cursor.nextSequence = oldest;
 		}
+
 		if (cursor.nextSequence > newest) {
 			cursor.nextSequence = _nextSequence;
 		} else {

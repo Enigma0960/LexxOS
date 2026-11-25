@@ -8,6 +8,7 @@
 #include <lexxos/kernel/scheduler.h>
 
 namespace {
+
 [[noreturn]] void halt() {
 	taskDISABLE_INTERRUPTS();
 	while (true) {
@@ -33,6 +34,7 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t, char* taskName) {
 	} else {
 		lexxos::kernel::schedulerBackend().writeConsole("<unknown>");
 	}
+
 	lexxos::kernel::schedulerBackend().writeConsole("\r\n");
 	halt();
 }

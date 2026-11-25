@@ -67,9 +67,11 @@ std::uint16_t BatteryIcon::_fillColor(std::uint8_t percent) const {
 	if (percent <= lowBatteryPercent) {
 		return statusLowBatteryColor;
 	}
+
 	if (percent <= mediumBatteryPercent) {
 		return statusMediumBatteryColor;
 	}
+
 	return statusAccentColor;
 }
 
@@ -80,6 +82,7 @@ void BatteryIcon::_drawChargingPlus(int bodyX, int bodyY, int rowY, std::uint16_
 	if (rowY == centerY) {
 		_fillRange(pixels, pixelWidth, centerX - halfLength, centerX + halfLength, statusTextColor);
 	}
+
 	if (rowY >= centerY - halfLength && rowY <= centerY + halfLength) {
 		_setPixel(pixels, pixelWidth, centerX, statusTextColor);
 	}

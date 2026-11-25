@@ -4,9 +4,9 @@
 #include <cstdint>
 
 #include <driver/spi_master.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
-
 #include <lexxos/devices/bus/spi_bus.h>
 
 namespace lexxos::devices {
@@ -18,10 +18,12 @@ namespace espidf::detail {
 		lexxos::platform::SpiPins pins{};
 	};
 
-} // namespace espidf::detail
+} // namespace lexxos::devices::espidf::detail
 
 class EspIdfSpiBus final : public SpiBus {
 public:
+	using SpiBus::SpiBus;
+
 	~EspIdfSpiBus() override;
 
 	bool initialize(lexxos::platform::SpiPins const& pins) override;

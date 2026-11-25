@@ -9,36 +9,37 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec imuArguments[] = {
 	    {
-         .name = "samples",
-         .shortName = 'n',
-         .valueName = "count",
-         .help = "sample count",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "1",
+	     .name = "samples",
+	     .shortName = 'n',
+	     .valueName = "count",
+	     .help = "sample count",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "1",
 	     },
 	    {
-         .name = "interval",
-         .shortName = 'i',
-         .valueName = "milliseconds",
-         .help = "delay between samples",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "100",
+	     .name = "interval",
+	     .shortName = 'i',
+	     .valueName = "milliseconds",
+	     .help = "delay between samples",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "100",
 	     },
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "sensor device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "sensor device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -78,6 +79,7 @@ namespace {
 		if (fraction < 10) {
 			context.write("0");
 		}
+
 		writeUnsigned(context, static_cast<std::uint32_t>(fraction));
 		context.writeLine("C");
 	}
@@ -107,6 +109,7 @@ int ImuProgram::run(
 		context.writeErrorLine("imu: motion sensor is not registered");
 		return 1;
 	}
+
 	if (!sensor->isReady()) {
 		context.writeError("imu: sensor is not ready: ");
 		context.writeLine(lexxos::devices::toString(sensor->state()));
@@ -125,6 +128,7 @@ int ImuProgram::run(
 		context.writeErrorLine("imu: invalid sample count");
 		return 1;
 	}
+
 	if (!parseUnsigned32(arguments.valueOr("interval", "100"), intervalMs) || intervalMs > 60000) {
 		context.writeErrorLine("imu: invalid interval");
 		return 1;
@@ -135,6 +139,7 @@ int ImuProgram::run(
 		context.writeErrorLine("imu: selected sensor is not a motion sensor");
 		return 1;
 	}
+
 	context.write("imu: device=");
 	context.write(sensor->name());
 	context.write(" state=");
@@ -144,16 +149,19 @@ int ImuProgram::run(
 			context.writeLine("imu: canceled");
 			return 130;
 		}
+
 		lexxos::devices::MotionSensorSample sample{};
 		if (!motion->readSample(sample)) {
 			context.writeErrorLine("imu: failed to read sample");
 			return 1;
 		}
+
 		writeSample(context, sample);
 		if (index + 1U < samples && intervalMs != 0) {
 			lexxos::kernel::sleepMs(intervalMs);
 		}
 	}
+
 	return 0;
 }
 

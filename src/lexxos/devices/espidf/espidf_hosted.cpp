@@ -7,20 +7,24 @@
 #include <esp_err.h>
 #include <esp_hosted.h>
 #include <esp_hosted_host_fw_ver.h>
+
 #include <lexxos/devices/espidf/espidf_wifi.h>
 
 namespace lexxos::devices::espidf_hosted {
+
 namespace {
 
 	void copyFixedString(char* output, std::size_t outputSize, char const* input, std::size_t inputSize) {
 		if (output == nullptr || outputSize == 0U) {
 			return;
 		}
+
 		std::size_t length = 0;
 		while (length + 1U < outputSize && length < inputSize && input[length] != '\0') {
 			output[length] = input[length];
 			++length;
 		}
+
 		output[length] = '\0';
 	}
 
@@ -33,18 +37,21 @@ namespace {
 		if (host.major != coprocessor.major) {
 			return host.major > coprocessor.major ? 1 : -1;
 		}
+
 		if (host.minor != coprocessor.minor) {
 			return host.minor > coprocessor.minor ? 1 : -1;
 		}
+
 		if (host.patch != coprocessor.patch) {
 			return host.patch > coprocessor.patch ? 1 : -1;
 		}
+
 		return 0;
 	}
 
 } // namespace
 
-bool isHostedBoard(lexxos::platform::BoardDescriptor const& board) {
+bool isHostedBoard(lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!board.wireless.wifi || board.wireless.backend == nullptr) {
 		return false;
 	}
@@ -55,7 +62,7 @@ bool activateSupported(Version version) {
 	return version.valid && (version.major > 2U || (version.major == 2U && version.minor > 5U));
 }
 
-Info readInfo(lexxos::platform::BoardDescriptor const& board, bool startWifiBackend) {
+Info readInfo(lexxos::platform::LegacyBoardDescriptor const& board, bool startWifiBackend) {
 	Info info{};
 	info.supported = isHostedBoard(board);
 	info.hostVersion = {

@@ -1,11 +1,13 @@
 """Release archive integrity and isolation contracts."""
 import importlib.util
 import json
-from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
+
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('release', ROOT / 'tools/release.py')
@@ -62,6 +64,27 @@ class ReleaseTests(unittest.TestCase):
             path.write_text('// SDK\n\nPICO_SDK_PATH:PATH=/sdk\n\nPICO_BOARD:STRING=pico\n')
             self.assertEqual(release.read_cache(path), {'PICO_SDK_PATH': '/sdk', 'PICO_BOARD': 'pico'})
 
+    def test_configuration_copy_uses_generated_include_from_cache(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            generated = root / 'custom/generated/include'
+            expected = {
+                'board_list.h': '#define BOARD_TEST 1\n',
+                'feature_list.h': '#define FEATURE_TEST 1\n',
+                'commands/commands.json': '{"commands": []}\n',
+            }
+            for name, content in expected.items():
+                path = generated / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content)
+
+            cache_file = root / 'CMakeCache.txt'
+            cache_file.write_text(f'LEXXOS_GENERATED_INCLUDE_DIR:INTERNAL={generated}\n')
+            package = root / 'package'
+            release.copy_generated_configuration(package, release.read_cache(cache_file))
+            for name, content in expected.items():
+                self.assertEqual((package / 'configuration' / name).read_text(), content)
+
     def test_archive_hashes_and_stable_zip(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -105,13 +128,58 @@ class ReleaseTests(unittest.TestCase):
             self.assertFalse((dest / 'dist').exists())
             self.assertFalse((dest / 'CMakeUserPresets.json').exists())
 
+    def test_release_snapshot_excludes_tamapoke_source_and_assets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'repo'
+            root.mkdir()
+            subprocess.run(['git', 'init', '-q', str(root)], cwd=root, check=True)
+            app = root / 'apps/tamapoke'
+            app.mkdir(parents=True)
+            (app / 'main.cpp').write_text('int main() {}')
+            (app / 'asset.bin').write_bytes(b'private assets')
+            subprocess.run(['git', 'add', '.'], cwd=root, check=True)
+
+            snapshot = Path(tmp) / 'snapshot'
+            snapshot.mkdir()
+            release.snapshot(root, snapshot)
+
+            self.assertFalse((snapshot / 'apps/tamapoke').exists())
+            self.assertTrue((app / 'asset.bin').is_file())
+
+    def test_snapshot_rejects_local_paths_in_documentation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'repo'
+            root.mkdir()
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            (root / 'README.md').write_text(f'SDK: {Path.home() / "sdk"}\n')
+            snapshot = Path(tmp) / 'snapshot'
+            snapshot.mkdir()
+            with self.assertRaisesRegex(RuntimeError, 'README.md'):
+                release.snapshot(root, snapshot)
+
+    def test_full_and_standalone_release_plans(self):
+        command = [sys.executable, str(ROOT / 'tools/release.py'), '--plan']
+
+        def plan(*args):
+            return subprocess.check_output([*command, *args], text=True).splitlines()
+
+        self.assertEqual(plan('--ce-only'), ['ce-sdk-esp32'])
+        self.assertEqual(plan('--lyra-only'), ['picocalc-lyra-release'])
+        self.assertEqual(plan('--apps-only'), ['apps'])
+        self.assertEqual(plan('--boards', 'picocalc_pico', '--flavors', 'minimal'),
+                         ['minimal-picocalc_pico', 'apps'])
+        full = plan()
+        self.assertEqual(full.count('ce-sdk-esp32'), 1)
+        self.assertEqual(full.count('picocalc-lyra-release'), 1)
+        self.assertEqual(len(set(full)), 15)
+
     def test_matrix_includes_four_picocalc_modules_and_no_examples(self):
         data = json.loads((ROOT / 'CMakePresets.json').read_text())
         presets = {p['name']: p for p in data['configurePresets']}
-        for board, sdk in [('picocalc_pico','pico'), ('picocalc_pico_w','pico_w'),
-                           ('picocalc_pico2','pico2'), ('picocalc_pico2w','pico2_w')]:
+        for board, sdk in [('picocalc_pico', 'pico'), ('picocalc_pico_w', 'pico_w'),
+                           ('picocalc_pico2', 'pico2'), ('picocalc_pico2w', 'pico2_w')]:
             for flavor in ('minimal', 'full'):
-                variables = presets[flavor+'-'+board]['cacheVariables']
+                variables = presets[flavor + '-' + board]['cacheVariables']
                 self.assertEqual(variables['PICO_BOARD'], sdk)
                 self.assertEqual(variables['LEXXOS_BOARD'], board)
         self.assertEqual(len(release.BOARDS), 6)

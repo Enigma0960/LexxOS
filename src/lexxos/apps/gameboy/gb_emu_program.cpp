@@ -1,14 +1,14 @@
 #include <lexxos/apps/gameboy/gb_emu_program.h>
 
+#include <array>
+#include <cstdint>
+#include <cstring>
+
 #include <lexxos/apps/gameboy/detail/gameboy_launcher.h>
 #include <lexxos/apps/gameboy/detail/gameboy_program_arguments.h>
 #include <lexxos/apps/gameboy/detail/gameboy_program_support.h>
 #include <lexxos/feature.h>
 #include <lexxos/vfs/vfs.h>
-
-#include <array>
-#include <cstdint>
-#include <cstring>
 
 namespace lexxos::apps::gameboy_programs {
 
@@ -43,10 +43,12 @@ namespace {
 		if (size + text.size() >= path.size()) {
 			return false;
 		}
+
 		if (!text.empty()) {
 			std::memcpy(path.data() + size, text.data(), text.size());
 			size += text.size();
 		}
+
 		path[size] = '\0';
 		return true;
 	}
@@ -56,17 +58,21 @@ namespace {
 			if (argument.kind == ProgramArgumentKind::Positional) {
 				continue;
 			}
+
 			if (source.has(argument.name)) {
 				if (!target.setNamed(argument.name, source.value(argument.name), true)) {
 					return false;
 				}
+
 				continue;
 			}
+
 			auto const value = source.value(argument.name);
 			if (!value.empty() && !target.setNamed(argument.name, value, false)) {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -90,10 +96,12 @@ namespace {
 				context.writeErrorLine(token);
 				return 2;
 			}
+
 			if (index != 0 && !appendPathPart(romPath, romPathSize, " ")) {
 				context.writeErrorLine("gbemu: ROM path is too long");
 				return 2;
 			}
+
 			if (!appendPathPart(romPath, romPathSize, token)) {
 				context.writeErrorLine("gbemu: ROM path is too long");
 				return 2;
@@ -105,6 +113,7 @@ namespace {
 			context.writeErrorLine("gbemu: too many parsed arguments");
 			return 2;
 		}
+
 		return runGameBoyEmulator(context, normalized);
 	}
 

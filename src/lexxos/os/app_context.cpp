@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include <lexxos/app/console_input.h>
+#include <lexxos/io/input_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/os/operating_system.h>
 #include <lexxos/platform/platform_services.h>
@@ -25,6 +26,18 @@ AppContext::AppContext(OperatingSystem& os, AppContextCreateInfo const& info)
     , _owner(info.owner)
     , _processId(info.processId) {
 	setWorkingDirectory(info.workingDirectory);
+}
+
+lexxos::lifecycle::EventBus& AppContext::events() {
+	return _os->core().events();
+}
+
+app::ProgramInputService& AppContext::programInput() {
+	return _os->programInput();
+}
+
+app::ConsoleInputService& AppContext::consoleInput() {
+	return _os->consoleInput();
 }
 
 AppContextOwner AppContext::owner() const {
@@ -55,9 +68,11 @@ bool AppContext::setWorkingDirectory(std::string_view path) {
 	if (path.empty() || path.size() + 1 > _workingDirectory.size()) {
 		return false;
 	}
+
 	if (_shell != nullptr && !_shell->setWorkingDirectory(path)) {
 		return false;
 	}
+
 	std::memcpy(_workingDirectory.data(), path.data(), path.size());
 	_workingDirectory[path.size()] = '\0';
 	return true;
@@ -152,16 +167,18 @@ bool AppContext::pollCancellationRequest() {
 	if (console.readAvailable != nullptr) {
 		std::array<char, 32> values{};
 		for (;;) {
-			auto const count = lexxos::app::console_input::readAvailable(platform(), values.data(), values.size());
+			auto const count = consoleInput().readAvailable(platform(), values.data(), values.size());
 			if (count == 0) {
 				return false;
 			}
+
 			for (std::size_t index = 0; index < count; ++index) {
 				if (static_cast<unsigned char>(values[index]) == 0x03U) {
 					requestCancellation();
 					return true;
 				}
 			}
+
 			if (count < values.size()) {
 				return false;
 			}
@@ -169,12 +186,13 @@ bool AppContext::pollCancellationRequest() {
 	}
 
 	char value{};
-	while (lexxos::app::console_input::readChar(platform(), value)) {
+	while (consoleInput().readChar(platform(), value)) {
 		if (static_cast<unsigned char>(value) == 0x03U) {
 			requestCancellation();
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -220,7 +238,12 @@ lexxos::program::ProgramExitResult AppContext::launch(lexxos::program::ProgramSt
 		    .exitCode = 126,
 		};
 	}
+
 	return _os->programs().execute(*this, request);
 }
 
 } // namespace lexxos::os
+
+lexxos::os::StorageMountPolicy* lexxos::os::AppContext::storageMountPolicy() const {
+	return _os != nullptr ? _os->storageMountPolicy() : nullptr;
+}

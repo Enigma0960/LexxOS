@@ -20,6 +20,7 @@
 #endif
 
 namespace lexxos::program {
+
 namespace {
 
 	using ProcessSlot = lexxos::program::detail::ProgramProcessSlot;
@@ -72,6 +73,7 @@ namespace {
 				return &slot;
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -88,6 +90,7 @@ namespace {
 			if (loadState(slot) != ProgramProcessState::Finished) {
 				continue;
 			}
+
 			if (oldestFinishedSlot == nullptr || slot.id < oldestFinishedSlot->id) {
 				oldestFinishedSlot = &slot;
 			}
@@ -121,6 +124,7 @@ namespace {
 		if (stackSizeBytes < minimumStackSize) {
 			stackSizeBytes = minimumStackSize;
 		}
+
 		return alignStackSize(stackSizeBytes);
 	}
 
@@ -146,7 +150,10 @@ namespace {
 		if (loadState(slot) != ProgramProcessState::StopRequested) {
 			storeState(slot, ProgramProcessState::Running);
 		}
+
 		slot.result = slot.context.launch(slot.request);
+		// Режим освобождается до публикации Finished и повторного использования слота.
+		slot.context.programInput().releaseInputMode(slot.id);
 #if defined(LEXXOS_KERNEL_FREERTOS)
 		slot.stackFreeBytes = static_cast<std::uint32_t>(uxTaskGetStackHighWaterMark(nullptr) * sizeof(StackType_t));
 #else
@@ -159,6 +166,7 @@ namespace {
 			if (g_focusedProcessId == slot.id) {
 				g_focusedProcessId = 0;
 			}
+
 			storeState(slot, ProgramProcessState::Finished);
 		}
 		ProgramMemoryArena::freeDetachedInternalStorage(detachedMemory);
@@ -214,8 +222,10 @@ namespace {
 			if (!isFocusableProcess(slot)) {
 				continue;
 			}
+
 			ids[count++] = slot.id;
 		}
+
 		return count;
 	}
 
@@ -223,11 +233,13 @@ namespace {
 		if (id == 0) {
 			return nullptr;
 		}
+
 		for (auto const& slot : g_processes) {
 			if (slot.id == id && isFocusableProcess(slot)) {
 				return &slot;
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -258,6 +270,7 @@ namespace {
 			if (!isActiveState(loadState(slot))) {
 				continue;
 			}
+
 			if (slot.request.name == name) {
 				return true;
 			}
@@ -308,10 +321,15 @@ namespace {
 
 		slot.id = nextProcessId();
 		slot.runtime = descriptor.runtime;
+		if (descriptor.internalMemoryQuotaResolver != nullptr) {
+			slot.runtime.internalMemoryQuotaBytes = descriptor.internalMemoryQuotaResolver({slot.arguments.argc, slot.arguments.argv.data()});
+		}
+
 		detachedMemory = slot.memoryArena.detachInternalStorage();
 		if (startMode == ProcessStartMode::Background) {
 			slot.runtime.launchMode = ProgramLaunchMode::BackgroundTask;
 		}
+
 		slot.runtime.stackSizeBytes = effectiveStackSize(slot.runtime);
 		slot.result = ProgramExitResult{};
 		slot.stackFreeBytes = 0;
@@ -344,9 +362,11 @@ namespace {
 		if (status == ProgramMemoryArenaStatus::Ready) {
 			return ProgramSupervisorStatus::Started;
 		}
+
 		if (status == ProgramMemoryArenaStatus::ExternalUnavailable) {
 			return ProgramSupervisorStatus::ExternalMemoryUnavailable;
 		}
+
 		return ProgramSupervisorStatus::MemoryUnavailable;
 	}
 
@@ -461,6 +481,7 @@ std::string_view toString(ProgramProcessState state) {
 		case ProgramProcessState::Finished:
 			return "finished";
 	}
+
 	return "unknown";
 }
 
@@ -489,6 +510,7 @@ std::string_view toString(ProgramSupervisorStatus status) {
 		case ProgramSupervisorStatus::TaskCreateFailed:
 			return "task-create-failed";
 	}
+
 	return "unknown";
 }
 
@@ -546,6 +568,7 @@ bool ProgramSupervisor::processFocused(ProgramProcessId id) {
 	if (id == 0) {
 		return false;
 	}
+
 	ProcessTableGuard guard;
 	auto const snapshot = focusSnapshotLocked();
 	return snapshot.target == ProgramFocusTarget::Program && snapshot.processId == id;
@@ -591,6 +614,7 @@ std::size_t ProgramSupervisor::clearFinished() {
 	for (std::size_t index = 0; index < cleared; ++index) {
 		ProgramMemoryArena::freeDetachedInternalStorage(detachedMemory[index]);
 	}
+
 	return cleared;
 }
 
@@ -607,6 +631,7 @@ void ProgramSupervisor::visitProcesses(ProgramProcessVisitor visitor, void* user
 			if (loadState(slot) == ProgramProcessState::Empty) {
 				continue;
 			}
+
 			snapshots[snapshotCount++] = snapshotOf(slot);
 		}
 	}

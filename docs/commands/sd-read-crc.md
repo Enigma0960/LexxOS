@@ -1,6 +1,6 @@
 # `sd-read-crc`
 
-show or set SD read CRC validation.
+Показывает или включает проверку CRC при чтении SD.
 
 ## Справка shell
 

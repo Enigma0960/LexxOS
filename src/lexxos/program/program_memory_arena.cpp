@@ -9,7 +9,19 @@
 	#include <portable.h>
 #endif
 
+#if defined(LEXXOS_RK3506_DDR_EXTENDED)
+	#include <lexxos/platform/rockchip/rk3506/mmu_managed.h>
+#endif
+
+// arm-none-eabi libstdc++ can omit std::malloc/std::free in freestanding mode.
+// Reuse the same heap as RK3506's new/delete and C allocator.
+#if defined(LEXXOS_RK3506_SHELL)
+extern "C" void* rk3506_heap_allocate(std::size_t bytes);
+extern "C" void rk3506_heap_release(void* pointer);
+#endif
+
 namespace lexxos::program {
+
 namespace {
 
 	void* allocateRaw(std::size_t size) {
@@ -17,7 +29,21 @@ namespace {
 			return nullptr;
 		}
 #if defined(LEXXOS_KERNEL_FREERTOS)
+	#if defined(LEXXOS_RK3506_DDR_EXTENDED)
+		// Keep the small FreeRTOS allocations on the kernel heap. Full
+		// application workspaces use physically contiguous extended DDR.
+		if (size >= 4096U) {
+			if (size > 1024U * 1024U) {
+				return nullptr;
+			}
+
+			return lexxos::platform::rk3506::memory::allocateExtendedPages((size + 4095U) / 4096U);
+		}
+	#endif
+
 		return pvPortMalloc(size);
+#elif defined(LEXXOS_RK3506_SHELL)
+		return rk3506_heap_allocate(size);
 #else
 		return std::malloc(size);
 #endif
@@ -28,7 +54,16 @@ namespace {
 			return;
 		}
 #if defined(LEXXOS_KERNEL_FREERTOS)
+	#if defined(LEXXOS_RK3506_DDR_EXTENDED)
+		if (lexxos::platform::rk3506::memory::isExtendedAddress(memory)) {
+			(void) lexxos::platform::rk3506::memory::freeExtendedPages(memory);
+			return; // Never pass an extended pointer to FreeRTOS heap_4.
+		}
+	#endif
+
 		vPortFree(memory);
+#elif defined(LEXXOS_RK3506_SHELL)
+		rk3506_heap_release(memory);
 #else
 		std::free(memory);
 #endif
@@ -76,6 +111,7 @@ ProgramMemoryArenaStatus ProgramMemoryArena::reserve(ProgramRuntimeProfile const
 			_snapshot.status = ProgramMemoryArenaStatus::InternalUnavailable;
 			return _snapshot.status;
 		}
+
 		_internalStorageBytes = runtime.internalMemoryQuotaBytes;
 		_snapshot.reservedInternalBytes = runtime.internalMemoryQuotaBytes;
 		_snapshot.active = true;

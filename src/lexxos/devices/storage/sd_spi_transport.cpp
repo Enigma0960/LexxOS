@@ -1,6 +1,7 @@
 #include <lexxos/devices/storage/sd_spi_transport.h>
 
 namespace lexxos::devices {
+
 SdSpiTransport::SdSpiTransport(SpiBus& bus, lexxos::platform::SpiPins pins)
     : _bus(bus)
     , _pins(pins) {

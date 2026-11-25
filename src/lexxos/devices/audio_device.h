@@ -32,6 +32,7 @@ enum class AudioToneWaveform : std::uint8_t {
 		case AudioChannel::Stereo:
 			return "stereo";
 	}
+
 	return "unknown";
 }
 
@@ -50,6 +51,7 @@ enum class AudioToneWaveform : std::uint8_t {
 		case AudioToneWaveform::Noise:
 			return "noise";
 	}
+
 	return "unknown";
 }
 

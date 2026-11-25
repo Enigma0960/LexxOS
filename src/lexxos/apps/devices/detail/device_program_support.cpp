@@ -13,6 +13,7 @@ bool parseUnsigned(std::string_view text, std::uint32_t& output) {
 		base = 16;
 		index = 2;
 	}
+
 	if (index >= text.size()) {
 		return false;
 	}
@@ -34,6 +35,7 @@ bool parseUnsigned(std::string_view text, std::uint32_t& output) {
 		if (digit >= base || value > (0xFFFFFFFFU - digit) / base) {
 			return false;
 		}
+
 		value = value * base + digit;
 	}
 

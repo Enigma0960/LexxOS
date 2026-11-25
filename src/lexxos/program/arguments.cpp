@@ -40,6 +40,7 @@ std::string_view toString(ArgumentParseStatus status) {
 		case ArgumentParseStatus::TooManyArguments:
 			return "too-many-arguments";
 	}
+
 	return "unknown";
 }
 
@@ -84,6 +85,7 @@ bool ParsedArguments::has(std::string_view name) const {
 			return _named[index].present;
 		}
 	}
+
 	return false;
 }
 
@@ -93,6 +95,7 @@ std::string_view ParsedArguments::value(std::string_view name) const {
 			return viewOf(_named[index].value);
 		}
 	}
+
 	return {};
 }
 
@@ -115,6 +118,7 @@ std::string_view ParsedArguments::positional(std::string_view name) const {
 			return viewOf(_positionals[index].value);
 		}
 	}
+
 	return {};
 }
 

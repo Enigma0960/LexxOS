@@ -1,6 +1,3 @@
-#include <lexxos/devices/bus/i2c_bus.h>
-#include <lexxos/devices/picocalc/picocalc_southbridge.h>
-
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -9,6 +6,9 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+
+#include <lexxos/devices/bus/i2c_bus.h>
+#include <lexxos/devices/picocalc/picocalc_southbridge.h>
 
 namespace {
 
@@ -53,6 +53,7 @@ public:
 		if (_reads.empty() || _reads.front().size() != size) {
 			return false;
 		}
+
 		auto const response = _reads.front();
 		_reads.pop_front();
 		std::memcpy(data, response.data(), size);

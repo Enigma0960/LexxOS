@@ -1,6 +1,6 @@
 # `display-fill`
 
-fill display with one color.
+Заполняет дисплей одним цветом.
 
 ## Справка shell
 

@@ -14,7 +14,13 @@
 	#define LEXXOS_PICOCALC_HAS_PICO_TIME 1
 #endif
 
+#if defined(LEXXOS_PLATFORM_RK3506)
+extern "C" std::uint64_t rk3506_timer_counter();
+extern "C" std::uint32_t rk3506_timer_counter_frequency();
+#endif
+
 namespace lexxos::devices {
+
 namespace {
 
 #ifndef LEXXOS_PICOCALC_REGISTER_RESPONSE_DELAY_MS
@@ -36,12 +42,23 @@ namespace {
 			if (ticks == 0) {
 				ticks = 1;
 			}
+
 			vTaskDelay(ticks);
 			return;
 		}
 #endif
 #if defined(LEXXOS_PICOCALC_HAS_PICO_TIME)
 		sleep_ms(registerResponseDelayMs);
+#elif defined(LEXXOS_PLATFORM_RK3506)
+		// Keep the register-select + response transaction atomic on CPU0's
+		// cooperative scheduler. sleepMs() would let another task select a register.
+		auto const started = rk3506_timer_counter();
+		auto const ticks = (static_cast<std::uint64_t>(rk3506_timer_counter_frequency())
+		                           * registerResponseDelayMs
+		                       + 999U)
+		    / 1000U;
+		while (rk3506_timer_counter() - started < ticks) {
+		}
 #else
 		static_cast<void>(registerResponseDelayMs);
 #endif
@@ -62,9 +79,11 @@ namespace {
 		for (std::uint16_t year = 2000U; year < value.year; ++year) {
 			days += lexxos::devices::rtc::isLeapYear(year) ? 366U : 365U;
 		}
+
 		for (std::uint8_t month = 1U; month < value.month; ++month) {
 			days += lexxos::devices::rtc::daysInMonth(value.year, month);
 		}
+
 		days += static_cast<std::uint64_t>(value.day - 1U);
 
 		output = days * 86400U
@@ -82,6 +101,7 @@ namespace {
 		if (!secondsSince2000(actual, actualSeconds) || !secondsSince2000(expected, expectedSeconds)) {
 			return false;
 		}
+
 		std::uint64_t const delta = actualSeconds > expectedSeconds
 		    ? actualSeconds - expectedSeconds
 		    : expectedSeconds - actualSeconds;
@@ -161,8 +181,10 @@ std::uint8_t PicoCalcSouthbridgeSnapshot::validFieldCount() const {
 		if ((mask & 1U) != 0) {
 			++count;
 		}
+
 		mask = static_cast<std::uint16_t>(mask >> 1U);
 	}
+
 	return count;
 }
 
@@ -196,7 +218,8 @@ std::uint8_t PicoCalcSouthbridge::address() const {
 }
 
 bool PicoCalcSouthbridge::probe() const {
-	return _bus.probe(_address);
+	I2cBusTransaction transaction{_bus};
+	return transaction && _bus.probe(_address);
 }
 
 bool PicoCalcSouthbridge::isReady() const {
@@ -309,6 +332,7 @@ bool PicoCalcSouthbridge::readJcsFirmwareInfo(PicoCalcJcsFirmwareInfo& info) con
 	if (!readFirmwareType(value.type) || !readVersion(value.version)) {
 		return false;
 	}
+
 	info = value;
 	return true;
 }
@@ -318,6 +342,7 @@ bool PicoCalcSouthbridge::readJcsRtcConfig(PicoCalcJcsRtcConfig& config) const {
 	if (!_readValue(registerJcsRtcConfig, value)) {
 		return false;
 	}
+
 	config.raw = value;
 	return true;
 }
@@ -331,6 +356,7 @@ bool PicoCalcSouthbridge::setJcsRtcConfig(
 	if (ok && acceptedConfig != nullptr) {
 		acceptedConfig->raw = acceptedValue;
 	}
+
 	return ok;
 }
 
@@ -339,12 +365,15 @@ bool PicoCalcSouthbridge::readJcsRtcDateTime(lexxos::devices::rtc::DateTime& val
 	if (!_readJcsRtcDate(registerJcsRtcDate, dateTime) || !_readJcsRtcTime(registerJcsRtcTime, dateTime)) {
 		return false;
 	}
+
 	if (dateTime.weekday == 0U) {
 		dateTime.weekday = lexxos::devices::rtc::weekdayIso(dateTime);
 	}
+
 	if (!lexxos::devices::rtc::isValidDate(dateTime)) {
 		return false;
 	}
+
 	value = dateTime;
 	return true;
 }
@@ -357,6 +386,7 @@ bool PicoCalcSouthbridge::setJcsRtcDateTime(
 		setWriteState(state, dateState);
 		return false;
 	}
+
 	PicoCalcSouthbridgeCommandState timeState = PicoCalcSouthbridgeCommandState::Failed;
 	if (_writeJcsRtcTime(registerJcsRtcTime, value, &timeState)) {
 		setWriteState(state, timeState);
@@ -378,12 +408,15 @@ bool PicoCalcSouthbridge::readJcsRtcAlarm(lexxos::devices::rtc::DateTime& value)
 	if (!_readJcsRtcDate(registerJcsRtcAlarmDate, dateTime) || !_readJcsRtcTime(registerJcsRtcAlarmTime, dateTime)) {
 		return false;
 	}
+
 	if (dateTime.weekday == 0U) {
 		dateTime.weekday = lexxos::devices::rtc::weekdayIso(dateTime);
 	}
+
 	if (!lexxos::devices::rtc::isValidDate(dateTime)) {
 		return false;
 	}
+
 	value = dateTime;
 	return true;
 }
@@ -396,6 +429,7 @@ bool PicoCalcSouthbridge::setJcsRtcAlarm(
 		setWriteState(state, dateState);
 		return false;
 	}
+
 	return _writeJcsRtcTime(registerJcsRtcAlarmTime, value, state);
 }
 
@@ -577,6 +611,7 @@ bool PicoCalcSouthbridge::_writeValue(
 	if (acceptedValue != nullptr) {
 		*acceptedValue = response[1];
 	}
+
 	return true;
 }
 
@@ -608,6 +643,7 @@ bool PicoCalcSouthbridge::_writeBytes(
 	for (std::uint8_t index = 0; index < size; ++index) {
 		command[static_cast<std::size_t>(index) + 1U] = data[index];
 	}
+
 	if (!_bus.write(_address, command.data(), static_cast<std::size_t>(size + 1U))) {
 		return false;
 	}
@@ -620,6 +656,7 @@ bool PicoCalcSouthbridge::_writeBytes(
 			break;
 		}
 	}
+
 	if (!readOk) {
 		return false;
 	}
@@ -676,10 +713,12 @@ bool PicoCalcSouthbridge::_writeJcsRtcDate(
 	if (!_writeBytes(reg, data, 3, response, 5, state)) {
 		return false;
 	}
+
 	if (response[1] != data[0] || response[2] != data[1] || response[3] != data[2]) {
 		setWriteState(state, PicoCalcSouthbridgeCommandState::Refused);
 		return false;
 	}
+
 	return true;
 }
 
@@ -701,10 +740,12 @@ bool PicoCalcSouthbridge::_writeJcsRtcTime(
 	if (!_writeBytes(reg, data, 3, response, 4, state)) {
 		return false;
 	}
+
 	if (response[1] != data[0] || response[2] != data[1] || response[3] != data[2]) {
 		setWriteState(state, PicoCalcSouthbridgeCommandState::Refused);
 		return false;
 	}
+
 	return true;
 }
 

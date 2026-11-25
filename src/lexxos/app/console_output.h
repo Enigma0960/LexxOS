@@ -3,8 +3,10 @@
 #include <string_view>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
-}
+
+} // namespace lexxos::platform
 
 namespace lexxos::app::console_output {
 

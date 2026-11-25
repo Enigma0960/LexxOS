@@ -13,20 +13,20 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec writeArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "VFS file path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "VFS file path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	    {
-         .name = "text",
-         .valueName = "text",
-         .help = "text to write; extra arguments are joined with spaces",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "text",
+	     .valueName = "text",
+	     .help = "text to write; extra arguments are joined with spaces",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -42,7 +42,7 @@ ProgramDescriptor WriteProgram::descriptor() {
 	    .handler = run,
 	    .runtime = {
 	                .launchMode = ProgramLaunchMode::ForegroundTask,
-	                .stackSizeBytes = 4096,
+	                .stackSizeBytes = lexxos::runtime::standardRuntimeProfile.programs.filesystemMutationStackBytes,
 	                .priority = 1,
 	                .memoryClass = ProgramMemoryClass::InternalOnly,
 	                .externalMemoryQuotaBytes = 0,

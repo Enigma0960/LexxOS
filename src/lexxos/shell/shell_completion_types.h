@@ -7,7 +7,9 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::shell {
+
 class Shell;
+
 } // namespace lexxos::shell
 
 namespace lexxos::shell::detail {

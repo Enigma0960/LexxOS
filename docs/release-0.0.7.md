@@ -1,4 +1,4 @@
-# LexxOS 0.0.7 release readiness
+# Готовность выпуска LexxOS 0.0.7
 
 Имена тестовых файлов и идентификаторы портов в примерах условные; результаты измерений сохранены.
 
@@ -38,7 +38,8 @@
 - PicoCalc Pico W получил отдельный RP2040 tight-RAM profile: 88 KiB FreeRTOS heap, Game Boy/MIDI/GPIO analyzer
   выключены в релизной сборке, а `display-test --bench` перенёс RGB565 chunk buffers из static `.bss` в lazy heap
   allocation без descriptor-level quota для обычного `display-test`;
-- экспериментальный `.lexx` runtime доведён до минимального 0.0.7-сценария: прямой запуск внешних RV32I-программ с SD/VFS,
+- экспериментальный `.lexx` runtime доведён до минимального 0.0.7-сценария: прямой запуск внешних RV32I-программ с
+  SD/VFS,
   `lexx-run`, `argc/argv`, keyboard/console ABI и read-only storage ABI через capability `storage-read`;
 - PicoCalc и storage команды проверены на стековые профили и перенесли крупные рабочие буферы в arena.
 - Game Boy full-track получил `--preset playable`/`--preset none`, runtime defaults из
@@ -54,7 +55,7 @@ git diff --check
 cmake --build build/host-full
 ctest --test-dir build/host-full --output-on-failure
 cmake --build build/sim-full
-LEXXOS_SIM_LIB=build/sim-full/src/liblexxos_sim.dylib python3 -m pytest emulator/tests -k 'not gbemu'
+LEXXOS_SIM_LIB=build/sim-full/src/liblexxos_sim.dylib python3 -m pytest tools/emulator/tests -k 'not gbemu'
 cmake --build build/host-midi
 ctest --test-dir build/host-midi --output-on-failure
 cmake --build --preset custom_configurator-build
@@ -89,8 +90,8 @@ cmake --build --preset debug-picocalc-pico-w
 Для `.lexx` runtime-правок от 2026-07-08 локально пройдены:
 
 ```text
-make -C examples/lexx/hello clean all
-make -C examples/lexx/cat clean all
+make -C apps/examples/lexx/hello clean all
+make -C apps/examples/lexx/cat clean all
 cmake --build build/host-full --target src/CMakeFiles/lexxos.dir/lexxos/external_program/external_program_runner.cpp.o
 cmake --build build/host-full --target src/CMakeFiles/lexxos.dir/lexxos/apps/lexx/lexx_run_program.cpp.o
 cmake --build build/host-full
@@ -103,8 +104,8 @@ Host-full build blocker `picoCalcConsoleMirrorTaskPriority` закрыт: consol
 Релизная проверка code-style от 2026-07-08:
 
 ```text
-/opt/homebrew/Cellar/llvm/22.1.7_1/bin/clang-format --version
-git ls-files -z '*.cpp' '*.h' '*.hpp' '*.c' '*.cc' '*.cxx' ':!:third_party/**' ':!:build/**' ':!:cmake-build-*' | xargs -0 /opt/homebrew/Cellar/llvm/22.1.7_1/bin/clang-format --dry-run --Werror
+clang-format --version
+git ls-files -z '*.cpp' '*.h' '*.hpp' '*.c' '*.cc' '*.cxx' ':!:third_party/**' ':!:build/**' ':!:cmake-build-*' | xargs -0 clang-format --dry-run --Werror
 python3 tools/check_cpp_layout.py .
 python3 tools/check_markdown.py .
 ```
@@ -149,7 +150,7 @@ PicoCalc/Wi-Fi/PSRAM/MIDI-only команды. Disabled-команды врод�
 git diff --check
 git ls-files -z '*.cpp' '*.h' '*.hpp' '*.c' '*.cc' '*.cxx' \
   ':!:third_party/**' ':!:build/**' ':!:cmake-build-*' \
-  | xargs -0 /opt/homebrew/Cellar/llvm/22.1.7_1/bin/clang-format --dry-run --Werror
+  | xargs -0 clang-format --dry-run --Werror
 python3 tools/check_cpp_layout.py .
 python3 tools/check_markdown.py .
 python3 tools/check_board_presets.py .
@@ -161,7 +162,7 @@ ctest --test-dir build/host-checks --output-on-failure
 cmake --build build/host-full --target lexxos lexxos_gameboy_settings_tests
 ctest --test-dir build/host-full --output-on-failure
 cmake --build build/sim-full --target lexxos_sim
-LEXXOS_SIM_LIB=build/sim-full/src/liblexxos_sim.dylib python3 -m pytest emulator/tests/test_virtual_board.py emulator/tests/test_sd.py -q
+LEXXOS_SIM_LIB=build/sim-full/src/liblexxos_sim.dylib python3 -m pytest tools/emulator/tests/test_virtual_board.py tools/emulator/tests/test_sd.py -q
 ```
 
 Результат: host-checks `13/13`, host-full CTest `10/10`, simulator smoke `7 passed`, command docs снова
@@ -192,7 +193,8 @@ buffers на lazy heap allocation и снизил дефолт `--rows` до 16.
 `bss=187552`, а новый UF2 собран как `build/configurator/picocalc-pico-w/src/lexxos.uf2`. UART после старого panic
 вернул `NO_RESPONSE`, поэтому следующий hardware retest начинается с power cycle/reflash.
 
-Повторный hardware retest после lazy workspace fix подтвердил обычный `display-test`, full-width double-buffer benchmark,
+Повторный hardware retest после lazy workspace fix подтвердил обычный `display-test`, full-width double-buffer
+benchmark,
 `transport all` на GB1, graceful heap refusal для `--rows 64`, SD/FAT, southbridge, Wi-Fi, `rtc-sync --tz +07:00` и soft
 reboot. Новый найденный blocker: PSRAM data path на первом Pico W при 16 MHz из старого CMake cache даёт readback
 mismatch (`expected=A5 actual=D2`) и restore mismatch. После этого CMake cap снижает
@@ -224,14 +226,16 @@ git diff --check
 только до первых 32 байт (`echo 0123456789ABCDEFGHIJKLMNOPQ`), а path completion для длинного MIDI LFN останавливался
 на 32-байтном имени вроде `ExampleMidiFile_Theme_One_Long1.`. Source fix:
 
-- `console_input::readAvailable()` и console task batch-drain сначала быстро вычитывают доступные UART/input байты в RAM,
+- `console_input::readAvailable()` и console task batch-drain сначала быстро вычитывают доступные UART/input байты в
+  RAM,
   а уже потом отдают их shell line editor на echo и обработку;
 - `VfsRuntimeLimits::maxNameLength` поднят до 64, что соответствует текущему FatFs `FF_LFN_BUF=64` и позволяет shell
   completion держать длинные ASCII LFN в пределах `maxPathLength`;
 - добавлены host regression tests на paste-sized input batch и single-match completion имени
   `ExampleMidiFile_Finale_With_A_Long_Title.mid`.
 
-Локально повторно пройдены `lexxos_contract_tests`, `lexxos_services_contract_tests`, host CTest `10/10`, host/Pico W/Pico
+Локально повторно пройдены `lexxos_contract_tests`, `lexxos_services_contract_tests`, host CTest `10/10`, host/Pico
+W/Pico
 2 W builds и markdown/C++ layout/board preset/diff checks. Свежий Pico W ELF после input/LFN fix: `text=836400`,
 `data=0`, `bss=188056`; Pico 2 W: `text=846636`, `data=0`, `bss=324412`. Hardware UART paste/completion retest нужен
 после прошивки нового UF2.
@@ -244,8 +248,9 @@ git diff --check
 `ping --count 1 pool.ntp.org` и supervisor `jobs`.
 
 Аппаратный UART smoke 2026-07-08 на ClockworkPi PicoCalc with Raspberry Pi Pico 2 W подтвердил профиль
-`picocalc_pico2w`: `version`, `board`, SD/FAT, LCD console, southbridge keyboard/backlight/display-power, RTC/NTP
-`rtc-sync --tz +07:00`, PSRAM JEDEC/data test, beep/audio, Wi-Fi scan/status/ICMP, `.lexx` external programs, soft
+`picocalc_pico2w`: `version`, `board`, SD/FAT, LCD-консоль, клавиатура/подсветка/питание через STM32, RTC/NTP
+`rtc-sync --tz +07:00`, проверка JEDEC/данных PSRAM, звук, поиск/состояние Wi-Fi/ICMP, внешние программы `.lexx`,
+программный
 reboot и `poweroff`. Подробности зафиксированы в
 [`docs/tests/picocalc-pico2w-0.0.7-regression.md`](tests/picocalc-pico2w-0.0.7-regression.md).
 
@@ -278,12 +283,12 @@ reboot и `poweroff`. Подробности зафиксированы в
 
 Эти пункты остаются в roadmap, но не должны задерживать релиз, если release notes называют их явно:
 
-- PSRAM allocator/cache/arena backend;
+- реализация аллокатора, кеша и арен PSRAM;
 - активная low-battery policy;
 - Bluetooth runtime API;
 - MIDI `mplayer` в standard build;
-- STM32F407 RWX linker warning;
+- предупреждение компоновщика STM32F407 о RWX;
 - ProgramModule registry и board-specific runtime profile variants;
-- Game Boy graphical ROM launcher, SRAM saves, save states, palette settings UI/preview and APU;
+- графическое меню ROM Game Boy, сохранения SRAM и состояния, настройки/просмотр палитры и APU;
 - JCS `update-keyboard-fifo-read` warning, если он одиночный и сопровождается `ready=yes`, `consecutive=1`,
   `snapshot-ok=yes` без потери ввода.

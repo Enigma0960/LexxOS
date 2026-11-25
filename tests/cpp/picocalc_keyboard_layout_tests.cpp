@@ -1,7 +1,7 @@
-#include <lexxos/devices/input/picocalc_keyboard_layout.h>
-
 #include <cstdlib>
 #include <iostream>
+
+#include <lexxos/devices/input/picocalc_keyboard_layout.h>
 
 namespace {
 

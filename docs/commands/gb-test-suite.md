@@ -1,6 +1,6 @@
 # `gb-test-suite`
 
-run Blargg Game Boy CPU individual test suite.
+Запускает набор отдельных CPU-тестов Blargg для Game Boy.
 
 ## Справка shell
 

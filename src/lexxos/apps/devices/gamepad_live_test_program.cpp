@@ -1,8 +1,8 @@
-#include "gamepad_live_test_program.h"
-#include <lexxos/apps/devices/gamepad_test_program.h>
+#include <lexxos/apps/devices/gamepad_live_test_program.h>
 
 #include <lexxos/apps/common/core_programs_support.h>
 #include <lexxos/apps/devices/detail/input_program_support.h>
+#include <lexxos/apps/devices/gamepad_test_program.h>
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/devices/gamepad_device.h>
 #include <lexxos/kernel/system.h>
@@ -15,32 +15,32 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec gamepadLiveArguments[] = {
 	    {
-         .name = "seconds",
-         .shortName = 's',
-         .valueName = "seconds",
-         .help = "test duration in seconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "30",
+	     .name = "seconds",
+	     .shortName = 's',
+	     .valueName = "seconds",
+	     .help = "test duration in seconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "30",
 	     },
 	    {
-         .name = "interval",
-         .shortName = 'i',
-         .valueName = "milliseconds",
-         .help = "poll interval in milliseconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "25",
+	     .name = "interval",
+	     .shortName = 'i',
+	     .valueName = "milliseconds",
+	     .help = "poll interval in milliseconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "25",
 	     },
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "gamepad device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "gamepad device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -87,6 +87,7 @@ int GamepadLiveTestProgram::run(
 		context.writeErrorLine("gamepad-live: gamepad device is not registered");
 		return 1;
 	}
+
 	if (!gamepad->isReady()) {
 		context.writeErrorLine("gamepad-live: gamepad device is not ready");
 		return 1;
@@ -104,6 +105,7 @@ int GamepadLiveTestProgram::run(
 		context.writeErrorLine("gamepad-live: invalid seconds value");
 		return 1;
 	}
+
 	if (!detail::parseUnsigned(arguments.valueOr("interval", "25"), intervalMs) || intervalMs == 0 || intervalMs > 1000) {
 		context.writeErrorLine("gamepad-live: invalid interval value");
 		return 1;
@@ -138,6 +140,7 @@ int GamepadLiveTestProgram::run(
 			writeGamepadState(context, state);
 			++changes;
 		}
+
 		sleepMs(context, intervalMs);
 	}
 
@@ -147,6 +150,7 @@ int GamepadLiveTestProgram::run(
 	if (changes == 0) {
 		context.writeLine("gamepad-live: no gamepad activity detected");
 	}
+
 	return 0;
 }
 

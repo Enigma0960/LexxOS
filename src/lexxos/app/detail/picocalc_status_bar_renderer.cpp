@@ -11,6 +11,7 @@ void PicoCalcStatusBarRenderer::draw(lexxos::devices::DisplayDevice& display, le
 	if (width > maxStatusBarPixelWidth) {
 		width = maxStatusBarPixelWidth;
 	}
+
 	if (width <= 0) {
 		return;
 	}
@@ -32,9 +33,11 @@ void PicoCalcStatusBarRenderer::draw(lexxos::devices::DisplayDevice& display, le
 		for (int x = 0; x < width; ++x) {
 			pixels[x] = status.visible && y + 1 == statusBarHeightPixels ? statusSeparatorColor : statusBackgroundColor;
 		}
+
 		if (status.visible) {
 			_drawComponentsRow(status, layout, y, pixels, width);
 		}
+
 		display.writeRgb565Stream(pixels, width);
 	}
 
@@ -60,6 +63,7 @@ void PicoCalcStatusBarRenderer::_appendTime(Layout& layout, lexxos::app::picocal
 	if (!status.timeValid) {
 		return;
 	}
+
 	char timeText[9]{};
 	_formatTimeText(status, timeText);
 	_pushText(layout, timeText, statusTextColor);
@@ -96,6 +100,7 @@ void PicoCalcStatusBarRenderer::_pushText(Layout& layout, char const* text, std:
 	for (; index + 1 < sizeof(component.text) && text[index] != '\0'; ++index) {
 		component.text[index] = text[index];
 	}
+
 	component.text[index] = '\0';
 }
 
@@ -167,6 +172,7 @@ bool PicoCalcStatusBarRenderer::_resolveSprings(Layout& layout, int width) const
 			remainingExtra -= share;
 			remainingWeight -= component.weight;
 		}
+
 		cursor += component.width;
 		if (index + 1 < layout.count) {
 			cursor += statusBarComponentGap;
@@ -221,6 +227,7 @@ void PicoCalcStatusBarRenderer::_formatBatteryPercent(lexxos::app::picocalc_lcd_
 	} else {
 		text[index++] = static_cast<char>('0' + percent);
 	}
+
 	text[index++] = '%';
 	text[index] = '\0';
 }
@@ -262,6 +269,7 @@ int PicoCalcStatusBarRenderer::_textWidth(char const* text) const {
 		width += cellWidth;
 		++text;
 	}
+
 	return width;
 }
 
@@ -270,15 +278,19 @@ std::uint16_t PicoCalcStatusBarRenderer::_batteryTextColor(
 	if (!status.batteryValid) {
 		return statusSeparatorColor;
 	}
+
 	if (status.batteryCharging) {
 		return statusAccentColor;
 	}
+
 	if (status.batteryPercent <= lowBatteryPercent) {
 		return statusLowBatteryColor;
 	}
+
 	if (status.batteryPercent <= mediumBatteryPercent) {
 		return statusMediumBatteryColor;
 	}
+
 	return statusTextColor;
 }
 
@@ -326,12 +338,15 @@ void PicoCalcStatusBarRenderer::_fillRange(std::uint16_t* pixels, int width, int
 	if (pixels == nullptr || width <= 0) {
 		return;
 	}
+
 	if (x0 < 0) {
 		x0 = 0;
 	}
+
 	if (x1 >= width) {
 		x1 = width - 1;
 	}
+
 	for (int x = x0; x <= x1; ++x) {
 		pixels[x] = color;
 	}

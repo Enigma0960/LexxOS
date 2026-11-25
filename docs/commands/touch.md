@@ -1,6 +1,6 @@
 # `touch`
 
-create an empty writable VFS file.
+Создаёт пустой файл в доступной для записи VFS.
 
 ## Справка shell
 

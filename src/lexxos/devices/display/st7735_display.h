@@ -8,7 +8,9 @@
 #include <lexxos/platform/board.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices {

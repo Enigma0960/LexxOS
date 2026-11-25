@@ -13,7 +13,7 @@
 - status LED: PC0;
 - дисплей: EU-TFT3.2-320x240, отдельно описан в профиле платы.
 
-## Toolchain
+## Инструменты компиляции
 
 Preset использует Arm GNU Toolchain из Raspberry Pi Pico SDK:
 
@@ -53,7 +53,7 @@ Wrapper проекта находит установленный OpenOCD в
 Проверка SWD:
 
 ```bash
-./tools/openocd-lexxos -f debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
+./tools/openocd-lexxos -f tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
 ```
 
 Если порт 4444 занят:
@@ -67,7 +67,7 @@ pkill -f openocd
 
 ```bash
 ./tools/openocd-lexxos \
-  -f debug/openocd/lexxos-stm32f407-cmsis-dap.cfg \
+  -f tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg \
   -c "program build/stm32f407/src/lexxos.elf verify reset exit"
 ```
 

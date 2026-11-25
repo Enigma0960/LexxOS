@@ -23,6 +23,7 @@ bool MatrixKeyboard::initialize() {
 	if (gpio.configureOutput == nullptr || gpio.configureInput == nullptr) {
 		return false;
 	}
+
 	for (std::size_t index = 0; index < _config.rowCount; ++index) {
 		if (!gpio.configureOutput(_config.rows[index], inactiveLevel)) {
 			return false;
@@ -57,6 +58,7 @@ void MatrixKeyboard::update() {
 	if (!_firstScan && _config.scanPeriodMs > 0 && now - _lastScanMs < _config.scanPeriodMs) {
 		return;
 	}
+
 	_lastScanMs = now;
 
 	auto const rawState = _readRawState();
@@ -170,6 +172,7 @@ void MatrixKeyboard::_driveAllRowsInactive() {
 	if (gpio.write == nullptr) {
 		return;
 	}
+
 	for (std::size_t index = 0; index < _config.rowCount; ++index) {
 		gpio.write(_config.rows[index], inactiveLevel);
 	}

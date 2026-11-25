@@ -1,7 +1,6 @@
-#include <lexxos/platform/platform.h>
-
 #include <cstdint>
 
+#include <lexxos/platform/platform.h>
 #include <lexxos/platform/stm32/detail/stm32_console.h>
 #include <lexxos/platform/stm32/detail/stm32_gpio.h>
 
@@ -45,7 +44,7 @@ void lexxos::platform::initialize() {
 	writeConsole("LexxOS STM32F407 runtime boot\r\n");
 }
 
-lexxos::platform::BoardDescriptor const& lexxos::platform::board() {
+lexxos::platform::LegacyBoardDescriptor const& lexxos::platform::board() {
 	return activeBoardDescriptor();
 }
 

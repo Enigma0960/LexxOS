@@ -1,0 +1,10 @@
+menu "I2C sensors"
+    config DEMO_I2C_SDA
+        int "SDA GPIO"
+        range 0 33
+        default 21
+    config DEMO_I2C_SCL
+        int "SCL GPIO"
+        range 0 33
+        default 22
+endmenu

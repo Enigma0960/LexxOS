@@ -10,43 +10,44 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec keyboardLiveArguments[] = {
 	    {
-         .name = "seconds",
-         .shortName = 's',
-         .valueName = "seconds",
-         .help = "test duration in seconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "30",
+	     .name = "seconds",
+	     .shortName = 's',
+	     .valueName = "seconds",
+	     .help = "test duration in seconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "30",
 	     },
 	    {
-         .name = "interval",
-         .shortName = 'i',
-         .valueName = "milliseconds",
-         .help = "poll interval in milliseconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "25",
+	     .name = "interval",
+	     .shortName = 'i',
+	     .valueName = "milliseconds",
+	     .help = "poll interval in milliseconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "25",
 	     },
 	    {
-         .name = "full",
-         .shortName = 'f',
-         .help = "also report unmapped raw events",
-         .kind = lexxos::program::ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "full",
+	     .shortName = 'f',
+	     .help = "also report unmapped raw events",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "input device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "input device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -76,6 +77,7 @@ int KeyboardLiveTestProgram::run(
 		context.writeErrorLine("keyboard-live: input device is not registered");
 		return 1;
 	}
+
 	if (!input->isReady()) {
 		context.writeErrorLine("keyboard-live: input device is not ready");
 		return 1;
@@ -93,6 +95,7 @@ int KeyboardLiveTestProgram::run(
 		context.writeErrorLine("keyboard-live: invalid seconds value");
 		return 1;
 	}
+
 	if (!detail::parseUnsigned(arguments.valueOr("interval", "25"), intervalMs) || intervalMs == 0 || intervalMs > 1000) {
 		context.writeErrorLine("keyboard-live: invalid interval value");
 		return 1;
@@ -156,6 +159,7 @@ int KeyboardLiveTestProgram::run(
 			writeUnsigned(context, (nowMs - startedMs) / 1000U);
 			context.writeLine("s");
 		}
+
 		lexxos::kernel::sleepMs(intervalMs);
 	}
 
@@ -170,6 +174,7 @@ int KeyboardLiveTestProgram::run(
 	if (totalEvents == 0 && totalChanges == 0) {
 		context.writeLine("keyboard-live: no key activity detected");
 	}
+
 	return 0;
 }
 

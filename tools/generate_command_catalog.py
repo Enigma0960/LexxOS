@@ -13,7 +13,7 @@ REQUIREMENTS = {
     "ESPIDF", "ESP_SPI", "FATFS", "FULL", "GAMEBOY", "GB_RUNTIME", "GPIO_ANALYZER",
     "HOSTED", "I2C", "JC", "KEYBOARD_TEST_COMMANDS", "LCD_CONSOLE", "LED", "MIC",
     "MIDI", "NET", "PICO", "PICOCALC", "PORTABLE_BEEP", "PSRAM", "SD_CARD",
-    "SD_CARD_TEST_COMMANDS", "SD_SPI", "WIFI",
+    "SD_CARD_TEST_COMMANDS", "SD_SPI", "WIFI", "UI_NATIVE_DEMO",
 }
 
 
@@ -23,9 +23,11 @@ def capabilities(board: str, platform: str, flavor: str, backend: str, enabled: 
         result.discard("DISPLAY")
         result.discard("DISPLAY_TEST_COMMANDS")
         result.discard("KEYBOARD_TEST_COMMANDS")
+
     def add(name: str, condition: bool) -> None:
         if condition:
             result.add(name)
+
     picocalc = board in {"picocalc_pico_w", "picocalc_pico2w"}
     jc = board == "jc_esp32p4_m3_dev"
     adv = board == "m5stack_cardputer_adv"
@@ -45,10 +47,12 @@ def capabilities(board: str, platform: str, flavor: str, backend: str, enabled: 
     add("AUDIO", platform == "sim" or picocalc or jc or adv)
     add("MIC", jc or adv)
     add("PORTABLE_BEEP", platform in {"sim", "espidf"})
-    add("LCD_CONSOLE", "DISPLAY" in enabled and (picocalc or cardputer or jc))
+    # Lyra has the PicoCalc LCD, but not yet the Pico SDK keyboard/I2C backend.
+    add("LCD_CONSOLE", "DISPLAY" in enabled and
+        (picocalc or cardputer or jc or board == "picocalc_lyra"))
     add("BACKLIGHT", "DISPLAY" in enabled and (picocalc or platform == "espidf"))
     add("LED", board in {"dev_pico", "dev_pico_sdio", "dev_pico2w", "euse_m4_demo_stm32f407", "dev-sim"})
-    add("I2C", platform != "host")
+    add("I2C", platform not in {"host", "rk3506"})
     add("ESP_SPI", platform == "espidf" and not jc)
     add("GB_RUNTIME", "PSRAM" in enabled or platform in {"host", "sim", "espidf"})
     return result
@@ -63,7 +67,13 @@ def select(entries: list[dict], enabled: set[str]) -> list[dict]:
         unknown = set(entry["requires"]) - REQUIREMENTS
         if unknown:
             raise ValueError(f"Unknown dependencies for {entry['name']}: {sorted(unknown)}")
-        if "GROUP_" + entry["group"] not in enabled or not set(entry["requires"]) <= enabled:
+        opt_in = entry.get("opt_in")
+        if opt_in is not None and (opt_in not in REQUIREMENTS or opt_in not in entry["requires"]):
+            raise ValueError(f"Invalid explicit opt-in for {entry['name']}: {opt_in}")
+        explicitly_enabled = opt_in is not None and opt_in in enabled
+        group_enabled = "GROUP_" + entry["group"] in enabled
+        bench_only = entry["name"] == "bench" and "BENCH_ONLY" in enabled
+        if not (group_enabled or bench_only or explicitly_enabled) or not set(entry["requires"]) <= enabled:
             continue
         if entry["name"] in names:
             raise ValueError(f"Duplicate command: {entry['name']}")
@@ -99,7 +109,7 @@ def generate(entries: list[dict], selected: list[dict], output: Path, enabled: s
     cmake += f'set(LEXXOS_COMMAND_HAS_GBEMU {int("gbemu" in names)})\n'
     (output / 'command_sources.cmake').write_text(cmake)
     report = [{"name": e['name'], "group": e['group'], "enabled": e in selected,
-               "missing": sorted((set(e['requires']) | {'GROUP_' + e['group']}) - enabled)} for e in entries]
+               "missing": [] if e in selected else sorted((set(e['requires']) | {'GROUP_' + e['group']}) - enabled)} for e in entries]
     (output / 'commands.json').write_text(json.dumps(report, indent=2) + '\n')
 
 

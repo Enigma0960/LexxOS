@@ -1,6 +1,6 @@
 # `uptime`
 
-show system uptime.
+Показывает время работы системы.
 
 ## Справка shell
 

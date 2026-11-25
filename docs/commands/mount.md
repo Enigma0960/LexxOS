@@ -1,6 +1,6 @@
 # `mount`
 
-show or create VFS mounts.
+Показывает или создаёт точки монтирования VFS.
 
 ## Справка shell
 

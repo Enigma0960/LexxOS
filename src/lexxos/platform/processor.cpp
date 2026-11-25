@@ -14,6 +14,8 @@ char const* toString(ProcessorFamily family) {
 			return "esp32";
 		case ProcessorFamily::Stm32f4:
 			return "stm32f4";
+		case ProcessorFamily::Rk3506:
+			return "rk3506";
 		case ProcessorFamily::Unknown:
 			return "unknown";
 	}

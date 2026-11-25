@@ -5,6 +5,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::filesystem_programs {
+
 namespace {
 
 	constexpr lexxos::apps::PrettyTableColumn tmpFileColumns[] = {
@@ -29,6 +30,7 @@ namespace {
 			lookup.found = true;
 			return false;
 		}
+
 		++lookup.current;
 		return true;
 	}
@@ -73,6 +75,7 @@ int TmpInfoProgram::run(
 		lexxos::apps::PrettyTable table{tmpFileColumns, sizeof(tmpFileColumns) / sizeof(tmpFileColumns[0])};
 		table.print(context, tmpFileTableRow, nullptr);
 	}
+
 	return 0;
 }
 

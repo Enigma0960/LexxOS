@@ -30,6 +30,7 @@ RunBudgetResult runCpuBudget(
 			if (fastCycles > fastHaltStepCycles) {
 				fastCycles = fastHaltStepCycles;
 			}
+
 			fastCycles -= fastCycles % 4U;
 			if (fastCycles >= 4U) {
 				step.status = lexxos::gameboy::CpuStepStatus::Halted;
@@ -41,14 +42,17 @@ RunBudgetResult runCpuBudget(
 		} else {
 			step = cpu.step(bus);
 		}
+
 		if (trace != nullptr) {
 			trace->push(step, cartridge);
 		}
+
 		if (fastTiming) {
 			bus.advanceCyclesFast(step.cycles);
 		} else {
 			bus.advanceCycles(step.cycles);
 		}
+
 		result.cycles += step.cycles;
 		++result.steps;
 		result.status = step.status;
@@ -69,6 +73,7 @@ RunBudgetResult runCpuBudget(
 			break;
 		}
 	}
+
 	return result;
 }
 
@@ -92,13 +97,16 @@ RunBudgetResult runUntilVramWrite(
 		if (chunk.breakpointHit) {
 			total.breakpointHit = true;
 		}
+
 		if (chunk.pcRangeHit) {
 			total.pcRangeHit = true;
 		}
+
 		if (chunk.breakpointHit || chunk.pcRangeHit || !isContinuableEmulationStatus(chunk.status) || chunk.steps == 0) {
 			break;
 		}
 	}
+
 	return total;
 }
 
@@ -120,13 +128,16 @@ RunBudgetResult runUntilVisibleVram(
 		if (chunk.breakpointHit) {
 			total.breakpointHit = true;
 		}
+
 		if (chunk.pcRangeHit) {
 			total.pcRangeHit = true;
 		}
+
 		if (chunk.breakpointHit || chunk.pcRangeHit || !isContinuableEmulationStatus(chunk.status) || chunk.steps == 0) {
 			break;
 		}
 	}
+
 	return total;
 }
 
@@ -155,13 +166,16 @@ RunBudgetResult runUntilVramTarget(
 		if (chunk.breakpointHit) {
 			total.breakpointHit = true;
 		}
+
 		if (chunk.pcRangeHit) {
 			total.pcRangeHit = true;
 		}
+
 		if (chunk.breakpointHit || chunk.pcRangeHit || !isContinuableEmulationStatus(chunk.status) || chunk.steps == 0) {
 			break;
 		}
 	}
+
 	return total;
 }
 
@@ -195,13 +209,16 @@ RunBudgetResult runUntilBgReady(
 		if (chunk.breakpointHit) {
 			total.breakpointHit = true;
 		}
+
 		if (chunk.pcRangeHit) {
 			total.pcRangeHit = true;
 		}
+
 		if (chunk.breakpointHit || chunk.pcRangeHit || !isContinuableEmulationStatus(chunk.status) || chunk.steps == 0) {
 			break;
 		}
 	}
+
 	return total;
 }
 

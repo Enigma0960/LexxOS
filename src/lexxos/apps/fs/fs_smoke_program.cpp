@@ -27,12 +27,12 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec fsSmokeArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "optional VFS path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = false,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "optional VFS path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = false,
 	     },
 	};
 
@@ -72,6 +72,7 @@ namespace {
 				buffer.overflow = true;
 				return;
 			}
+
 			buffer.data[buffer.size++] = character;
 		}
 	}
@@ -83,6 +84,7 @@ namespace {
 			if (size + 1 >= output.size()) {
 				return false;
 			}
+
 			output[size++] = value;
 			output[size] = '\0';
 			return true;
@@ -92,19 +94,23 @@ namespace {
 				return false;
 			}
 		}
+
 		if (size == 0) {
 			return false;
 		}
+
 		if (output[size - 1] != '/') {
 			if (!append('/')) {
 				return false;
 			}
 		}
+
 		for (char const character : name) {
 			if (!append(character)) {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -137,9 +143,11 @@ namespace {
 				source.close();
 				return false;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
+
 			auto const writeStatus = target.write(std::string_view{buffer.data(), bytesRead});
 			if (writeStatus != lexxos::vfs::WriteStatus::Ok) {
 				target.close();
@@ -147,9 +155,11 @@ namespace {
 				return false;
 			}
 		}
-		target.close();
+
+		auto const finishStatus = target.finish();
 		source.close();
-		return true;
+
+		return finishStatus == lexxos::vfs::WriteStatus::Ok;
 	}
 
 	void smokeCleanup(

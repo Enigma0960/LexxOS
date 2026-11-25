@@ -4,12 +4,15 @@
 #include <cstdint>
 #include <string_view>
 
+#include <lexxos/io/input_stream.h>
 #include <lexxos/program/arguments.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 
 namespace lexxos::io {
+
 class InputStream;
 class OutputStream;
+
 } // namespace lexxos::io
 
 namespace lexxos::os {
@@ -116,6 +119,9 @@ struct ProgramDescriptor {
 	bool allowExtraArguments{false};
 	bool legacy{false};
 	bool enabled{true};
+	// Resolve the internal workspace quota from argv before a process is created.
+	// Must be cheap and safe inside the supervisor process-table guard.
+	std::uint32_t (*internalMemoryQuotaResolver)(ProgramInvocation const&){nullptr};
 };
 
 } // namespace lexxos::program

@@ -41,7 +41,7 @@ std::uint32_t platformUptimeMs(lexxos::platform::PlatformServices const& platfor
 }
 
 #if LEXXOS_SOFTWARE_RTC_NETWORK_SYNC_AVAILABLE
-lexxos::platform::BoardDescriptor const& activeBoard(lexxos::app::RuntimeTaskContext const& context) {
+lexxos::platform::LegacyBoardDescriptor const& activeBoard(lexxos::app::RuntimeTaskContext const& context) {
 	auto const& platform = platformServices(context);
 	auto const& board = platform.board;
 	return board.current != nullptr ? board.current() : lexxos::platform::board();
@@ -57,12 +57,14 @@ bool softwareRtcNetworkReady(lexxos::app::RuntimeTaskContext& context) {
 			return true;
 		}
 	}
+
 	if (board.wireless.wifi) {
 		auto const wifi = lexxos::apps::network_programs::detail::readWifiRuntimeStatus(board);
 		if (wifi.supported && wifi.initialized && wifi.connected && wifi.gotIp) {
 			return true;
 		}
 	}
+
 	return false;
 #elif FEATURE_ENABLED(PICO_CALC) && defined(LEXXOS_PLATFORM_PICO) && defined(LEXXOS_PICO_CYW43_AVAILABLE) && defined(LEXXOS_PICO_CYW43_LWIP_AVAILABLE)
 	auto const wifi = lexxos::apps::network_programs::detail::readWifiRuntimeStatus(activeBoard(context));
@@ -158,6 +160,7 @@ void softwareRtcTask(void* userData) {
 		    && softwareRtcNetworkSyncDue(platform, config, platformUptimeMs(platform))) {
 			runSoftwareRtcNetworkSync(runtimeContext, config);
 		}
+
 		lexxos::kernel::sleepMs(1000);
 	}
 }
@@ -168,6 +171,7 @@ bool lexxos::app::startSoftwareRtcTask(RuntimeTaskContext& context) {
 	if (!lexxos::devices::rtc::software::configured(platformServices(context))) {
 		return true;
 	}
+
 	return lexxos::kernel::createTask(softwareRtcTask, &context, {
 	                                                                 .name = "software-rtc",
 	                                                                 .stackSizeBytes = 6144,

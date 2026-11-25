@@ -1,0 +1,286 @@
+{
+  "features": [
+    {
+      "key": "LEXXOS_FEATURE_SD_CARD",
+      "label": "SD card",
+      "default": "ON",
+      "boardControlled": true,
+      "visible": false
+    },
+    {
+      "key": "LEXXOS_FEATURE_FATFS",
+      "label": "FatFs",
+      "default": "ON",
+      "boardControlled": true,
+      "visible": false
+    },
+    {
+      "key": "LEXXOS_FEATURE_DISPLAY",
+      "label": "Display",
+      "default": "ON",
+      "boardControlled": true,
+      "visible": false
+    },
+    {
+      "key": "LEXXOS_FEATURE_KEYBOARD",
+      "label": "Keyboard / input",
+      "default": "ON",
+      "boardControlled": true,
+      "visible": false
+    },
+    {
+      "key": "LEXXOS_FEATURE_DEBUG_DISPLAY",
+      "label": "Debug display",
+      "default": "OFF",
+      "boardControlled": true,
+      "visible": false
+    },
+    {
+      "key": "LEXXOS_FEATURE_DS3231_RTC",
+      "label": "DS3231 RTC",
+      "default": "OFF",
+      "boardControlled": true,
+      "visible": false
+    },
+    {
+      "key": "LEXXOS_FEATURE_PSRAM",
+      "label": "PSRAM",
+      "default": "OFF",
+      "boardControlled": true,
+      "visible": false
+    },
+    {
+      "key": "LEXXOS_FEATURE_HEALTH",
+      "label": "Health",
+      "default": "ON"
+    },
+    {
+      "key": "LEXXOS_ENABLE_GAMEBOY",
+      "label": "Game Boy emulator",
+      "default": "OFF"
+    },
+    {
+      "key": "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS",
+      "label": "SD test commands",
+      "default": "OFF"
+    },
+    {
+      "key": "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS",
+      "label": "Display test commands",
+      "default": "OFF"
+    },
+    {
+      "key": "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS",
+      "label": "Keyboard test commands",
+      "default": "OFF"
+    },
+    {
+      "key": "LEXXOS_FEATURE_LEGACY_FAT_EXPERIMENTAL",
+      "label": "Legacy FAT backend",
+      "default": "OFF"
+    },
+    {
+      "key": "LEXXOS_FEATURE_LEGACY_FAT_TEST_COMMANDS",
+      "label": "Legacy FAT diagnostics",
+      "default": "OFF"
+    }
+  ],
+  "platforms": [
+    {
+      "key": "host",
+      "label": "Host native",
+      "cmakePlatform": "host",
+      "defaultBoard": "host_native",
+      "defaultBuildDir": "build/configurator/host",
+      "defaultCMakeOptions": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      },
+      "visibleGroups": [
+        "common",
+        "features"
+      ],
+      "instructions": "Host build does not need an embedded SDK. Open the repository root in CLion. Use the generated CMake command only if you want a custom build directory or custom feature set.",
+      "presets": [
+        {
+          "label": "debug-host",
+          "configurePreset": "debug-host",
+          "buildTarget": "debug-host"
+        },
+        {
+          "label": "debug-host-full",
+          "configurePreset": "debug-host-full",
+          "buildTarget": "debug-host-full"
+        },
+        {
+          "label": "manual",
+          "configurePreset": "",
+          "notes": "Generate a custom configure command"
+        }
+      ]
+    },
+    {
+      "key": "sim",
+      "label": "Simulator",
+      "cmakePlatform": "sim",
+      "defaultBoard": "dev-sim",
+      "defaultBuildDir": "build/configurator/sim",
+      "defaultCMakeOptions": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      },
+      "visibleGroups": [
+        "common",
+        "features"
+      ],
+      "instructions": "Simulator build produces a host shared library used by the Python emulator. Use CLion root project profile debug-sim for regular development.",
+      "presets": [
+        {
+          "label": "debug-sim",
+          "configurePreset": "debug-sim",
+          "buildTarget": "lexxos-sim"
+        },
+        {
+          "label": "debug-sim-full",
+          "configurePreset": "debug-sim-full",
+          "buildTarget": "lexxos-sim-full"
+        },
+        {
+          "label": "manual",
+          "configurePreset": ""
+        }
+      ]
+    },
+    {
+      "key": "pico",
+      "label": "Raspberry Pi Pico / RP2040",
+      "cmakePlatform": "pico",
+      "defaultBoard": "dev_pico",
+      "defaultBuildDir": "build/configurator/pico",
+      "defaultCMakeOptions": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_ENABLE_GAMEBOY": "ON",
+        "LEXXOS_GAMEBOY_ROM_CACHE_BANKS": "2",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "32"
+      },
+      "visibleGroups": [
+        "common",
+        "features",
+        "pico",
+        "debug"
+      ],
+      "instructions": "Pico build needs Pico SDK, Pico toolchain and FreeRTOS. In CLion open the repository root and select a Pico CMake profile. For flashing/debugging configure OpenOCD/picotool/GDB in CLion. If you use dev_pico_sdio, enable LEXXOS_ENABLE_EXPERIMENTAL_RP2040_SDIO explicitly.",
+      "presets": [
+        {
+          "label": "debug-pico",
+          "configurePreset": "debug-pico",
+          "buildTarget": "lexxos-pico"
+        },
+        {
+          "label": "debug-pico-full",
+          "configurePreset": "debug-pico-full",
+          "buildTarget": "lexxos-pico-full"
+        },
+        {
+          "label": "perf-pico-gb",
+          "configurePreset": "perf-pico-gb",
+          "buildTarget": "perf-pico-gb"
+        },
+        {
+          "label": "perf-pico-gb-250",
+          "configurePreset": "perf-pico-gb-250",
+          "buildTarget": "perf-pico-gb-250"
+        },
+        {
+          "label": "perf-pico-gb-250-spi62",
+          "configurePreset": "perf-pico-gb-250-spi62",
+          "buildTarget": "perf-pico-gb-250-spi62"
+        },
+        {
+          "label": "perf-pico-gb-266",
+          "configurePreset": "perf-pico-gb-266",
+          "buildTarget": "perf-pico-gb-266"
+        },
+        {
+          "label": "manual",
+          "configurePreset": ""
+        }
+      ]
+    },
+    {
+      "key": "stm32f4",
+      "label": "STM32F407",
+      "cmakePlatform": "stm32f4",
+      "defaultBoard": "euse_m4_demo_stm32f407",
+      "defaultBuildDir": "build/configurator/stm32f407",
+      "defaultCMakeOptions": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "config/cmake/toolchains/arm-none-eabi.cmake",
+        "LEXXOS_STM32F4_BRINGUP_ONLY": "OFF",
+        "LEXXOS_BUILD_FLAVOR": "standard"
+      },
+      "visibleGroups": [
+        "common",
+        "features",
+        "stm32",
+        "debug"
+      ],
+      "instructions": "STM32F407 build needs the Arm GNU toolchain and FreeRTOS. In CLion open the repository root, select debug-stm32f407 and configure OpenOCD/ST-Link as the debug target. The generated command is for CMake configuration only; run/debug should remain in CLion.",
+      "presets": [
+        {
+          "label": "debug-stm32f407",
+          "configurePreset": "debug-stm32f407",
+          "buildTarget": "lexxos-stm32f407"
+        },
+        {
+          "label": "debug-stm32f407-full",
+          "configurePreset": "debug-stm32f407-full",
+          "buildTarget": "lexxos-stm32f407-full"
+        },
+        {
+          "label": "manual",
+          "configurePreset": ""
+        }
+      ]
+    },
+    {
+      "key": "espidf",
+      "label": "ESP32 / ESP-IDF",
+      "cmakePlatform": "espidf",
+      "defaultBoard": "m5stack_basic_v1",
+      "defaultBuildDir": "build/configurator/esp32",
+      "defaultCMakeOptions": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ESP_PLATFORM": "1",
+        "PYTHON_DEPS_CHECKED": "1",
+        "LEXXOS_BUILD_FLAVOR": "standard",
+        "LEXXOS_ENABLE_GAMEBOY": "OFF",
+        "CCACHE_ENABLE": "False"
+      },
+      "visibleGroups": [
+        "common",
+        "features",
+        "espidf",
+        "debug"
+      ],
+      "instructions": "ESP32 build needs ESP-IDF. The CLI dispatcher can source export.sh automatically, but CLion should still open the repository root and use the debug-esp32 profile. Configure serial port and flash/debug settings in ESP-IDF/CLion. Game Boy is disabled for ESP32 at this stage.",
+      "presets": [
+        {
+          "label": "debug-esp32",
+          "configurePreset": "debug-esp32",
+          "buildTarget": "lexxos-esp32"
+        },
+        {
+          "label": "debug-cardputer",
+          "configurePreset": "debug-cardputer",
+          "buildTarget": "lexxos-cardputer"
+        },
+        {
+          "label": "manual",
+          "configurePreset": ""
+        }
+      ]
+    }
+  ]
+}

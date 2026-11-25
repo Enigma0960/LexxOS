@@ -6,7 +6,9 @@
 #include <lexxos/apps/editor/detail/text_editor_types.h>
 
 namespace lexxos::io {
+
 class OutputStream;
+
 } // namespace lexxos::io
 
 namespace lexxos::apps::text_editor_programs::detail {

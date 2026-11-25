@@ -10,6 +10,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::lexx_programs {
+
 namespace {
 
 	bool equals(std::string_view value, std::string_view expected) {
@@ -48,6 +49,7 @@ namespace {
 			buffer[--index] = static_cast<char>('0' + (value % 10U));
 			value /= 10U;
 		} while (value != 0 && index > 0);
+
 		context.writeError({buffer + index, sizeof(buffer) - index});
 	}
 
@@ -72,10 +74,12 @@ namespace {
 				writeHex32Error(context, result.faultInstruction);
 			}
 		}
+
 		if (result.unsupportedSyscall != 0) {
 			context.writeError(" syscall=");
 			writeUnsignedError(context, result.unsupportedSyscall);
 		}
+
 		context.writeError(" executed=");
 		writeUnsignedError(context, result.instructionsExecuted);
 		context.writeErrorLine("");
@@ -94,9 +98,12 @@ lexxos::program::ProgramDescriptor LexxRunProgram::descriptor() {
 	                .launchMode = lexxos::program::ProgramLaunchMode::ForegroundTask,
 	                .stackSizeBytes = 8192,
 	                .priority = 1,
-	                .memoryClass = lexxos::program::ProgramMemoryClass::ExternalPreferred,
-	                .externalMemoryQuotaBytes = lexxos::external_program::lexxMaximumGuestMemoryBytes,
-	                .internalMemoryQuotaBytes = lexxos::external_program::lexxMaximumGuestMemoryBytes,
+	                // The supervisor creates the task with zero guest workspace.
+	        // After validating its .lexx header the loader reserves
+	        // precisely memorySize, rather than always reserving 64 KiB.
+	        .memoryClass = lexxos::program::ProgramMemoryClass::InternalOnly,
+	                .externalMemoryQuotaBytes = 0,
+	                .internalMemoryQuotaBytes = 0,
 	                .cancellable = true,
 	                .allowBackground = true,
 	                .interfaceKind = lexxos::program::ProgramInterfaceKind::Console,
@@ -126,6 +133,7 @@ int LexxRunProgram::run(
 			writeUsage(context);
 			return 2;
 		}
+
 		while (pathIndex < invocation.argc) {
 			std::string_view const token{invocation.argv[pathIndex]};
 			if (equals(token, "--trace")) {
@@ -133,32 +141,39 @@ int LexxRunProgram::run(
 				++pathIndex;
 				continue;
 			}
+
 			if (equals(token, "--max-steps")) {
 				if (pathIndex + 1 >= invocation.argc || !parseMaxSteps(invocation.argv[pathIndex + 1], options.maxInstructions)) {
 					context.writeErrorLine("lexx-run: invalid --max-steps value");
 					return 2;
 				}
+
 				pathIndex += 2;
 				continue;
 			}
+
 			if (startsWith(token, "--max-steps=")) {
 				if (!parseMaxSteps(token.substr(12), options.maxInstructions)) {
 					context.writeErrorLine("lexx-run: invalid --max-steps value");
 					return 2;
 				}
+
 				++pathIndex;
 				continue;
 			}
+
 			if (equals(token, "--")) {
 				++pathIndex;
 				break;
 			}
+
 			if (isOptionLike(token)) {
 				context.writeError("lexx-run: unknown option: ");
 				context.writeErrorLine(token);
 				writeUsage(context);
 				return 2;
 			}
+
 			break;
 		}
 	}
@@ -191,6 +206,16 @@ int LexxRunProgram::run(
 
 	context.writeError("lexx-run: failed: ");
 	context.writeError(lexxos::external_program::toString(result.status));
+
+	if (result.status == lexxos::external_program::ExternalProgramStatus::MemoryUnavailable) {
+		context.writeError(" requested=");
+		writeUnsignedError(context, result.requiredMemoryBytes);
+		if (result.availableMemoryBytes != 0U) {
+			context.writeError(" free-heap=");
+			writeUnsignedError(context, result.availableMemoryBytes);
+		}
+	}
+
 	writeFailureDetails(context, result);
 	return 126;
 }

@@ -9,11 +9,12 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec displayTextArguments[] = {
-	    {	     .name = "x",      .valueName = "pixels",                                         .help = "left coordinate", .kind = lexxos::program::ProgramArgumentKind::Positional, .valueType = lexxos::program::ProgramArgumentValueType::Unsigned, .required = true},
-	    {	     .name = "y",      .valueName = "pixels",                                          .help = "top coordinate", .kind = lexxos::program::ProgramArgumentKind::Positional, .valueType = lexxos::program::ProgramArgumentValueType::Unsigned, .required = true},
+	    {         .name = "x",      .valueName = "pixels",                                         .help = "left coordinate", .kind = lexxos::program::ProgramArgumentKind::Positional, .valueType = lexxos::program::ProgramArgumentValueType::Unsigned, .required = true},
+	    {         .name = "y",      .valueName = "pixels",                                          .help = "top coordinate", .kind = lexxos::program::ProgramArgumentKind::Positional, .valueType = lexxos::program::ProgramArgumentValueType::Unsigned, .required = true},
 	    {     .name = "scale",        .valueName = "1..8",                                      .help = "integer text scale", .kind = lexxos::program::ProgramArgumentKind::Positional, .valueType = lexxos::program::ProgramArgumentValueType::Unsigned, .required = true},
 	    {.name = "foreground", .valueName = "rgb565|name",                                              .help = "text color", .kind = lexxos::program::ProgramArgumentKind::Positional,   .valueType = lexxos::program::ProgramArgumentValueType::String, .required = true},
 	    {.name = "background", .valueName = "rgb565|name",                                        .help = "background color", .kind = lexxos::program::ProgramArgumentKind::Positional,   .valueType = lexxos::program::ProgramArgumentValueType::String, .required = true},
@@ -62,6 +63,7 @@ int DisplayTextProgram::run(
 		context.writeErrorLine("display-text: invalid argument");
 		return 1;
 	}
+
 	if (scale == 0 || scale > 8 || x > 0x7FFFFFFFU || y > 0x7FFFFFFFU) {
 		context.writeErrorLine("display-text: invalid position or scale");
 		return 1;

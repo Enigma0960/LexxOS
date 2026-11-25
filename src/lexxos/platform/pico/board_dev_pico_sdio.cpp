@@ -2,8 +2,8 @@
 
 namespace lexxos::platform {
 
-BoardDescriptor const& activeBoardDescriptor() {
-	static BoardDescriptor const descriptor{
+LegacyBoardDescriptor const& activeBoardDescriptor() {
+	static LegacyBoardDescriptor const descriptor{
 	    .boardId = "dev_pico_sdio",
 	    .boardName = "LexxOS development board on Raspberry Pi Pico (experimental SDIO profile)",
 	    .vendor = "LexxOS",

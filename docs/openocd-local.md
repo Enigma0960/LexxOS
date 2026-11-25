@@ -138,7 +138,7 @@ $PROJECT_DIR$/tools/openocd-local
 |-------------------|---------------------------------------------|
 | Target            | `lexxos`                                    |
 | Executable binary | `build/pico/src/lexxos.elf`                 |
-| Board config file | `debug/openocd/lexxos-rp2040-cmsis-dap.cfg` |
+| Board config file | `tools/debug/openocd/lexxos-rp2040-cmsis-dap.cfg` |
 | GDB port          | `3333`                                      |
 | Telnet port       | `4444`                                      |
 | Download          | `Always` или `If updated`                   |
@@ -147,7 +147,7 @@ $PROJECT_DIR$/tools/openocd-local
 Для Pico 2 / RP2350 позже можно использовать:
 
 ```text
-debug/openocd/lexxos-rp2350-cmsis-dap.cfg
+tools/debug/openocd/lexxos-rp2350-cmsis-dap.cfg
 ```
 
 ## Если CLion показывает `Wrong OpenOCD installation`

@@ -8,12 +8,16 @@
 #include <lexxos/devices/display_device.h>
 
 namespace lexxos::os {
+
 class AppContext;
-}
+
+} // namespace lexxos::os
 
 namespace lexxos::program {
+
 struct ProgramInvocation;
-}
+
+} // namespace lexxos::program
 
 namespace lexxos::apps::device_programs::detail {
 

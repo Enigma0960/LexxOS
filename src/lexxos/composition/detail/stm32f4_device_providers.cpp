@@ -1,8 +1,7 @@
-#include <lexxos/composition/detail/platform_device_providers.h>
-
 #include <iterator>
 #include <string_view>
 
+#include <lexxos/composition/detail/platform_device_providers.h>
 #include <lexxos/devices/bus/i2c_bus.h>
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/feature.h>
@@ -23,18 +22,20 @@ using lexxos::devices::Stm32ParallelTftDisplay;
 #endif
 
 namespace {
+
 #if defined(LEXXOS_PLATFORM_STM32F4) && FEATURE_ENABLED(DISPLAY)
 	Stm32ParallelTftDisplay& boardParallelTftDisplay(lexxos::platform::PlatformServices const& platform) {
 		static Stm32ParallelTftDisplay display{boardFor(platform).parallelTftDisplay, platform};
 		return display;
 	}
 #endif
+
 } // namespace
 
-void registerStm32BoardDevices(
+static void registerStm32BoardDevices(
     DeviceManager& devices,
     lexxos::platform::PlatformServices const& platformServices,
-    lexxos::platform::BoardDescriptor const& activeBoard) {
+    lexxos::platform::LegacyBoardDescriptor const& activeBoard) {
 	(void) devices;
 	(void) platformServices;
 	(void) activeBoard;
@@ -45,6 +46,11 @@ void registerStm32BoardDevices(
 		devices.registerDisplayDevice(display.name(), "EU-TFT3.2 320x240 RGB565 parallel TFT display", display);
 	}
 #endif
+}
+
+std::span<BoardDeviceProvider const> selectedBoardDeviceProviders() {
+	static constexpr BoardDeviceProvider providers[]{registerLegacyBoardDevices, registerStm32BoardDevices};
+	return providers;
 }
 
 } // namespace lexxos::composition::detail

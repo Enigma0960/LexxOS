@@ -20,3 +20,14 @@
 - [PicoCalc Pico W, 0.0.7](picocalc-pico-w-0.0.7-regression.md).
 - [PicoCalc Pico 2 W, 0.0.7](picocalc-pico2w-0.0.7-regression.md).
 - [Cardputer ADV, 0.0.7](m5stack-cardputer-adv-0.0.7-regression.md).
+
+## PicoCalc / Lyra M
+
+Текущая инструкция и сводка результатов находятся в
+[руководстве платы](../boards/picocalc_lyra_m.md#аппаратные-результаты).
+Датированные протоколы сохраняют условия своего прогона:
+
+- [FreeRTOS, 29.10.2026](lyra-freertos-20261029.md),
+  [исходный UART-журнал](lyra-freertos-20261029-uart.txt).
+- [Исправления и проверки, 30.10.2026](lyra-freertos-20261030-fixes.md).
+- [Планировщик и синхронизация, 01.11.2026](lyra-freertos-20261101-scheduler.md).

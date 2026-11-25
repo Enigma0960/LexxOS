@@ -59,7 +59,7 @@ SD/FatFs, повторный mount, сохранность после reboot и 
 
 2026-10-23: full `0.1.0`, build `Oct 23 2026 22:55:10`, установленная автором.
 Checkout был `a7d5f52d`, но соответствие установленного BIN этому commit не установлено.
-SD 3790 MiB, SDIO 4-bit/20 MHz; Ethernet link up, DHCP, 100 Mbps/full duplex;
+SD 3790 МиБ, SDIO 4 бита/20 МГц; Ethernet подключён, DHCP, 100 Мбит/с, полный дуплекс;
 Wi-Fi также активен. Прочая внешняя периферия не подключена.
 
 - Чтение LEXX/1, RV32I, ABI 1 и запуск fileman/pacman/snake/tetris до первого экрана

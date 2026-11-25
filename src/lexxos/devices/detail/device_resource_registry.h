@@ -4,14 +4,32 @@
 #include <cstddef>
 #include <string_view>
 
+#include <lexxos/devices/detail/device_registry_critical_section.h>
+
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	#include <FreeRTOS.h>
+	#include <task.h>
+#endif
+
 #include <lexxos/devices/device_resource.h>
 
 namespace lexxos::devices::detail {
 
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+// Single-core FreeRTOS: protect metadata without LDREX/STREX.
+// Registry locks themselves remain non-blocking.
+
+#endif
+
 inline constexpr std::size_t invalidDeviceResourceIndex = static_cast<std::size_t>(-1);
 
 struct DeviceResourceState {
+#if defined(LEXXOS_PLATFORM_RK3506)
+	// CPU0-only cooperative scheduler; no IRQ accesses this registry.
+	bool locked{false};
+#else
 	std::atomic_bool locked{false};
+#endif
 	DeviceResourcePriority priority{DeviceResourcePriority::Normal};
 	std::string_view owner{};
 };
@@ -54,6 +72,7 @@ public:
 				return index;
 			}
 		}
+
 		return invalidDeviceResourceIndex;
 	}
 
@@ -79,7 +98,15 @@ public:
 			return {};
 		}
 
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+		DeviceRegistryCriticalSection guard;
+#endif
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+		auto const locked = _states[index].locked;
+#else
 		auto const locked = _states[index].locked.load(std::memory_order_acquire);
+#endif
 		return {
 		    .locked = locked,
 		    .priority = locked ? _states[index].priority : DeviceResourcePriority::Normal,
@@ -92,10 +119,23 @@ public:
 			return false;
 		}
 
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+		DeviceRegistryCriticalSection guard;
+#endif
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+		// No context switch is possible inside this operation.
+		if (_states[index].locked) {
+			return false;
+		}
+
+		_states[index].locked = true;
+#else
 		bool expected = false;
 		if (!_states[index].locked.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
 			return false;
 		}
+#endif
 
 		_states[index].priority = priority;
 		_states[index].owner = owner;
@@ -107,6 +147,10 @@ public:
 			return;
 		}
 
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+		DeviceRegistryCriticalSection guard;
+#endif
+
 		resetState(_states[index]);
 	}
 
@@ -114,7 +158,12 @@ private:
 	static void resetState(DeviceResourceState& state) {
 		state.owner = {};
 		state.priority = DeviceResourcePriority::Normal;
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+		state.locked = false;
+#else
 		state.locked.store(false, std::memory_order_release);
+#endif
 	}
 
 	Descriptor _descriptors[Capacity]{};

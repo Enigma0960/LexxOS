@@ -1,31 +1,16 @@
 #pragma once
 
 #include <lexxos/composition/board_device_providers.h>
-#include <lexxos/platform/board.h>
-
-namespace lexxos::devices {
-class I2cBus;
-}
 
 namespace lexxos::composition::detail {
 
-lexxos::platform::BoardDescriptor const& boardFor(lexxos::platform::PlatformServices const& platform);
-void registerPicoBoardDevices(
-    lexxos::devices::DeviceManager& devices,
-    lexxos::platform::PlatformServices const& platformServices,
-    lexxos::platform::BoardDescriptor const& board);
+platform::LegacyBoardDescriptor const& boardFor(platform::PlatformServices const& platform);
 
-void registerStm32BoardDevices(
-    lexxos::devices::DeviceManager& devices,
-    lexxos::platform::PlatformServices const& platformServices,
-    lexxos::platform::BoardDescriptor const& activeBoard);
+// Реализацию задаёт ровно один target-local исходник, выбранный сборкой.
+std::span<BoardDeviceProvider const> selectedBoardDeviceProviders();
 
-void registerEspidfBoardDevices(
-    lexxos::devices::DeviceManager& devices,
-    lexxos::platform::PlatformServices const& platformServices,
-    lexxos::platform::BoardDescriptor const& activeBoard,
-    lexxos::devices::I2cBus& debugBus);
-
-void registerSimulatorDevices(lexxos::devices::DeviceManager& devices);
+// Явно подключаемое legacy wiring; native-продукты задают собственные шины/носители.
+void registerLegacyBoardDevices(devices::DeviceManager& devices,
+    platform::PlatformServices const& platformServices, platform::LegacyBoardDescriptor const& board);
 
 } // namespace lexxos::composition::detail

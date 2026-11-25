@@ -1,0 +1,14 @@
+{
+  "id": "dev-sim",
+  "name": "Pico simulator board profile",
+  "platform": "sim",
+  "preset": "debug-sim",
+  "buildDir": "build/configurator/sim",
+  "userPresetName": "user-sim-dev-sim",
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON"
+  }
+}

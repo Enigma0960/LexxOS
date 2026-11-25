@@ -1,6 +1,6 @@
 # `echo`
 
-print program arguments.
+Выводит аргументы программы.
 
 ## Справка shell
 

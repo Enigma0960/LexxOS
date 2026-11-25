@@ -2,8 +2,8 @@
 
 namespace lexxos::platform {
 
-BoardDescriptor const& activeBoardDescriptor() {
-	static BoardDescriptor const descriptor{
+LegacyBoardDescriptor const& activeBoardDescriptor() {
+	static LegacyBoardDescriptor const descriptor{
 	    .boardId = "jc_esp32p4_m3_dev",
 	    .boardName = "Guition JC-ESP32P4-M3-DEV",
 	    .vendor = "Guition / Jingcai",
@@ -36,7 +36,7 @@ BoardDescriptor const& activeBoardDescriptor() {
 	                  },
 
 	    // USB-TTL connector, CH340C on board. This is the minimal bring-up
-	    // terminal path used by /dev/tty.usbserial-2130 at 115200 baud.
+	    // terminal path for bring-up at 115200 baud.
 	    .debugUart = {
 	                  .index = 0,
 	                  .tx = {37},
@@ -74,7 +74,7 @@ BoardDescriptor const& activeBoardDescriptor() {
 	    .sdCardDetect = {},
 
 	    // ESP32-P4NRW32 has 32 MB in-package PSRAM. It is configured through
-	    // ESP-IDF sdkconfig, not through GPIO pins exposed to BoardDescriptor.
+	    // ESP-IDF sdkconfig, not through GPIO pins exposed to LegacyBoardDescriptor.
 	    .psram = {},
 	    .audioCodec = {
 	                  .enabled = true,
@@ -291,7 +291,7 @@ BoardDescriptor const& activeBoardDescriptor() {
 	 * USB:
 	 *   USB 2.0 high-speed OTG: ESP_USB_P/N
 	 *   USB 1.1 full-speed OTG: USB1P1_P/N
-	 *   USB-TTL CH340C debug/programming port: USB-DP/DM to UART0
+	 *   USB-TTL CH340C tools/debug/programming port: USB-DP/DM to UART0
 	 *
 	 * RS485:
 	 *   TX1 GPIO26, RX1 GPIO27, EN/DE tied in the transceiver circuit.

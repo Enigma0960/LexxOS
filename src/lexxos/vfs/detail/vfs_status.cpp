@@ -21,6 +21,7 @@ std::string_view lexxos::vfs::toString(OpenStatus status) {
 		case OpenStatus::NoSpace:
 			return "no space";
 	}
+
 	return "unknown error";
 }
 
@@ -35,6 +36,7 @@ std::string_view lexxos::vfs::toString(NodeType type) {
 		case NodeType::BlockDevice:
 			return "block";
 	}
+
 	return "unknown";
 }
 
@@ -53,6 +55,7 @@ std::string_view lexxos::vfs::toString(ReadStatus status) {
 		case ReadStatus::InvalidPath:
 			return "invalid path";
 	}
+
 	return "unknown error";
 }
 
@@ -77,6 +80,7 @@ std::string_view lexxos::vfs::toString(WriteStatus status) {
 		case WriteStatus::TooLarge:
 			return "file too large";
 	}
+
 	return "unknown error";
 }
 
@@ -99,6 +103,7 @@ std::string_view lexxos::vfs::toString(RemoveStatus status) {
 		case RemoveStatus::InvalidPath:
 			return "invalid path";
 	}
+
 	return "unknown error";
 }
 
@@ -123,6 +128,7 @@ std::string_view lexxos::vfs::toString(RenameStatus status) {
 		case RenameStatus::CrossDirectory:
 			return "cross-directory rename is not supported";
 	}
+
 	return "unknown error";
 }
 
@@ -133,6 +139,7 @@ std::string_view lexxos::vfs::toString(SyncStatus status) {
 		case SyncStatus::Failed:
 			return "sync failed";
 	}
+
 	return "unknown error";
 }
 
@@ -155,6 +162,7 @@ std::string_view lexxos::vfs::toString(MountStatus status) {
 		case MountStatus::NoMountSlot:
 			return "no mount slot";
 	}
+
 	return "unknown error";
 }
 
@@ -169,5 +177,6 @@ std::string_view lexxos::vfs::toString(UnmountStatus status) {
 		case UnmountStatus::SyncFailed:
 			return "sync failed";
 	}
+
 	return "unknown error";
 }

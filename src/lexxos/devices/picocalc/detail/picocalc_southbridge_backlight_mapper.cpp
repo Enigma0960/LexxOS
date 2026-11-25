@@ -1,6 +1,7 @@
 #include <lexxos/devices/picocalc/detail/picocalc_southbridge_backlight_mapper.h>
 
 namespace lexxos::devices::detail {
+
 namespace {
 
 #if defined(LEXXOS_PICOCALC_KEYBOARD_FIRMWARE_JCS)
@@ -35,9 +36,11 @@ std::uint8_t PicoCalcSouthbridgeBacklightMapper::normalizeKeyboard(std::uint8_t 
 	if (value == 0) {
 		return 0;
 	}
+
 	if (value >= keyboardBacklightMax) {
 		return keyboardBacklightMax;
 	}
+
 	return static_cast<std::uint8_t>(((value + keyboardBacklightStep - 1U) / keyboardBacklightStep) * keyboardBacklightStep);
 #endif
 }

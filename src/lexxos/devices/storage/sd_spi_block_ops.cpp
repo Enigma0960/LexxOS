@@ -4,6 +4,7 @@
 #include <cstdint>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint8_t cmd12StopTransmission = 12;
@@ -78,6 +79,7 @@ SdSpiBlockResult SdSpiBlockOps::readMultipleBlocks(
 				(void) stopMultipleBlockRead(command.r1, firstBlock, static_cast<std::uint32_t>(blockCount));
 				return failure(SdCardDiagnosticCode::ReadCrcMismatch, cmd18ReadMultipleBlock, command.r1, currentBlock - 1U, 1);
 			}
+
 			if (!transferOk) {
 				(void) stopMultipleBlockRead(command.r1, firstBlock, static_cast<std::uint32_t>(blockCount));
 				return failure(SdCardDiagnosticCode::DmaWaitTimeout, cmd18ReadMultipleBlock, command.r1, currentBlock, 1);
@@ -87,6 +89,7 @@ SdSpiBlockResult SdSpiBlockOps::readMultipleBlocks(
 				(void) stopMultipleBlockRead(command.r1, firstBlock, static_cast<std::uint32_t>(blockCount));
 				return failure(SdCardDiagnosticCode::RegisterReadFailed, cmd18ReadMultipleBlock, command.r1, currentBlock, 1);
 			}
+
 			if (previousBlock != nullptr && !validateReadCrc(previousBlock, blockSize, previousCrc.data(), config.validateCrc)) {
 				(void) stopMultipleBlockRead(command.r1, firstBlock, static_cast<std::uint32_t>(blockCount));
 				return failure(SdCardDiagnosticCode::ReadCrcMismatch, cmd18ReadMultipleBlock, command.r1, currentBlock - 1U, 1);
@@ -159,9 +162,11 @@ SdSpiBlockResult SdSpiBlockOps::writeMultipleBlocks(
 	if (statusCommand.r1 != 0x00) {
 		return failure(SdCardDiagnosticCode::Cmd13Rejected, cmd13SendStatus, statusCommand.r1, firstBlock, static_cast<std::uint32_t>(blockCount));
 	}
+
 	if (status[0] != 0x00 || status[1] != 0x00) {
 		return failure(SdCardDiagnosticCode::Cmd13StatusError, cmd13SendStatus, static_cast<std::uint32_t>((status[0] << 8) | status[1]), firstBlock, static_cast<std::uint32_t>(blockCount));
 	}
+
 	return success();
 }
 
@@ -171,9 +176,11 @@ SdSpiBlockResult SdSpiBlockOps::readPayload(std::uint8_t command, std::uint32_t 
 		if (!_transport.startDmaTransfer(nullptr, buffer, blockSize)) {
 			return failure(SdCardDiagnosticCode::DmaStartFailed, command, r1, block, 1);
 		}
+
 		if (!_transport.waitDmaTransfer(config.dmaTimeoutMs)) {
 			return failure(SdCardDiagnosticCode::DmaWaitTimeout, command, r1, block, 1);
 		}
+
 		payloadRead = true;
 	} else {
 		payloadRead = _transport.read(0xFF, buffer, blockSize);
@@ -187,9 +194,11 @@ SdSpiBlockResult SdSpiBlockOps::readPayload(std::uint8_t command, std::uint32_t 
 	if (!_transport.read(0xFF, crc.data(), crc.size())) {
 		return failure(SdCardDiagnosticCode::CrcReadFailed, command, r1, block, 1);
 	}
+
 	if (!validateReadCrc(buffer, blockSize, crc.data(), config.validateCrc)) {
 		return failure(SdCardDiagnosticCode::ReadCrcMismatch, command, r1, block, 1);
 	}
+
 	return success();
 }
 
@@ -214,6 +223,7 @@ SdSpiBlockResult SdSpiBlockOps::writePayload(
 		if (!_transport.startDmaTransfer(buffer, nullptr, blockSize)) {
 			return failure(SdCardDiagnosticCode::WriteDmaStartFailed, command, r1, block, 1);
 		}
+
 		if (!_transport.waitDmaTransfer(config.dmaTimeoutMs)) {
 			return failure(SdCardDiagnosticCode::WriteDmaWaitFailed, command, r1, block, 1);
 		}
@@ -234,9 +244,11 @@ SdSpiBlockResult SdSpiBlockOps::writePayload(
 	if (!accepted) {
 		return failure(SdCardDiagnosticCode::WriteDataRejected, command, dataResponse, block, 1);
 	}
+
 	if (!_protocol.waitReady(1000000)) {
 		return failure(SdCardDiagnosticCode::WriteBusyTimeout, command, r1, block, 1);
 	}
+
 	return success();
 }
 
@@ -267,6 +279,7 @@ SdSpiBlockResult SdSpiBlockOps::stopMultipleBlockRead(std::uint8_t r1, std::uint
 			_protocol.endTransaction();
 			return failure(SdCardDiagnosticCode::Cmd12ResponseReadFailed, cmd12StopTransmission, r1, firstBlock, blockCount);
 		}
+
 		if ((stopR1 & 0x80U) == 0) {
 			break;
 		}
@@ -278,6 +291,7 @@ SdSpiBlockResult SdSpiBlockOps::stopMultipleBlockRead(std::uint8_t r1, std::uint
 	if (!ok) {
 		return failure(ready ? SdCardDiagnosticCode::Cmd12Rejected : SdCardDiagnosticCode::Cmd12BusyTimeout, cmd12StopTransmission, stopR1, firstBlock, blockCount);
 	}
+
 	return success();
 }
 
@@ -297,6 +311,7 @@ std::uint16_t SdSpiBlockOps::crc16Ccitt(std::uint8_t const* data, std::size_t si
 			crc = (crc & 0x8000U) != 0 ? static_cast<std::uint16_t>((crc << 1) ^ 0x1021U) : static_cast<std::uint16_t>(crc << 1);
 		}
 	}
+
 	return crc;
 }
 

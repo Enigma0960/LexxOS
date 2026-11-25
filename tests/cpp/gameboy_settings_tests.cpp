@@ -1,9 +1,13 @@
+#include <algorithm>
+#include <cstring>
+#include <iostream>
+#include <string>
+#include <string_view>
+
 #include <lexxos/apps/gameboy/detail/gameboy_settings.h>
 #include <lexxos/gameboy/bus.h>
 #include <lexxos/gameboy/cartridge.h>
-
-#include <iostream>
-#include <string_view>
+#include <lexxos/platform/platform_services.h>
 
 namespace {
 
@@ -181,10 +185,12 @@ bool testSerialTransferTiming() {
 	    || !expect((bus.read8OrFF(0xFF02) & 0x80U) != 0, "serial transfer start bit stays set while active")) {
 		return false;
 	}
+
 	bus.advanceCycles(4095);
 	if (!expect(bus.pendingInterrupts() == 0, "serial internal transfer waits for full byte time")) {
 		return false;
 	}
+
 	bus.advanceCycles(1);
 	if (!expect((bus.pendingInterrupts() & lexxos::gameboy::interruptSerial) != 0, "serial internal transfer requests interrupt on completion")
 	    || !expect((bus.read8OrFF(0xFF02) & 0x80U) == 0, "serial transfer start bit clears on completion")
@@ -202,10 +208,113 @@ bool testSerialTransferTiming() {
 	    && expect(bus.serialOutputSize() == 0, "serial external clock does not capture without clocks");
 }
 
+class SettingsDisk final : public lexxos::devices::BlockDevice {
+public:
+	bool initialize() override { return true; }
+
+	bool isReady() const override { return true; }
+
+	std::uint32_t blockSizeBytes() const override { return 512; }
+
+	std::uint64_t blockCount() const override { return 16; }
+
+	bool readBlocks(std::uint64_t, void*, std::size_t) override { return false; }
+
+	bool writeBlocks(std::uint64_t, void const*, std::size_t) override { return false; }
+};
+
+class SettingsFilesystem final : public lexxos::vfs::ReadOnlyFilesystem {
+public:
+	bool isReady() const override { return true; }
+
+	bool isReadOnly() const override { return false; }
+
+	std::string_view typeName() const override { return "settings-test"; }
+
+	bool stat(std::string_view path, lexxos::vfs::Stat& out) override {
+		if (path == "/apps" || path == "/apps/gbemu") {
+			out = {.type = lexxos::vfs::NodeType::Directory};
+			return true;
+		}
+
+		if (path != "/apps/gbemu/settings.ini" || content.empty()) {
+			return false;
+		}
+
+		out = {.type = lexxos::vfs::NodeType::RegularFile, .sizeBytes = content.size()};
+		return true;
+	}
+
+	bool list(std::string_view, lexxos::vfs::DirectoryVisitor, void*) override { return false; }
+
+	lexxos::vfs::ReadStatus read(std::string_view, std::uint64_t offset, void* buffer,
+	    std::size_t capacity, std::size_t& count) override {
+		count = offset < content.size() ? std::min(capacity, content.size() - static_cast<std::size_t>(offset)) : 0;
+		if (count) {
+			std::memcpy(buffer, content.data() + offset, count);
+		}
+		return lexxos::vfs::ReadStatus::Ok;
+	}
+
+	lexxos::vfs::ReadStatus readText(std::string_view, lexxos::vfs::TextWriter, void*) override {
+		return lexxos::vfs::ReadStatus::NotFound;
+	}
+
+	lexxos::vfs::WriteStatus writeText(std::string_view path, std::string_view text, lexxos::vfs::WriteMode) override {
+		if (path != "/apps/gbemu/settings.ini") {
+			return lexxos::vfs::WriteStatus::NotFound;
+		}
+		content.assign(text);
+		return lexxos::vfs::WriteStatus::Ok;
+	}
+
+	bool sync() override {
+		++syncs;
+		return syncOk;
+	}
+
+	std::string content;
+	unsigned syncs{0};
+	bool syncOk{true};
+};
+
+bool testSettingsVfsIsolation() {
+	namespace settings = lexxos::apps::gameboy_programs::detail;
+	SettingsDisk disk;
+	SettingsFilesystem leftFs, rightFs;
+	lexxos::platform::PlatformServices platform{};
+	lexxos::vfs::Vfs left, right;
+	left.initialize(platform);
+	right.initialize(platform);
+	if (!expect(left.registerBlockDevice("sd", &disk) && right.registerBlockDevice("sd", &disk), "register independent disks")
+	    || !expect(left.mountFilesystem("/dev/sd", "/mnt/sd", &leftFs) == lexxos::vfs::MountStatus::Ok, "mount left settings")
+	    || !expect(right.mountFilesystem("/dev/sd", "/mnt/sd", &rightFs) == lexxos::vfs::MountStatus::Ok, "mount right settings")) {
+		return false;
+	}
+
+	auto created = settings::loadOrCreateGbEmuSettings(left);
+	if (!expect(created.status == settings::GbEmuSettingsStatus::CreatedDefault, "create settings in selected VFS")
+	    || !expect(rightFs.content.empty() && rightFs.syncs == 0, "default creation does not touch other VFS")) {
+		return false;
+	}
+
+	auto changed = created.settings;
+	changed.renderEvery = 7;
+	if (!expect(settings::saveGbEmuSettings(left, changed).status == settings::GbEmuSettingsStatus::Loaded, "save selected VFS")
+	    || !expect(settings::loadOrCreateGbEmuSettings(left).settings.renderEvery == 7, "settings round trip")
+	    || !expect(settings::loadOrCreateGbEmuSettings(right).settings.renderEvery != 7, "same path is isolated in another VFS")) {
+		return false;
+	}
+
+	leftFs.syncOk = false;
+	return expect(settings::saveGbEmuSettings(left, changed).status == settings::GbEmuSettingsStatus::SyncFailed, "sync failure is preserved")
+	    && expect(settings::loadOrCreateGbEmuSettings(right).status == settings::GbEmuSettingsStatus::Loaded, "other VFS remains readable after sync failure");
+}
+
 } // namespace
 
 int main() {
-	if (!testDefaults() || !testParseOverrides() || !testRejectsInvalidValues() || !testDisplayAliases() || !testCartridgeMapperMetadata() || !testSerialTransferTiming()) {
+	if (!testSettingsVfsIsolation() || !testDefaults() || !testParseOverrides() || !testRejectsInvalidValues() || !testDisplayAliases() || !testCartridgeMapperMetadata() || !testSerialTransferTiming()) {
 		return 1;
 	}
 	return 0;

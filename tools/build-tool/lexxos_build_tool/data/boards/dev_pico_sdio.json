@@ -1,0 +1,20 @@
+{
+  "id": "dev_pico_sdio",
+  "name": "LexxOS Pico dev board / SDIO",
+  "platform": "pico",
+  "notes": "Experimental guarded SDIO profile.",
+  "preset": "debug-pico",
+  "buildDir": "build/configurator/pico-sdio",
+  "userPresetName": "user-pico-dev_pico_sdio",
+  "cmakeDefaults": {
+    "PICO_BOARD": "pico"
+  },
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_DEBUG_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_FEATURE_DS3231_RTC": "ON"
+  }
+}

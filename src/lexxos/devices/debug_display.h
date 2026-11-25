@@ -4,7 +4,9 @@
 #include <string_view>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices::debug_display {

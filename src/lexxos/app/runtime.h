@@ -1,5 +1,6 @@
 #pragma once
 
+#include <lexxos/app/app.h>
 #include <lexxos/app/runtime_tasks.h>
 #include <lexxos/app/system_event_service.h>
 #include <lexxos/feature.h>
@@ -19,10 +20,10 @@ namespace lexxos::app {
 
 class Runtime {
 public:
-	int run();
+	int run(ProgramRegistrar registerPrograms = nullptr);
 
 private:
-	void initializeSystem();
+	bool initializeSystem(ProgramRegistrar registerPrograms);
 
 #if FEATURE_ENABLED(DEBUG_DISPLAY)
 	bool initializeDebugDisplay();
@@ -34,9 +35,12 @@ private:
 
 	lexxos::platform::PlatformServices const& _platformServices{lexxos::platform::services()};
 	lexxos::shell::Shell _shell;
-	lexxos::os::OperatingSystem _operatingSystem{_platformServices};
+	lexxos::lifecycle::EventBus _events;
+	ProgramInputService _programInput{_events};
+	ConsoleInputService _consoleInput;
+	lexxos::os::OperatingSystem _operatingSystem{_platformServices, lexxos::vfs::defaultVfs(), _programInput, _consoleInput};
 	RuntimeTaskContext _taskContext{};
-	SystemEventService _systemEvents{_platformServices};
+	SystemEventService _systemEvents{_platformServices, _events};
 
 #if FEATURE_ENABLED(SD_CARD)
 	SdAutomountService _sdAutomount{_operatingSystem};

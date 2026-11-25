@@ -53,6 +53,7 @@ int FatCacheProgram::run(
 					return 1;
 				}
 			}
+
 			context.write("fat-cache: write max sectors = ");
 			std::size_t const limit = lexxos::fs::fat::fatfs_backend::diskWriteMaxSectors();
 			if (limit == 0U) {
@@ -61,6 +62,7 @@ int FatCacheProgram::run(
 				writeUnsigned(context, static_cast<std::uint32_t>(limit));
 				context.writeLine("");
 			}
+
 			return 0;
 		}
 
@@ -69,6 +71,7 @@ int FatCacheProgram::run(
 			context.writeLine("fat-cache: cached window dropped");
 			return 0;
 		}
+
 		context.writeLine("usage: fat-cache [clear|drop|write-max [0..64]]");
 		return 1;
 	}
@@ -85,6 +88,7 @@ int FatCacheProgram::run(
 		writeUnsigned(context, stats.drive);
 		context.writeLine("");
 	}
+
 	context.write("window: first=");
 	writeUnsigned64(context, stats.firstSector);
 	context.write(" sectors=");
@@ -116,6 +120,7 @@ int FatCacheProgram::run(
 		writeUnsigned(context, writes.maxSectorsPerChunk);
 		context.writeLine("");
 	}
+
 	context.write("write calls: ");
 	writeUnsigned(context, writes.calls);
 	context.write(" chunks=");

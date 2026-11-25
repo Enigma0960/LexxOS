@@ -1,6 +1,6 @@
 # `clear`
 
-clear ANSI terminal.
+Очищает ANSI-терминал.
 
 ## Справка shell
 

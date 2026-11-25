@@ -1,8 +1,7 @@
-#include <lexxos/composition/detail/platform_device_providers.h>
-
 #include <iterator>
 #include <string_view>
 
+#include <lexxos/composition/detail/platform_device_providers.h>
 #include <lexxos/devices/bus/i2c_bus.h>
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/devices/input_device.h>
@@ -62,8 +61,9 @@ using lexxos::devices::KeyCode;
 #endif
 
 namespace {
+
 #if defined(LEXXOS_PLATFORM_ESPIDF) && FEATURE_ENABLED(CARDPUTER)
-	bool isCardputerAdvBoard(lexxos::platform::BoardDescriptor const& board) {
+	bool isCardputerAdvBoard(lexxos::platform::LegacyBoardDescriptor const& board) {
 		return std::string_view(board.boardId) == "m5stack_cardputer_adv";
 	}
 #endif
@@ -143,13 +143,19 @@ namespace {
 		return device;
 	}
 #endif
+
 } // namespace
 
-void registerEspidfBoardDevices(
+static void registerEspidfBoardDevices(
     DeviceManager& devices,
     lexxos::platform::PlatformServices const& platformServices,
-    lexxos::platform::BoardDescriptor const& activeBoard,
-    I2cBus& debugBus) {
+    lexxos::platform::LegacyBoardDescriptor const& activeBoard) {
+	auto* const bus = devices.i2cBus("debug");
+	if (bus == nullptr) {
+		return;
+	}
+
+	auto& debugBus = *bus;
 	(void) devices;
 	(void) platformServices;
 	(void) activeBoard;
@@ -171,6 +177,7 @@ void registerEspidfBoardDevices(
 				} else if (platformServices.console.write != nullptr) {
 					platformServices.console.write("gt911-touch: initialize failed\r\n");
 				}
+
 				break;
 			}
 			case lexxos::platform::TouchPanelKind::FocalTechFt5x06: {
@@ -180,6 +187,7 @@ void registerEspidfBoardDevices(
 				} else if (platformServices.console.write != nullptr) {
 					platformServices.console.write("ft5x06-touch: initialize failed\r\n");
 				}
+
 				break;
 			}
 			case lexxos::platform::TouchPanelKind::None:
@@ -229,6 +237,7 @@ void registerEspidfBoardDevices(
 		} else if (platformServices.console.write != nullptr) {
 			platformServices.console.write("cardputer-adv keyboard: initialize failed\r\n");
 		}
+
 		if (activeBoard.motionSensor.isValid()) {
 			auto& motionSensor = cardputerBmi270(debugBus, platformServices);
 			if (motionSensor.initialize()) {
@@ -237,6 +246,7 @@ void registerEspidfBoardDevices(
 				platformServices.console.write("cardputer-adv bmi270: initialize failed\r\n");
 			}
 		}
+
 		if (activeBoard.infraredTransmitter.isValid()) {
 			auto& ir = cardputerIr(platformServices);
 			if (ir.initialize()) {
@@ -252,6 +262,11 @@ void registerEspidfBoardDevices(
 		}
 	}
 #endif
+}
+
+std::span<BoardDeviceProvider const> selectedBoardDeviceProviders() {
+	static constexpr BoardDeviceProvider providers[]{registerLegacyBoardDevices, registerEspidfBoardDevices};
+	return providers;
 }
 
 } // namespace lexxos::composition::detail

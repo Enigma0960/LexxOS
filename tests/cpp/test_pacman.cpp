@@ -1,16 +1,16 @@
-#include "../../apps/pacman/game.h"
-
 #include <cassert>
 #include <queue>
 
-using pacman::width;
-using pacman::height;
+#include "../../apps/pacman/game.h"
+
 using pacman::Direction;
-using pacman::Phase;
-using pacman::Sound;
-using pacman::Point;
-using pacman::Ghost;
 using pacman::Game;
+using pacman::Ghost;
+using pacman::height;
+using pacman::Phase;
+using pacman::Point;
+using pacman::Sound;
+using pacman::width;
 
 int main() {
 	Game game{};
@@ -33,11 +33,12 @@ int main() {
 		if (game.map[p.y][p.x] == '.' || game.map[p.y][p.x] == 'o') {
 			++collectibles;
 		}
+
 		Point candidates[] = {
 		    {p.x - 1,     p.y},
-            {p.x + 1,     p.y},
-            {    p.x, p.y - 1},
-            {    p.x, p.y + 1}
+		    {p.x + 1,     p.y},
+		    {    p.x, p.y - 1},
+		    {    p.x, p.y + 1}
         };
 		for (Point next : candidates) {
 			if (game.walkable(next) && !visited[next.y][next.x]) {
@@ -46,6 +47,7 @@ int main() {
 			}
 		}
 	}
+
 	assert(reachable > 100 && collectibles == game.remaining);
 
 	game.turn(Direction::Right);

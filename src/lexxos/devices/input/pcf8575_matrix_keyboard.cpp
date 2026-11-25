@@ -41,6 +41,7 @@ void Pcf8575MatrixKeyboard::update() {
 	if (!_firstScan && _config.scanPeriodMs > 0 && now - _lastScanMs < _config.scanPeriodMs) {
 		return;
 	}
+
 	_lastScanMs = now;
 
 	auto const rawState = _readRawState();

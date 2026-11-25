@@ -58,7 +58,7 @@ LCD console разделена на маленькие detail-компонент
 Такое разделение оставляет layout, scrollback navigation и terminal-state orchestration вне renderer-файла, но сохраняет
 прежний публичный API `picocalc_lcd_console`.
 
-## ANSI subset
+## Поддерживаемые последовательности ANSI
 
 LCD mirror не является полным terminal emulator, но обрабатывает VT/ANSI-последовательности, которые использует shell и
 screen-oriented `edit`:
@@ -75,7 +75,7 @@ screen-oriented `edit`:
 Этого достаточно, чтобы `edit` перерисовывал header, text area, status line и курсор на LCD так же, как на UART/USB
 terminal. Более широкий ANSI subset нужно добавлять только под реальные приложения и проверять на PicoCalc hardware.
 
-## Status Bar
+## Строка состояния
 
 Верхние 24 пикселя LCD зарезервированы под status bar, поэтому текстовая область console mirror начинается ниже этой
 строки. Status bar показывает время слева, а справа заряд аккумулятора PicoCalc: процент заряда, пиктограмму батареи и
@@ -90,7 +90,7 @@ Status bar рендерится отдельным компонентным layo
 Данные берутся из cached `picocalc-southbridge` snapshot через background task `picocalc-status` примерно раз в секунду.
 Task использует service lock с background priority и не читает southbridge registers напрямую из shell path.
 
-## Text/graphics handoff
+## Переключение текста и графики
 
 LCD mirror работает в `ConsoleMirrorMode::Text`. Display diagnostics и будущие graphics apps могут временно взять
 `ConsoleMirrorMode::Graphics` через `ScopedConsoleMirrorMode`: на это время PicoCalc LCD mirror перестаёт дорисовывать
@@ -100,7 +100,7 @@ LCD mirror работает в `ConsoleMirrorMode::Text`. Display diagnostics и
 после успешного display resource lock. Сообщение об ошибке или успешном завершении печатается уже после восстановления
 text mode, поэтому автономный shell снова видит ответ команды на LCD.
 
-## Display power mode
+## Режим питания дисплея
 
 Команда `display-power [on|off|sleep]` управляет режимом LCD controller через общий `DisplayDevice` API:
 
@@ -130,7 +130,7 @@ default `300s` и режим `off`. Любой ввод в shell или `KeyDown
 Пока controller находится в `off` или `sleep`, pixel/scroll операции отвергаются драйвером, а pending LCD mirror output
 сможет отрисоваться после `display-power on` или после пробуждения клавишей.
 
-## Scrollback
+## История прокрутки
 
 Экранная консоль хранит ограниченную историю строк. История используется только для просмотра вывода и не меняет
 состояние shell line editor.

@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-UF2="${1:-build/picocalc-pico-w/src/lexxos.uf2}"
-BOOTSEL_VOLUME="${2:-/Volumes/RPI-RP2}"
+UF2="${1:-build/minimal-picocalc_pico_w/src/lexxos.uf2}"
+BOOTSEL_VOLUME="${2:-${PICO_BOOTSEL_VOLUME:-}}"
+
+if [[ -z "${BOOTSEL_VOLUME}" ]]; then
+	echo "Pass the mounted BOOTSEL volume as the second argument or set PICO_BOOTSEL_VOLUME." >&2
+	exit 2
+fi
 
 if [[ ! -f "${UF2}" ]]; then
 	echo "UF2 file not found: ${UF2}" >&2

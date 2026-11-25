@@ -34,6 +34,7 @@ int GbRomCheckProgram::run(
 		context.writeErrorLine("gb-rom-check: invalid pass count");
 		return 2;
 	}
+
 	if (passes > 8) {
 		passes = 8;
 	}
@@ -68,6 +69,7 @@ int GbRomCheckProgram::run(
 					failedOffset = offset;
 					break;
 				}
+
 				fullHash = fnv1aUpdate(fullHash, block.data(), chunk);
 				offset += static_cast<std::uint32_t>(chunk);
 			}
@@ -108,6 +110,7 @@ int GbRomCheckProgram::run(
 			if (sampleOffset >= fileSize) {
 				continue;
 			}
+
 			auto const remaining = fileSize - sampleOffset;
 			auto const chunk = static_cast<std::size_t>(remaining < block.size() ? remaining : block.size());
 			if (!readFileBlockRetry(file, sampleOffset, block.data(), chunk, 6)) {
@@ -115,20 +118,25 @@ int GbRomCheckProgram::run(
 				if (failedOffset == 0) {
 					failedOffset = sampleOffset;
 				}
+
 				continue;
 			}
+
 			sampleHash = fnv1aUpdate(sampleHash, block.data(), chunk);
 		}
+
 		if (readFileBlockRetry(file, 0x0038U, block.data(), 1, 6)) {
 			value0038 = block[0];
 		} else {
 			sampleReadOk = false;
 		}
+
 		if (readFileBlockRetry(file, 0x0100U, block.data(), 1, 6)) {
 			value0100 = block[0];
 		} else {
 			sampleReadOk = false;
 		}
+
 		if (readFileBlockRetry(file, 0x0147U, block.data(), 3, 6)) {
 			value0147 = block[0];
 			value0148 = block[1];
@@ -151,6 +159,7 @@ int GbRomCheckProgram::run(
 				writeHex32(context, failedOffset);
 			}
 		}
+
 		context.write(" full-hash=0x");
 		writeHex32(context, fullHash);
 		context.write(" sample-hash=0x");
@@ -181,10 +190,12 @@ int GbRomCheckProgram::run(
 				sampleReadOk = false;
 			}
 		}
+
 		context.writeLine("");
 		if (pass > 0 && (sampleHash != previousSampleHash || (full && fullHash != previousFullHash))) {
 			stable = false;
 		}
+
 		previousFullHash = fullHash;
 		previousSampleHash = sampleHash;
 		allReadsOk = allReadsOk && sampleReadOk && (!full || fullReadOk);
@@ -195,6 +206,7 @@ int GbRomCheckProgram::run(
 		context.writeLine("read-error");
 		return 1;
 	}
+
 	context.writeLine(stable ? "stable" : "unstable");
 	return stable ? 0 : 1;
 }

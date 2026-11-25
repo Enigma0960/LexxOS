@@ -1,6 +1,6 @@
 # `gb-io`
 
-test Game Boy IO registers.
+Проверяет регистры ввода-вывода Game Boy.
 
 ## Справка shell
 

@@ -1,28 +1,33 @@
-# PicoCalc Pico W 0.0.7 regression checklist
+# Регрессионная проверка PicoCalc Pico W 0.0.7
 
 Имена тестовых файлов и идентификаторы портов в примерах условные; результаты измерений сохранены.
 
-Дата последнего полного serial smoke: 2026-07-02.
-Дата последнего partial serial retest: 2026-07-08.
-Дата актуализации checklist: 2026-07-08.
-Устройство: ClockworkPi PicoCalc with Raspberry Pi Pico W.
-Serial: `/dev/tty.usbserial-XXXX`, 115200 baud.
-Прошивка полного smoke: `version: 0.0.7`, `build: Jul 1 2026 21:29:20`, `flavor: standard`.
-Прошивка partial retest: `version: 0.0.7`, `build: Jul 8 2026 18:41:11`, `flavor: standard`.
+Дата последней полной проверки UART: 2026-07-02.
+Дата последней частичной перепроверки UART: 2026-07-08.
+Дата актуализации списка: 2026-07-08.
+Устройство: ClockworkPi PicoCalc с Raspberry Pi Pico W.
+Порт: `/dev/tty.usbserial-XXXX`, 115200 бод.
+Прошивка полной проверки: `version: 0.0.7`, `build: Jul 1 2026 21:29:20`, `flavor: standard`.
+Прошивка частичной перепроверки: `version: 0.0.7`, `build: Jul 8 2026 18:41:11`, `flavor: standard`.
 
-Основной smoke не запускает `poweroff`, `sd-stress` и длинные keyboard live-тесты. Дополнительный soft reboot smoke
-запущен отдельно, потому что serial port остаётся доступным после перезагрузки. Клавиатурный прогон считается
-подтверждённым вручную перед этим smoke-тестом.
+Основной прогон не запускает `poweroff`, `sd-stress` и длительные проверки
+клавиатуры. Программный перезапуск проверен отдельно: последовательный порт
+после него остаётся доступен. Клавиатура перед прогоном проверена вручную.
 
-Обновление 2026-07-08: build-only проверка нового RP2040 tight-RAM профиля закрыла link-time SRAM overflow
-(`.bss will not fit in region RAM`, overlap с `.stack1_dummy`). Первый hardware retest поймал `display-test` panic из-за
-прежней 80 KiB benchmark quota; source fix убрал quota из descriptor и перевёл benchmark buffers на lazy heap allocation.
-Повторный hardware retest подтвердил `display-test` и display benchmark path, но выявил нестабильный PSRAM data path при
-16 MHz из старого CMake cache. После retest CMake cap для `picocalc_pico_w` снижает PSRAM baud до 8 MHz; новый UF2 нужно
-прошить и повторить PSRAM checks. После отчёта о перекрытии prompt сообщениями `wifi-autoconnect`/`FreeRTOS task start`
-также добавлен source fix для перерисовки активной строки ввода. Следующий UART retest выявил, что быстрый paste
-теряет байты после 32-байтного FIFO, а path completion режет длинные MIDI LFN до 32 символов; эти source fixes тоже
-нужно проверить на том же новом UF2.
+Обновление 08.07.2026: сборка профиля RP2040 с ограниченной RAM устранила
+переполнение SRAM при компоновке (`.bss will not fit in region RAM`,
+пересечение с `.stack1_dummy`). Первая аппаратная перепроверка выявила
+аварию `display-test` из-за прежней квоты теста 80 КиБ. Исправление убрало
+её из дескриптора и перенесло выделение буферов на момент необходимости.
+Повторный прогон подтвердил отрисовку и измерение скорости, но выявил
+неустойчивость PSRAM на 16 МГц из старого кеша CMake. Новая сборка
+ограничивает частоту 8 МГц; её ещё нужно прошить и проверить.
+
+После сообщения о перекрытии приглашения выводом `wifi-autoconnect` и
+`FreeRTOS task start` добавлена перерисовка строки ввода. Следующий UART-прогон
+обнаружил потерю вставленных байтов после 32-байтного FIFO и обрезку
+дополняемых MIDI-имён до 32 символов. Эти исправления тоже требуют
+проверки на новом UF2.
 
 ```text
 LEXXOS_PICO_FREERTOS_HEAP_KB=88
@@ -32,126 +37,130 @@ LEXXOS_FEATURE_MIDI=OFF
 LEXXOS_FEATURE_GPIO_ANALYZER=OFF
 ```
 
-Map для tight-RAM build до lazy workspace fix: `.data=0x106a8`, `.bss=0x2d3e0`, FreeRTOS `ucHeap=0x16000`,
-`.heap=0x800`, `.stack1_dummy=0x20040000`. После hardware retest `display-test --bench` дополнительно переведён на
-ленивые heap buffers: обычный `display-test` больше не резервирует benchmark workspace, а дефолтный `--rows` равен 16.
+Карта компоновки до исправления отложенного выделения: `.data=0x106a8`,
+`.bss=0x2d3e0`, FreeRTOS `ucHeap=0x16000`, `.heap=0x800`,
+`.stack1_dummy=0x20040000`. Обычный `display-test` теперь не резервирует
+рабочую область измерения скорости; значение `--rows` по умолчанию — 16.
 
-## Автоматический serial smoke
+## Автоматическая проверка UART
 
-| Блок                    | Команда                              | Ожидание                                                                            | Результат                                     |
-|-------------------------|--------------------------------------|-------------------------------------------------------------------------------------|-----------------------------------------------|
-| Версия                  | `version`                            | `version: 0.0.7`, `platform: pico`, `board: picocalc_pico_w`                        | PASS                                          |
-| Плата                   | `board`                              | PicoCalc Pico W descriptor, PSRAM/audio/wireless pins                               | PASS                                          |
-| Память                  | `mem`                                | heap статистика печатается                                                          | PASS                                          |
-| Tasks                   | `tasks`                              | табличный вывод, console/input/system/console-mirror tasks видны                    | PASS                                          |
-| Devices                 | `devices`                            | табличный вывод: `sd0`, `ili9488-spi`, `picocalc-keyboard`, `picocalc-southbridge`  | PASS                                          |
-| Storage                 | `storage`                            | SD ready, SPI backend, block size/count, capacity                                   | PASS                                          |
-| Block devices           | `block-devs`                         | табличный вывод, `sd0 ready free`                                                   | PASS                                          |
-| VFS/FAT                 | `fs-info`                            | табличный вывод, `/mnt/sd` mounted as `fatfs ready rw`                              | PASS                                          |
-| VFS cwd                 | `pwd`                                | `/`                                                                                 | PASS                                          |
-| SD listing              | `ls /mnt/sd`                         | табличный вывод, SD root directory is readable, no stack overflow                   | PASS                                          |
-| LCD console             | `console-info`                       | text mode, scrollback/status bar visible                                            | PASS                                          |
-| Backlight               | `backlight`                          | source `picocalc-southbridge`, lcd/kbd values printed                               | PASS, with transient keyboard comm warning    |
-| Display power           | `display-power`                      | `ili9488-spi mode=on`                                                               | PASS                                          |
-| Southbridge             | `picocalc-sb`                        | cached service snapshot, `keyboard-ready: yes`                                      | WARN: cached snapshot can be partial          |
-| Southbridge FIFO safety | `picocalc-sb --poll 1`               | direct FIFO polling skipped while keyboard driver owns input                        | PASS                                          |
-| RTC status              | `rtc-status`                         | source `picocalc-southbridge`, JCS firmware visible                                 | PASS                                          |
-| RTC read                | `rtc-get`                            | decoded date/time                                                                   | PASS after `rtc-set --source picocalc` retake |
-| PSRAM info              | `psram-info`                         | JEDEC ID printed                                                                    | PASS                                          |
-| PSRAM data              | `psram-test`                         | `ok restored=yes`                                                                   | PASS                                          |
-| Beep                    | `beep --frequency 880 --duration 80` | left/right pins printed, short beep expected                                        | PASS, audible on hardware                     |
-| Audio contract          | `audio`                              | `picocalc-audio`, tone/mix/channel capabilities                                     | PASS                                          |
-| Supervisor foreground   | `run board`                          | board descriptor printed through supervised task                                    | PASS, harness timeout after output; exit 0    |
-| Supervisor jobs         | `jobs`                               | finished `board`, stack/memory fields visible                                       | PASS                                          |
-| Supervisor cleanup      | `jobs clear`                         | finished process cleared                                                            | PASS                                          |
-| Wi-Fi scan              | `wifi-scan`                          | scan completes and prints merged networks                                           | PASS                                          |
-| Wi-Fi config            | `wifi-config show`                   | config path/status printed without password                                         | PASS                                          |
-| Wi-Fi connect/status    | `wifi-status`                        | after saved auto-connect or manual connect, link/IP/DNS are visible                 | PASS                                          |
-| Network client          | `ping --count 1 pool.ntp.org`        | DNS resolves and one ICMP request completes                                         | PASS                                          |
-| NTP/RTC                 | `rtc-sync --tz +07:00`               | NTP query succeeds and selected RTC backend is updated                              | RETEST: source fixed after flashed smoke      |
+| Блок                        | Команда                              | Ожидание                                                                           | Результат                                                           |
+|-----------------------------|--------------------------------------|------------------------------------------------------------------------------------|---------------------------------------------------------------------|
+| Версия                      | `version`                            | `version: 0.0.7`, `platform: pico`, `board: picocalc_pico_w`                       | Пройдено                                                            |
+| Плата                       | `board`                              | Описание PicoCalc Pico W, выводы PSRAM/аудио/сети                                  | Пройдено                                                            |
+| Память                      | `mem`                                | статистика кучи выведена                                                           | Пройдено                                                            |
+| Задачи                      | `tasks`                              | табличный вывод, видны задачи console/input/system/console-mirror                  | Пройдено                                                            |
+| Устройства                  | `devices`                            | табличный вывод: `sd0`, `ili9488-spi`, `picocalc-keyboard`, `picocalc-southbridge` | Пройдено                                                            |
+| Хранилище                   | `storage`                            | SD готова, реализация SPI, размер/число блоков, ёмкость                            | Пройдено                                                            |
+| Блочные устройства          | `block-devs`                         | табличный вывод, `sd0 ready free`                                                  | Пройдено                                                            |
+| VFS/FAT                     | `fs-info`                            | табличный вывод, `/mnt/sd` смонтирован как `fatfs ready rw`                        | Пройдено                                                            |
+| Текущий каталог VFS         | `pwd`                                | `/`                                                                                | Пройдено                                                            |
+| Каталог SD                  | `ls /mnt/sd`                         | табличный вывод, корень SD читается без переполнения стека                         | Пройдено                                                            |
+| LCD-консоль                 | `console-info`                       | текстовый режим, видны история прокрутки и строка состояния                        | Пройдено                                                            |
+| Подсветка                   | `backlight`                          | источник `picocalc-southbridge`, выведены уровни LCD/клавиатуры                    | Пройдено, с кратковременным предупреждением связи с клавиатурой     |
+| Питание дисплея             | `display-power`                      | `ili9488-spi mode=on`                                                              | Пройдено                                                            |
+| STM32                       | `picocalc-sb`                        | кешированный снимок сервиса, `keyboard-ready: yes`                                 | Предупреждение: кешированный снимок может быть частичным            |
+| Защита FIFO STM32           | `picocalc-sb --poll 1`               | прямой опрос FIFO пропущен, пока вводом владеет драйвер клавиатуры                 | Пройдено                                                            |
+| Состояние RTC               | `rtc-status`                         | источник `picocalc-southbridge`, видна прошивка JCS                                | Пройдено                                                            |
+| Чтение RTC                  | `rtc-get`                            | декодированные дата/время                                                          | Пройдено после повторной проверки `rtc-set --source picocalc`       |
+| Сведения PSRAM              | `psram-info`                         | JEDEC ID выведен                                                                   | Пройдено                                                            |
+| Данные PSRAM                | `psram-test`                         | `ok restored=yes`                                                                  | Пройдено                                                            |
+| Сигнал                      | `beep --frequency 880 --duration 80` | выведены левый/правый выводы, ожидается короткий сигнал                            | Пройдено, сигнал слышен на плате                                    |
+| Аудиоконтракт               | `audio`                              | `picocalc-audio`, возможности тона/смешивания/каналов                              | Пройдено                                                            |
+| Интерактивный супервизор    | `run board`                          | описание платы выведено задачей под управлением супервизора                        | Пройдено, тайм-аут проверяющей программы после вывода; код выхода 0 |
+| Процессы супервизора        | `jobs`                               | `board` завершён, видны стек и память                                              | Пройдено                                                            |
+| Очистка супервизора         | `jobs clear`                         | завершённый процесс удалён                                                         | Пройдено                                                            |
+| Поиск Wi-Fi                 | `wifi-scan`                          | сканирование завершено, сети объединены и выведены                                 | Пройдено                                                            |
+| Настройки Wi-Fi             | `wifi-config show`                   | путь/статус настроек выведены без пароля                                           | Пройдено                                                            |
+| Подключение/состояние Wi-Fi | `wifi-status`                        | после авто- или ручного подключения видны состояние/IP/DNS                         | Пройдено                                                            |
+| Сетевой клиент              | `ping --count 1 pool.ntp.org`        | DNS разрешён, один ICMP-запрос завершён                                            | Пройдено                                                            |
+| NTP/RTC                     | `rtc-sync --tz +07:00`               | NTP-запрос успешен, выбранный RTC обновлён                                         | Повторить: исходники исправлены после аппаратного прогона           |
 
-## Build-only SRAM retest 2026-07-08
+## Перепроверка SRAM только сборкой 2026-07-08
 
-| Блок             | Команда                                                        | Результат |
-|------------------|----------------------------------------------------------------|-----------|
-| Pico W build     | `cmake --build build/configurator/picocalc-pico-w --target lexxos` | PASS      |
-| Pico W size/map  | `arm-none-eabi-size build/configurator/picocalc-pico-w/src/lexxos.elf` + map inspection | PASS: no RAM overlap, FreeRTOS heap 88 KiB |
-| Pico 2 W control | `cmake --preset debug-picocalc-pico2w`; `cmake --build --preset lexxos-picocalc-pico2w` | PASS      |
-| Host control     | `cmake --build build/host-full --target lexxos`                | PASS      |
-| Lazy workspace fix | `cmake --build build/configurator/picocalc-pico-w --target lexxos` after source fix | PASS: `text=835000`, `bss=187552`, UF2 rebuilt |
-| PSRAM baud cap    | `cmake --build build/configurator/picocalc-pico-w --target lexxos` after CMake cap | PASS: CMake reduced old cache `16000000 -> 8000000`, UF2 rebuilt |
-| Console prompt guard | `lexxos_services_contract_tests`, host CTest, Pico W/Pico 2 W firmware builds | PASS: chunked async output redraws saved shell input; Pico W `text=836160`, `bss=187576` |
-| UART paste and long LFN completion | `lexxos_contract_tests`, `lexxos_services_contract_tests`, host CTest, Pico W/Pico 2 W firmware builds | PASS: batch input drain, VFS name limit 64; Pico W `text=836400`, `bss=188056` |
+| Блок                                   | Команда                                                                                                         | Результат                                                                                                     |
+|----------------------------------------|-----------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| Сборка Pico W                          | `cmake --build build/configurator/picocalc-pico-w --target lexxos`                                              | Пройдено                                                                                                      |
+| Размеры/карта Pico W                   | `arm-none-eabi-size build/configurator/picocalc-pico-w/src/lexxos.elf` и проверка карты компоновки              | Пройдено: нет пересечения RAM, куча FreeRTOS 88 КиБ                                                           |
+| Контроль Pico 2 W                      | `cmake --preset debug-picocalc-pico2w`; `cmake --build --preset lexxos-picocalc-pico2w`                         | Пройдено                                                                                                      |
+| Контроль на компьютере                 | `cmake --build build/host-full --target lexxos`                                                                 | Пройдено                                                                                                      |
+| Отложенное выделение памяти            | `cmake --build build/configurator/picocalc-pico-w --target lexxos` после исправления исходников                 | Пройдено: `text=835000`, `bss=187552`, UF2 пересобран                                                         |
+| Ограничение частоты PSRAM              | `cmake --build build/configurator/picocalc-pico-w --target lexxos` после ограничения CMake                      | Пройдено: CMake снизил прежнее значение кеша `16000000 -> 8000000`, UF2 пересобран                            |
+| Защита приглашения консоли             | `lexxos_services_contract_tests`, CTest на компьютере, сборки прошивок Pico W/Pico 2 W                          | Пройдено: асинхронный вывод частями перерисовывает сохранённый ввод shell; Pico W `text=836160`, `bss=187576` |
+| Вставка UART и дополнение длинных имён | `lexxos_contract_tests`, `lexxos_services_contract_tests`, CTest на компьютере, сборки прошивок Pico W/Pico 2 W | Пройдено: пакетное чтение ввода, предел имени VFS 64; Pico W `text=836400`, `bss=188056`                      |
 
-## Hardware partial retest 2026-07-08
+## Частичная аппаратная перепроверка 2026-07-08
 
-Проверенная прошивка: `build: Jul 8 2026 18:41:11`, после tight-RAM split, но до lazy display benchmark workspace fix.
+Проверенная прошивка: `build: Jul 8 2026 18:41:11`, после разделения профиля ограниченной RAM, до отложенного выделения
+памяти теста дисплея.
 
-| Блок         | Команда                              | Результат |
-|--------------|--------------------------------------|-----------|
-| Версия       | `version`                            | PASS: `board: picocalc_pico_w`, `target: PICO cortex-m0plus` |
-| Плата        | `board`                              | PASS: RP2040/PICO, SD SPI 50 MHz, display SPI 50 MHz, PSRAM 16 MHz, audio, CYW43 |
-| Память       | `mem`                                | PASS: `free heap: 47552 bytes`, `minimum ever free heap: 37056 bytes` |
-| Runtime      | `top --count 1 --no-clear`           | PASS: internal heap `free=43328B`, task stacks `used=10092B`, arena `reserved=0B` |
-| Tasks        | `tasks`                              | PASS |
-| Devices      | `devices`                            | PASS: display/input busy by console, audio and southbridge service ready |
-| Storage      | `storage`, `block-devs`, `fs-info`   | PASS: `/mnt/sd` mounted `fatfs ready rw`, SD capacity около 30436 MiB |
-| VFS/FAT      | `pwd`, `ls /mnt/sd`                  | PASS |
-| SD speed     | `sd-baud`, `sd-test`, `fs-smoke`, `sd-bench` | PASS: raw read 259 KiB/s, FAT write 166 KiB/s, FAT read/verify 500 KiB/s |
-| Console      | `console-info`                       | PASS: battery 100%, Wi-Fi connected, status time visible |
-| Display info | `display-info`                       | PASS |
-| Display draw | `display-test`                       | FAIL: `panic: FreeRTOS malloc failed` |
+| Блок             | Команда                                      | Результат                                                                                 |
+|------------------|----------------------------------------------|-------------------------------------------------------------------------------------------|
+| Версия           | `version`                                    | Пройдено: `board: picocalc_pico_w`, `target: PICO cortex-m0plus`                          |
+| Плата            | `board`                                      | Пройдено: RP2040/PICO, SD SPI 50 МГц, дисплей SPI 50 МГц, PSRAM 16 МГц, аудио, CYW43      |
+| Память           | `mem`                                        | Пройдено: `free heap: 47552 bytes`, `minimum ever free heap: 37056 bytes`                 |
+| Среда выполнения | `top --count 1 --no-clear`                   | Пройдено: внутренняя куча `free=43328B`, стеки задач `used=10092B`, арена `reserved=0B`   |
+| Задачи           | `tasks`                                      | Пройдено                                                                                  |
+| Устройства       | `devices`                                    | Пройдено: дисплей/ввод заняты консолью, аудио и сервис STM32 готовы                       |
+| Хранилище        | `storage`, `block-devs`, `fs-info`           | Пройдено: `/mnt/sd` смонтирован `fatfs ready rw`, ёмкость SD около 30436 МиБ              |
+| VFS/FAT          | `pwd`, `ls /mnt/sd`                          | Пройдено                                                                                  |
+| Скорость SD      | `sd-baud`, `sd-test`, `fs-smoke`, `sd-bench` | Пройдено: секторное чтение 259 КиБ/с, запись FAT 166 КиБ/с, чтение/проверка FAT 500 КиБ/с |
+| Консоль          | `console-info`                               | Пройдено: батарея 100%, Wi-Fi подключён, время видно                                      |
+| Сведения дисплея | `display-info`                               | Пройдено                                                                                  |
+| Отрисовка        | `display-test`                               | Ошибка: `panic: FreeRTOS malloc failed`                                                   |
 
-Вывод: падение было не в LCD draw path, а в descriptor-level reservation для benchmark workspace. На RP2040 после boot
-оставалось около 47 KiB heap, а команда заранее запрашивала около 80 KiB даже для обычного pattern mode. Source fix после
-этого retest убрал descriptor quota и выделяет benchmark buffers лениво; нужен повторный hardware smoke после перепрошивки
-нового UF2. Короткая UART-проба `version` после panic вернула `NO_RESPONSE`, поэтому текущая прошивка считается
-остановленной до power cycle/reflash.
+Причина падения — резервирование рабочей памяти в дескрипторе, а не
+отрисовка LCD. После загрузки свободно около 47 КиБ, а команда заранее
+запрашивала около 80 КиБ даже для обычного изображения. Исправление
+выделяет тестовые буферы по необходимости. После аварии `version` вернул
+`NO_RESPONSE`: прошивка остановлена до выключения питания или перепрошивки.
 
-Hardware статус: RETEST. После прошивки нового UF2 повторить `mem`, `top`, SD/FAT, Wi-Fi, `display-test`,
-`display-test --bench` и smoke-команды ниже.
+Аппаратный статус: требуется повторение на новом UF2. Проверить `mem`,
+`top`, SD/FAT, Wi-Fi, `display-test`, `display-test --bench` и команды ниже.
 
-## Hardware retest after lazy workspace fix 2026-07-08
+## Аппаратная перепроверка после отложенного выделения рабочей памяти 2026-07-08
 
-Проверенная прошивка: `build: Jul 8 2026 18:41:11`, после lazy display benchmark workspace fix, но до PSRAM 8 MHz cap.
-Board output всё ещё показывал PSRAM baud `16000000`.
+Проверенная прошивка: `build: Jul 8 2026 18:41:11`, после отложенного выделения памяти теста дисплея, до ограничения
+PSRAM 8 МГц.
+Вывод `board` всё ещё показывал частоту PSRAM `16000000`.
 
-| Блок              | Команда                              | Результат |
-|-------------------|--------------------------------------|-----------|
-| Версия/плата      | `version`, `board`                   | PASS: `picocalc_pico_w`, RP2040, SD 50 MHz, display 50 MHz, PSRAM 16 MHz |
-| Память            | `mem`, `top --count 1 --no-clear`    | PASS: heap `47552` bytes, lowest before benchmark `37056`, task stacks sane |
-| Display pattern   | `display-test`                       | PASS: `drawn: 320x320`, heap restored to `47552` bytes |
-| Display benchmark | `display-test --bench --frames 1 --transport double --size full --rows 16` | PASS: 256 ms, `ok=yes`, min heap `21816` |
-| Display matrix    | `display-test --bench --frames 1 --transport all --size gb1 --rows 16` | PASS: row/stream/double/cached/psram transports all `ok=yes` |
-| Heap guard        | `display-test --bench --frames 1 --transport double --size full --rows 64` | PASS: graceful `not enough heap`, requested `81920`, no panic |
-| SD/FAT            | `sd-test`, `fs-smoke`, `sd-bench`    | PASS: raw 242 KiB/s, FAT write 193 KiB/s, FAT read/verify 492 KiB/s |
-| Southbridge       | `backlight`, `picocalc-sb`, `picocalc-sb --poll 1` | PASS with one transient `update-keyboard-fifo-read`; full snapshot stayed ok |
-| RTC/Wi-Fi         | `wifi-config show`, `wifi-scan`, `wifi-status`, `ping`, `rtc-sync --tz +07:00` | PASS: link up, ping `8.8.8.8`, `rtc sync: ok` |
-| Soft reboot       | `reboot`, then `version`, `wifi-status`, `rtc-get`, `console-info`, `mem` | PASS: SD automount, backlight restore, shell returned, Wi-Fi up after delay |
-| PSRAM probe       | `psram-info`                         | WARN: JEDEC bytes `FF FF FC 0D 5D 53 31 76`, PIO backend at 16 MHz |
-| PSRAM data        | `psram-test`, plus addresses `0x00200000` and `0x00001000` | FAIL: first byte readback `D2` instead of pattern, restore mismatch, `restored=no` |
+| Блок                   | Команда                                                                        | Результат                                                                                                |
+|------------------------|--------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| Версия/плата           | `version`, `board`                                                             | Пройдено: `picocalc_pico_w`, RP2040, SD 50 МГц, дисплей 50 МГц, PSRAM 16 МГц                             |
+| Память                 | `mem`, `top --count 1 --no-clear`                                              | Пройдено: куча `47552` байт, минимум перед тестом `37056`, стеки в норме                                 |
+| Тестовое изображение   | `display-test`                                                                 | Пройдено: `drawn: 320x320`, куча восстановлена до `47552` байт                                           |
+| Скорость дисплея       | `display-test --bench --frames 1 --transport double --size full --rows 16`     | Пройдено: 256 мс, `ok=yes`, минимум кучи `21816`                                                         |
+| Матрица тестов дисплея | `display-test --bench --frames 1 --transport all --size gb1 --rows 16`         | Пройдено: режимы row/stream/double/cached/psram — все `ok=yes`                                           |
+| Защита кучи            | `display-test --bench --frames 1 --transport double --size full --rows 64`     | Пройдено: корректный отказ `not enough heap`, запрошено `81920`, без аварии                              |
+| SD/FAT                 | `sd-test`, `fs-smoke`, `sd-bench`                                              | Пройдено: секторное чтение 242 КиБ/с, запись FAT 193 КиБ/с, чтение/проверка FAT 492 КиБ/с                |
+| STM32                  | `backlight`, `picocalc-sb`, `picocalc-sb --poll 1`                             | Пройдено с единичным `update-keyboard-fifo-read`; полный снимок остался корректным                       |
+| RTC/Wi-Fi              | `wifi-config show`, `wifi-scan`, `wifi-status`, `ping`, `rtc-sync --tz +07:00` | Пройдено: соединение установлено, ping `8.8.8.8`, `rtc sync: ok`                                         |
+| Программный перезапуск | `reboot`, затем `version`, `wifi-status`, `rtc-get`, `console-info`, `mem`     | Пройдено: автомонтирование SD, подсветка восстановлена, shell вернулся, Wi-Fi подключился после задержки |
+| Определение PSRAM      | `psram-info`                                                                   | Предупреждение: байты JEDEC `FF FF FC 0D 5D 53 31 76`, реализация PIO на 16 МГц                          |
+| Данные PSRAM           | `psram-test`, и адреса `0x00200000` и `0x00001000`                             | Ошибка: первый прочитанный байт `D2` вместо шаблона, восстановленные данные не совпали, `restored=no`    |
 
-Вывод: display-test stack/heap blocker закрыт. Оставшийся блокер первого Pico W — PSRAM data path при 16 MHz из старого
-CMake cache. После этого retest `CMakeLists.txt` получил release cap: для `LEXXOS_BOARD=picocalc_pico_w` старые cache
-values выше 8 MHz принудительно снижаются до `8000000`. Нужно прошить новый UF2 и повторить минимум `board`,
-`psram-info`, `psram-test`, `display-test --bench --frames 1 --transport all --size gb1 --rows 16`.
+Проблема стека/кучи `display-test` устранена. Остаётся нестабильность
+PSRAM первого Pico W на 16 МГц из старого кеша CMake. Для
+`LEXXOS_BOARD=picocalc_pico_w` значения выше 8 МГц принудительно снижаются
+до `8000000`. После прошивки нового UF2 повторить `board`, `psram-info`,
+`psram-test` и `display-test --bench --frames 1 --transport all --size gb1 --rows 16`.
 
-## Source fix after prompt redraw report 2026-07-08
+## Исправление перерисовки приглашения 2026-07-08
 
-Симптом на UART: delayed `wifi-autoconnect: connecting ...` и `FreeRTOS task start: ...` печатались поверх строки
-`lexx:/>`, переносили курсор и оставляли уже набранный текст визуально потерянным до следующей принудительной
-перерисовки, например Tab completion.
+Отложенные сообщения `wifi-autoconnect: connecting ...` и
+`FreeRTOS task start: ...` перекрывали строку `lexx:/>`, сдвигали курсор
+и скрывали уже набранный текст до следующей перерисовки, например по Tab.
 
-Source fix:
+Исправление:
 
-- `console_output` получил interactive line guard: внешний вывод очищает текущую строку, печатает сообщение кусками и
-  после `\n` вызывает redraw;
-- `Shell` регистрирует guard только когда prompt реально активен, снимает его на Enter/запуске программы/фокусе
-  foreground app и сохраняет текущий `_lineBuffer`;
-- FreeRTOS scheduler console writer в runtime теперь идёт через `console_output`, поэтому `FreeRTOS task start` проходит
-  тем же путём, что Wi-Fi/system-event сообщения.
+- `console_output` защищает интерактивную строку: внешний вывод очищает её,
+  печатает сообщение частями и после `\n` вызывает перерисовку;
+- `Shell` включает защиту только при активном приглашении, снимает на Enter,
+  запуске программы или передаче фокуса и сохраняет `_lineBuffer`;
+- вывод планировщика FreeRTOS проходит через тот же `console_output`,
+  что сообщения Wi-Fi и системных событий.
 
-Локальный статус: PASS в host regression test. Hardware статус: RETEST. После прошивки нового UF2 проверить:
+Регрессионный тест на компьютере пройден. На плате нужна перепроверка:
 
 ```text
 # оставить сохранённый Wi-Fi config, перезагрузить плату, сразу набрать несколько символов на prompt
@@ -159,24 +168,24 @@ Source fix:
 # убедиться, что сообщение появилось строкой выше, а prompt сохранил введённый текст
 ```
 
-## Source fix after UART paste and LFN completion report 2026-07-08
+## Исправление вставки UART и дополнения длинных имён 2026-07-08
 
-Симптомы на текущей прошивке:
+Симптомы:
 
-- быстрый paste в UART вставлял только первые 32 байта, например `echo 0123456789ABCDEFGHIJKLMNOPQ`;
-- Tab completion для `/mnt/sd/midi/ExampleMidiFile_T...` перерисовывал строку как
+- быстрая вставка UART сохраняла только первые 32 байта, например
+  `echo 0123456789ABCDEFGHIJKLMNOPQ`;
+- дополнение `/mnt/sd/midi/ExampleMidiFile_T...` давало
   `mplayer /mnt/sd/midi/ExampleMidiFile_Theme_One_Long1. `, теряя `.mid`;
-- более длинное имя `ExampleMidiFile_Finale_With_A_Long_Title.mid` невозможно было получить через completion.
+- имя `ExampleMidiFile_Finale_With_A_Long_Title.mid` полностью не дополнялось.
 
-Source fix:
+Исправление:
 
-- console task теперь использует `console_input::readAvailable()` и сначала вычитывает доступный input batch в RAM, чтобы
-  не переполнять 32-байтный UART FIFO во время echo;
-- `VfsRuntimeLimits::maxNameLength` поднят с 32 до 64, что совпадает с текущим FatFs `FF_LFN_BUF=64`;
-- host tests покрывают paste-sized platform input и completion длинного файла
-  `ExampleMidiFile_Finale_With_A_Long_Title.mid`.
+- задача консоли через `console_input::readAvailable()` сначала вычитывает
+  доступный пакет в RAM, чтобы отображение ввода не переполняло UART FIFO;
+- `VfsRuntimeLimits::maxNameLength` увеличен с 32 до 64, как `FF_LFN_BUF=64`;
+- тесты на компьютере проверяют пакетную вставку и дополнение длинного имени.
 
-Локальный статус: PASS. Hardware статус: RETEST. После прошивки нового UF2 проверить:
+Локальная проверка пройдена; после прошивки нового UF2 повторить:
 
 ```text
 echo 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
@@ -186,50 +195,54 @@ mplayer /mnt/sd/midi/ExampleMidiFile_F<Tab>
 
 ## Замечания по прогону 2026-07-02
 
-- `ls /mnt/sd`, `tasks`, `devices`, `block-devs`, `fs-info` и `jobs` прошли через `PrettyTable` без panic и stack overflow.
-- `beep` дал несколько слышимых звуковых сигналов на реальном PicoCalc; `audio` подтвердил `picocalc-audio` tone/mix
-  contract.
-- Boot auto-connect поднял Wi-Fi: `wifi-status` показал `link: up`, IP, gateway и DNS; `ping --count 1 pool.ntp.org`
-  получил `1 received`.
-- Первый `rtc-get` до установки времени вернул `failed to read or decode RTC date/time`. Повторный
-  `rtc-set --source picocalc ...` и `rtc-get --source picocalc` подтвердили чтение/запись PicoCalc RTC backend.
-- `rtc-sync --timeout 30000 --tz +07:00` и `rtc-sync --server time.google.com --timeout 30000 --tz +07:00` доходят до
-  NTP request, но завершаются `rtc-sync: failed to write RTC date/time`. После этого `rtc-get` читает актуальное время,
-  поэтому нужно отдельно разобрать JCS RTC write acknowledgement/echo path.
-- После этого прогона source fix добавил readback fallback для PicoCalc JCS RTC write: если strict time-register echo
-  отличается на тикающую секунду, но readback подтверждает установленное время, команда должна вернуть success. Нужно
-  повторить `rtc-sync --tz +07:00` после прошивки нового UF2.
-- `backlight` и обычный `picocalc-sb` иногда печатают `[picocalc-keyboard] communication failure:
-  stage=update-keyboard-fifo-read`, после чего cached snapshot может содержать только keyboard-state и read-failed поля.
-  Это оформлено как known non-blocking warning, если ошибка одиночная, ввод не теряется, а `ready=yes`,
-  `consecutive=1`, `snapshot-ok=yes`. `picocalc-sb --poll 1` в том же прогоне сделал full refresh и сохранил FIFO
-  safety (`direct polling skipped`).
+- `ls /mnt/sd`, `tasks`, `devices`, `block-devs`, `fs-info`, `jobs`
+  прошли через `PrettyTable` без аварии и переполнения стека.
+- `beep` дал слышимые сигналы; `audio` подтвердил тон и смешивание `picocalc-audio`.
+- Автоподключение подняло Wi-Fi: видны `link: up`, IP, шлюз, DNS;
+  `ping --count 1 pool.ntp.org` получил `1 received`.
+- Первый `rtc-get` вернул `failed to read or decode RTC date/time`.
+  Повторные `rtc-set --source picocalc ...` и `rtc-get --source picocalc`
+  подтвердили чтение/запись RTC.
+- `rtc-sync --timeout 30000 --tz +07:00` и
+  `rtc-sync --server time.google.com --timeout 30000 --tz +07:00`
+  доходили до NTP, но завершались `rtc-sync: failed to write RTC date/time`.
+  Затем `rtc-get` читал актуальное время: требуется проверка подтверждения
+  записи/эхо регистров JCS.
+- После прогона добавлено контрольное чтение: если эхо отличается на
+  изменившуюся секунду, но чтение подтверждает время, запись считается
+  успешной. Повторить `rtc-sync --tz +07:00` на новом UF2.
+- `backlight` и `picocalc-sb` иногда сообщали
+  `[picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read`;
+  снимок мог содержать только состояние клавиатуры и признаки ошибки чтения.
+  Единичное предупреждение не блокирует работу при сохранённом вводе,
+  `ready=yes`, `consecutive=1`, `snapshot-ok=yes`. В том же прогоне
+  `picocalc-sb --poll 1` полностью обновил снимок, сохранив защиту FIFO (`direct polling skipped`).
 
-## Soft reboot smoke
+## Проверка программного перезапуска
 
-| Блок                 | Команда                       | Результат                                                               |
-|----------------------|-------------------------------|-------------------------------------------------------------------------|
-| Reboot               | `reboot`                      | PASS: serial port stayed available                                      |
-| Boot sequence        | boot output                   | PASS: SD automount, saved backlight restore, Wi-Fi autoconnect, banner  |
-| Shell after reboot   | prompt                        | PASS: `LexxOS shell` and `lexx:/>` shown                                |
-| Version after reboot | `version`                     | PASS: output complete; harness split output across next command capture |
-| Wi-Fi after reboot   | `wifi-status`                 | PASS: `link: up`, IP/gateway/DNS visible                                |
-| RTC after reboot     | `rtc-get --source picocalc`   | PASS: decoded date/time visible                                         |
-| LCD status after boot | delayed `console-info`       | PASS: status bar, battery, Wi-Fi and time visible                       |
-| Southbridge after reboot | `picocalc-sb --poll 1`     | PASS: full snapshot, `snapshot-last-refresh-ok: yes`, FIFO skipped      |
+| Блок                        | Команда                     | Результат                                                                                   |
+|-----------------------------|-----------------------------|---------------------------------------------------------------------------------------------|
+| Перезапуск                  | `reboot`                    | Пройдено: последовательный порт остался доступен                                            |
+| Последовательность загрузки | загрузочный вывод           | Пройдено: автомонтирование SD, восстановление подсветки, автоподключение Wi-Fi, приветствие |
+| Shell после перезапуска     | приглашение                 | Пройдено: выведены `LexxOS shell` и `lexx:/>`                                               |
+| Версия после перезапуска    | `version`                   | Пройдено: вывод полный; проверяющая программа захватила часть при следующей команде         |
+| Wi-Fi после перезапуска     | `wifi-status`               | Пройдено: `link: up`, видны IP/шлюз/DNS                                                     |
+| RTC после перезапуска       | `rtc-get --source picocalc` | Пройдено: дата/время выведены                                                               |
+| LCD после загрузки          | отложенный `console-info`   | Пройдено: видны строка состояния, батарея, Wi-Fi и время                                    |
+| STM32 после перезапуска     | `picocalc-sb --poll 1`      | Пройдено: полный снимок, `snapshot-last-refresh-ok: yes`, FIFO пропущен                     |
 
 ## Ручные или отдельные проверки
 
-| Блок     | Проверка                                                         | Статус                                                                             |
-|----------|------------------------------------------------------------------|------------------------------------------------------------------------------------|
-| Keyboard | `input-test`, `keyboard-live`, editor input, arrows/modifiers    | PASS, подтверждено вручную                                                         |
-| RTC write ack | `rtc-sync` пишет PicoCalc JCS RTC и возвращает `rtc sync: ok` | RETEST after source fix                                                            |
-| Southbridge snapshot | `picocalc-sb` без transient read-failed полей          | TODO                                                                               |
-| Async console redraw | typed prompt survives delayed Wi-Fi/task messages      | RETEST after source fix                                                            |
-| UART paste and long LFN completion | fast paste and long MIDI path completion | RETEST after source fix                                                            |
-| Poweroff | `poweroff` через JCS southbridge                                 | Known limitation: может вернуть `southbridge request failed`; не запускать в smoke |
-| MIDI     | `mplayer`                                                        | Disabled by default in standard build via `LEXXOS_FEATURE_MIDI=OFF`                |
-| PrettyTable stack | `ls`, `mount`, `tasks`, `jobs`, `devices`, `block-devs`    | PASS                                                                               |
+| Блок                                   | Проверка                                                            | Статус                                                                                  |
+|----------------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| Клавиатура                             | `input-test`, `keyboard-live`, ввод редактора, стрелки/модификаторы | Пройдено, подтверждено вручную                                                          |
+| Подтверждение записи RTC               | `rtc-sync` пишет PicoCalc JCS RTC и возвращает `rtc sync: ok`       | Повторить после исправления исходников                                                  |
+| Снимок STM32                           | `picocalc-sb` без временных признаков ошибки чтения                 | Запланировано                                                                           |
+| Асинхронная перерисовка консоли        | введённая строка сохраняется при отложенных сообщениях Wi-Fi/задач  | Повторить после исправления исходников                                                  |
+| Вставка UART и дополнение длинных имён | быстрая вставка и дополнение длинных MIDI-путей                     | Повторить после исправления исходников                                                  |
+| Выключение                             | `poweroff` через JCS southbridge                                    | Известное ограничение: может вернуть `southbridge request failed`; не запускать в smoke |
+| MIDI                                   | `mplayer`                                                           | Выключен по умолчанию в стандартной сборке через `LEXXOS_FEATURE_MIDI=OFF`              |
+| Стек PrettyTable                       | `ls`, `mount`, `tasks`, `jobs`, `devices`, `block-devs`             | Пройдено                                                                                |
 
 ## Команды для повторения
 

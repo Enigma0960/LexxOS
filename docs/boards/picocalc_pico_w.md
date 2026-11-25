@@ -2,15 +2,15 @@
 
 Публичный набор 0.1.0 включает minimal/full для всех четырёх модулей:
 
-| Модуль | LEXXOS_BOARD | PICO_BOARD |
-| --- | --- | --- |
-| Pico | `picocalc_pico` | `pico` |
-| Pico W | `picocalc_pico_w` | `pico_w` |
-| Pico 2 | `picocalc_pico2` | `pico2` |
-| Pico 2 W | `picocalc_pico2w` | `pico2_w` |
+| Модуль   | LEXXOS_BOARD      | PICO_BOARD |
+|----------|-------------------|------------|
+| Pico     | `picocalc_pico`   | `pico`     |
+| Pico W   | `picocalc_pico_w` | `pico_w`   |
+| Pico 2   | `picocalc_pico2`  | `pico2`    |
+| Pico 2 W | `picocalc_pico2w` | `pico2_w`  |
 
-У non-W модулей нет CYW43; команды Wi-Fi исключены. Публичные presets используют
-**JCS southbridge firmware**, а не factory profile. Перед прошивкой сверяйте модуль
+У non-W модулей нет CYW43; команды Wi-Fi исключены. Публичные presets используют **JCS southbridge firmware**, а не
+factory profile. Перед прошивкой сверяйте модуль
 и [версию southbridge](../picocalc-jcs-keyboard-firmware.md).
 Все варианты прошли сборку/упаковку; hardware smoke финального набора не выполнен.
 
@@ -29,9 +29,9 @@ Bluetooth отложен, PSRAM проверялась диагностичес�
 - UART-консоль: UART0, TX GP0, RX GP1, 115200 baud.
 - USB CDC console mirror: включён по умолчанию для PicoCalc; USB product string `LexxOS PicoCalc`; shell output идёт в
   UART и USB, input принимается из USB или UART.
-- System I2C / southbridge: I2C1, SDA GP6, SCL GP7, 400 kHz.
+- Системная I2C / STM32: I2C1, SDA GP6, SCL GP7, 400 кГц.
 - SD card: SPI0, MISO GP16, CS GP17, SCK GP18, MOSI GP19, card detect GP22 active-low, штатная частота передачи 50 MHz.
-- LCD: ILI9488-compatible 320x320 panel on SPI1, SCK GP10, MOSI GP11, CS GP13, DC GP14, RESET GP15.
+- LCD: совместимая с ILI9488 панель 320×320 на SPI1, SCK GP10, MOSI GP11, CS GP13, DC GP14, RESET GP15.
 - Wireless: CYW43 Wi-Fi/Bluetooth capability объявлен в board profile; Wi-Fi scan, connect/status/ping и boot
   auto-connect подтверждены, а `rtc-sync --tz +07:00` прошёл hardware retest на PicoCalc Pico 2 W.
 - PSRAM: CE GP20, SCLK GP21, SI/SIO0 GP2, SO/SIO1 GP3, SIO2 GP4, SIO3 GP5 по
@@ -40,7 +40,7 @@ Bluetooth отложен, PSRAM проверялась диагностичес�
 - Status LED: отключён, потому что Pico W не выводит классический Pico GP25 LED.
 - PicoCalc southbridge address: `0x1F`.
 
-## Configure and build
+## Конфигурация и сборка
 
 ```bash
 cmake --preset minimal-picocalc_pico_w
@@ -57,7 +57,7 @@ build/minimal-picocalc_pico_w/src/lexxos.uf2
 на `full-`. Готовый релизный архив содержит `firmware.uf2`: удерживая BOOTSEL,
 подключите модуль по USB и скопируйте UF2 на появившийся загрузочный диск.
 
-## CMake GUI / CLion notes
+## Замечания по CMake GUI и CLion
 
 Для Pico W первого поколения важна следующая пара настроек:
 
@@ -122,17 +122,18 @@ processor: RP2040 / rp2040
 
 ## Прошивка через BOOTSEL
 
-Подключите USB Pico W в режиме BOOTSEL и скопируйте образ:
+Подключите Pico W в режиме BOOTSEL и задайте в `PICO_BOOTSEL_VOLUME` путь
+к смонтированному накопителю. Затем скопируйте образ.
 
 ```bash
-cp build/minimal-picocalc_pico_w/src/lexxos.uf2 /Volumes/RPI-RP2/
+cp build/minimal-picocalc_pico_w/src/lexxos.uf2 "$PICO_BOOTSEL_VOLUME/"
 sync
 ```
 
 Также можно использовать helper script:
 
 ```bash
-tools/flash-picocalc-pico-w-uf2.sh
+tools/flash-picocalc-pico-w-uf2.sh build/minimal-picocalc_pico_w/src/lexxos.uf2 "$PICO_BOOTSEL_VOLUME"
 ```
 
 После запуска LexxOS команда shell `bootsel` может вернуть Pico W в USB BOOTSEL loader без физического нажатия BOOTSEL:
@@ -278,7 +279,7 @@ lexx:/> poweroff
   объединённый список `SSID/channel/RSSI/auth`, а `--raw` печатает BSSID-записи для диагностики первичного запуска;
 - `wifi-config`, boot `wifi-autoconnect`, `wifi-connect`, `wifi-status`, `ping` и `rtc-sync` образуют первый
   TCP/IP/LwIP path; hardware smoke 0.0.7 подтвердил auto-connect, DNS и ICMP, а `rtc-sync` получил source fix для
-  PicoCalc JCS RTC write acknowledgement;
+  подтверждение записи RTC PicoCalc JCS;
 - `poweroff` выполняет VFS sync/unmount и затем запрашивает выключение через southbridge service; Pico 2 W smoke
   2026-07-08 подтвердил фактическое выключение, а старый Pico W smoke видел JCS-dependent `southbridge request failed`.
 
@@ -371,7 +372,7 @@ lexx:/> poweroff
   (`Ctrl-C`). Во время запущенной программы `Escape` передаётся как настоящий ESC для `terminal::readKey()`.
 - На проверенной прошивке PicoCalc power button не появляется как keyboard FIFO event, поэтому `KeyCode::Power` не
   маппится в клавиатурном драйвере. Если приложениям понадобится physical power button event, нужен отдельный
-  PMU/power-event source.
+  источник событий PMU/питания.
 - Wi-Fi поддержка вышла за пределы scan-only: есть сохранение credentials, boot auto-connect, ручное подключение,
   status, ICMP ping и NTP request path в `rtc-sync`. Ограничение этапа — это ещё не полноценный сетевой стек приложений:
   пароль хранится на SD в открытом виде, retry/roaming policy минимальная, а `rtc-sync` после source fix нужно повторно
@@ -429,7 +430,7 @@ lexx:/> keyboard-live -s 10 -i 16 picocalc-keyboard
 Печатные символы, цифры и `Enter` сейчас не повторяются намеренно. Это защита от ситуации, когда STM32/southbridge или
 FIFO теряет `key-up`, а software-autorepeat начинает бесконечно печатать в shell.
 
-## Southbridge diagnostics
+## Диагностика STM32
 
 При активном `picocalc-keyboard` southbridge принадлежит клавиатурному драйверу. Диагностические команды не должны
 напрямую читать регистры STM32 southbridge, потому что прямое чтение может забрать событие из FIFO или нарушить порядок

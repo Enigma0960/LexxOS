@@ -13,17 +13,39 @@ OperatingSystem::OperatingSystem(lexxos::platform::PlatformServices const& platf
 }
 
 OperatingSystem::OperatingSystem(lexxos::platform::PlatformServices const& platformServices, lexxos::vfs::Vfs& vfs)
-    : _platformServices(&platformServices) {
-	_vfs = &vfs;
+    : OperatingSystem(platformServices, vfs, app::program_input::defaultService(), app::console_input::defaultService()) {
+}
+
+OperatingSystem::OperatingSystem(platform::PlatformServices const& platformServices, lexxos::vfs::Vfs& vfs,
+    app::ProgramInputService& programInput, app::ConsoleInputService& consoleInput)
+    : _core(platformServices, programInput.events())
+    , _vfs(&vfs)
+    , _programInput(programInput)
+    , _consoleInput(consoleInput) {
+}
+
+app::ProgramInputService& OperatingSystem::programInput() {
+	return _programInput;
+}
+
+app::ConsoleInputService& OperatingSystem::consoleInput() {
+	return _consoleInput;
 }
 
 void OperatingSystem::initialize() {
-	_devices.initialize();
-	refreshCapabilities();
+	_core.initialize();
 }
 
 void OperatingSystem::refreshCapabilities() {
-	_capabilities = lexxos::runtime::detectCapabilities(_devices, platform());
+	_core.refreshCapabilities();
+}
+
+lexxos::core::CoreSystem& OperatingSystem::core() {
+	return _core;
+}
+
+lexxos::core::CoreSystem const& OperatingSystem::core() const {
+	return _core;
 }
 
 AppContext OperatingSystem::createAppContext(AppContextCreateInfo const& info) {
@@ -39,11 +61,11 @@ lexxos::program::ProgramManager const& OperatingSystem::programs() const {
 }
 
 lexxos::devices::DeviceManager& OperatingSystem::devices() {
-	return _devices;
+	return _core.devices();
 }
 
 lexxos::devices::DeviceManager const& OperatingSystem::devices() const {
-	return _devices;
+	return _core.devices();
 }
 
 lexxos::vfs::Vfs& OperatingSystem::vfs() {
@@ -55,7 +77,7 @@ lexxos::vfs::Vfs const& OperatingSystem::vfs() const {
 }
 
 lexxos::platform::PlatformServices const& OperatingSystem::platform() const {
-	return *_platformServices;
+	return _core.platform();
 }
 
 lexxos::runtime::RuntimeProfile const& OperatingSystem::runtimeProfile() const {
@@ -63,7 +85,15 @@ lexxos::runtime::RuntimeProfile const& OperatingSystem::runtimeProfile() const {
 }
 
 lexxos::runtime::CapabilitySet OperatingSystem::capabilities() const {
-	return _capabilities;
+	return _core.capabilities();
+}
+
+StorageMountPolicy* OperatingSystem::storageMountPolicy() const {
+	return _storageMountPolicy;
+}
+
+void OperatingSystem::setStorageMountPolicy(StorageMountPolicy* policy) {
+	_storageMountPolicy = policy;
 }
 
 } // namespace lexxos::os

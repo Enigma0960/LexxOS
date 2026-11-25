@@ -1,8 +1,12 @@
 #include <lexxos/devices/input/detail/picocalc_keyboard_diagnostics.h>
 
+#include <algorithm>
+#include <cstdio>
+
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices::input_detail {
+
 namespace {
 
 	char diagnosticHexDigit(std::uint8_t value) {
@@ -78,33 +82,24 @@ void PicoCalcKeyboardDiagnostics::_writeFailure(
 		return;
 	}
 
-	_writeText("[picocalc-keyboard] communication failure: stage=");
-	_writeText(stage);
-	_writeText(" uptime-ms=");
-	_writeUnsigned(now);
-	_writeText(" ready=");
-	_writeText(context.ready ? "yes" : "no");
-	_writeText(" comm-failures=");
-	_writeUnsigned(_communicationFailures);
-	_writeText(" consecutive=");
-	_writeUnsigned(_consecutiveCommunicationFailures);
-	_writeText(" sb-refresh-failures=");
-	_writeUnsigned(_southbridgeRefreshFailures);
-	_writeText(" sb-reset-attempts=");
-	_writeUnsigned(_southbridgeResetAttempts);
-	_writeText(" sb-reset-successes=");
-	_writeUnsigned(_southbridgeResetSuccesses);
-	_writeText(" last-state=");
-	_writeHex8(context.lastKeyboardStatus);
-	_writeText(" fifo=");
-	_writeUnsigned(context.lastKeyboardCount);
-	_writeText(" raw=");
-	_writeHex32(context.lastRawEvent);
-	_writeText(" snapshot-ok=");
-	_writeText(context.southbridgeSnapshotOk ? "yes" : "no");
-	_writeText(" snapshot-failures=");
-	_writeUnsigned(context.southbridgeSnapshotFailures);
-	_writeText("\r\n");
+	char line[640]{};
+	auto const& bus = context.i2cFailure;
+	auto const length = std::snprintf(line, sizeof(line),
+	    "[picocalc-keyboard] communication failure: stage=%.*s uptime-ms=%lu ready=%s comm-failures=%lu consecutive=%lu sb-refresh-failures=%lu sb-reset-attempts=%lu sb-reset-successes=%lu last-state=0x%02X fifo=%u raw=0x%08lX snapshot-ok=%s snapshot-failures=%lu i2c-failure=%s event=0x%lX pending=0x%lX recovery=%lu/%lu\r\n",
+	    static_cast<int>(stage.size()), stage.data(), static_cast<unsigned long>(now), context.ready ? "yes" : "no",
+	    static_cast<unsigned long>(_communicationFailures), static_cast<unsigned long>(_consecutiveCommunicationFailures),
+	    static_cast<unsigned long>(_southbridgeRefreshFailures), static_cast<unsigned long>(_southbridgeResetAttempts),
+	    static_cast<unsigned long>(_southbridgeResetSuccesses), static_cast<unsigned>(context.lastKeyboardStatus),
+	    static_cast<unsigned>(context.lastKeyboardCount), static_cast<unsigned long>(context.lastRawEvent),
+	    context.southbridgeSnapshotOk ? "yes" : "no", static_cast<unsigned long>(context.southbridgeSnapshotFailures),
+	    !bus.available ? "unavailable" : bus.nack ? "nack"
+	                                              : "timeout",
+	    static_cast<unsigned long>(bus.event), static_cast<unsigned long>(bus.pending),
+	    static_cast<unsigned long>(bus.recoverySuccesses), static_cast<unsigned long>(bus.recoveryAttempts));
+
+	if (length > 0) {
+		_console.write({line, std::min<std::size_t>(length, sizeof(line) - 1)});
+	}
 }
 
 void PicoCalcKeyboardDiagnostics::_writeText(std::string_view text) const {
@@ -120,6 +115,7 @@ void PicoCalcKeyboardDiagnostics::_writeUnsigned(std::uint32_t value) const {
 		buffer[--position] = static_cast<char>('0' + (value % 10U));
 		value /= 10U;
 	} while (value != 0 && position != 0);
+
 	_writeText({buffer + position, sizeof(buffer) - position});
 }
 
@@ -139,6 +135,7 @@ void PicoCalcKeyboardDiagnostics::_writeHex32(std::uint32_t value) const {
 		auto const shift = static_cast<std::uint8_t>((7U - index) * 4U);
 		buffer[index + 2U] = diagnosticHexDigit(static_cast<std::uint8_t>((value >> shift) & 0x0F));
 	}
+
 	_writeText({buffer, sizeof(buffer)});
 }
 

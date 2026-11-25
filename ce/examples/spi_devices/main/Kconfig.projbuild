@@ -1,0 +1,22 @@
+menu "SPI devices"
+    config DEMO_SPI_SCK
+        int "SCK GPIO"
+        range 0 33
+        default 18
+    config DEMO_SPI_MOSI
+        int "MOSI GPIO (-1 to disable)"
+        range -1 33
+        default 23
+    config DEMO_SPI_MISO
+        int "MISO GPIO (-1 to disable)"
+        range -1 39
+        default 19
+    config DEMO_SPI_CS_FIRST
+        int "First device CS GPIO (active low)"
+        range 0 33
+        default 25
+    config DEMO_SPI_CS_SECOND
+        int "Second device CS GPIO (active low)"
+        range 0 33
+        default 26
+endmenu

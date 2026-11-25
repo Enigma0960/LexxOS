@@ -9,7 +9,9 @@
 #endif
 
 namespace lexxos::devices {
+
 class DisplayDevice;
+
 } // namespace lexxos::devices
 
 namespace lexxos::app::picocalc_lcd_console::detail {

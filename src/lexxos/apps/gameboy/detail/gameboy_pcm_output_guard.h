@@ -1,8 +1,10 @@
 #pragma once
 
 namespace lexxos::devices {
+
 class AudioDevice;
-}
+
+} // namespace lexxos::devices
 
 namespace lexxos::apps::gameboy_programs::detail {
 

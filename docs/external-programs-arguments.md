@@ -20,9 +20,9 @@ argv[2] = two
 argv[3] = three
 ```
 
-## SDK API
+## Программный интерфейс SDK
 
-В `sdk/lexx/lexx.h` добавлены функции:
+В `apps/sdk/lexx/lexx.h` добавлены функции:
 
 ```cpp
 int lexx::argc();
@@ -57,7 +57,7 @@ for (int i = 0; i < lexx::argc(); ++i) {
 
 ## Проверка
 
-Демо `examples/lexx/hello` теперь печатает `argc` и список `argv` при старте.
+Демо `apps/examples/lexx/hello` теперь печатает `argc` и список `argv` при старте.
 
 После пересборки demo:
 

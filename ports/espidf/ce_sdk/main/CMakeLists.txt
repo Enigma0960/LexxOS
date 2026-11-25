@@ -1,0 +1,1 @@
+idf_component_register(SRCS "sdk_probe.cpp" REQUIRES lexxos_ce_espidf lexxos_ce_freertos lexxos_ce_cooperative)

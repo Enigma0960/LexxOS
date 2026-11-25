@@ -135,7 +135,7 @@ struct GbEmuSettingsLoadResult {
 [[nodiscard]] bool parseGbEmuSettings(std::string_view text, GbEmuSettings& settings);
 [[nodiscard]] bool setGbEmuRomDirectory(GbEmuSettings& settings, std::string_view value);
 [[nodiscard]] bool setGbEmuLastRom(GbEmuSettings& settings, std::string_view value);
-[[nodiscard]] GbEmuSettingsLoadResult loadOrCreateGbEmuSettings();
-[[nodiscard]] GbEmuSettingsSaveResult saveGbEmuSettings(GbEmuSettings const& settings);
+[[nodiscard]] GbEmuSettingsLoadResult loadOrCreateGbEmuSettings(lexxos::vfs::Vfs& vfs);
+[[nodiscard]] GbEmuSettingsSaveResult saveGbEmuSettings(lexxos::vfs::Vfs& vfs, GbEmuSettings const& settings);
 
 } // namespace lexxos::apps::gameboy_programs::detail

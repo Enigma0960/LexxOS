@@ -1,5 +1,3 @@
-#include <lexxos/platform/platform.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -10,6 +8,8 @@
 #include <hardware/pio_instructions.h>
 #include <hardware/structs/sio.h>
 #include <pico/time.h>
+
+#include <lexxos/platform/platform.h>
 
 namespace {
 
@@ -112,6 +112,7 @@ void configureInput(lexxos::platform::GpioPin pin) {
 	if (!pins.spi.isValid()) {
 		return false;
 	}
+
 	if (!gpioMask(pins.spi.cs, bus.csMask)
 	    || !gpioMask(pins.spi.sck, bus.sckMask)
 	    || !gpioMask(pins.spi.mosi, bus.mosiMask)
@@ -125,9 +126,11 @@ void configureInput(lexxos::platform::GpioPin pin) {
 	if (pins.sio2.isValid()) {
 		configureOutput(pins.sio2, true);
 	}
+
 	if (pins.sio3.isValid()) {
 		configureOutput(pins.sio3, true);
 	}
+
 	configureInput(pins.spi.miso);
 
 	// The software fallback is a diagnostic safety net, not a fast path. Keep it
@@ -164,6 +167,7 @@ std::uint8_t transferByte(PsramBus const& bus, std::uint8_t value) {
 		} else {
 			clearMask(bus.mosiMask);
 		}
+
 		bitDelay(bus);
 		setMask(bus.sckMask);
 		bitDelay(bus);
@@ -172,6 +176,7 @@ std::uint8_t transferByte(PsramBus const& bus, std::uint8_t value) {
 		bitDelay(bus);
 		value = static_cast<std::uint8_t>(value << 1U);
 	}
+
 	return result;
 }
 
@@ -217,9 +222,11 @@ PsramRuntimeStats& runtimeStats() {
 	if (pio == pio0) {
 		return 0;
 	}
+
 	if (pio == pio1) {
 		return 1;
 	}
+
 	return -1;
 }
 
@@ -239,6 +246,7 @@ PsramRuntimeStats& runtimeStats() {
 	if (effectiveBaud == 0) {
 		return pioTransferTimeoutSlackMs;
 	}
+
 	auto const limitedSize = std::min<std::size_t>(size, 0x1FFFFFFFU);
 	auto const bitCount = static_cast<std::uint64_t>(limitedSize) * 8ULL;
 	auto const expectedMs = (bitCount * 1000ULL + static_cast<std::uint64_t>(effectiveBaud) - 1ULL)
@@ -247,6 +255,7 @@ PsramRuntimeStats& runtimeStats() {
 	if (timeoutMs > 5000ULL) {
 		return 5000;
 	}
+
 	return std::max<std::uint32_t>(pioTransferTimeoutSlackMs, static_cast<std::uint32_t>(timeoutMs));
 }
 
@@ -254,6 +263,7 @@ void abortPioEngine(PsramPioEngine& engine) {
 	if (engine.pio == nullptr || engine.sm < 0) {
 		return;
 	}
+
 	pio_sm_set_enabled(engine.pio, static_cast<unsigned>(engine.sm), false);
 	pio_sm_clear_fifos(engine.pio, static_cast<unsigned>(engine.sm));
 	pio_sm_restart(engine.pio, static_cast<unsigned>(engine.sm));
@@ -274,16 +284,19 @@ void abortPioEngine(PsramPioEngine& engine) {
 		if (!pio_can_add_program(pio, &psramPioProgram)) {
 			continue;
 		}
+
 		auto const sm = pio_claim_unused_sm(pio, false);
 		if (sm < 0) {
 			continue;
 		}
+
 		engine.pio = pio;
 		engine.sm = sm;
 		engine.offset = pio_add_program(pio, &psramPioProgram);
 		engine.programLoaded = true;
 		return true;
 	}
+
 	return false;
 }
 
@@ -291,6 +304,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 	if (engine.pio == nullptr || engine.sm < 0) {
 		return;
 	}
+
 	pio_sm_exec_wait_blocking(
 	    engine.pio,
 	    static_cast<unsigned>(engine.sm),
@@ -315,6 +329,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 	    || !gpioMask(pins.spi.sck, sckMask)) {
 		return false;
 	}
+
 	if (!claimPioEngine(engine)) {
 		return false;
 	}
@@ -334,6 +349,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 	if (pins.sio2.isValid()) {
 		configureOutput(pins.sio2, true);
 	}
+
 	if (pins.sio3.isValid()) {
 		configureOutput(pins.sio3, true);
 	}
@@ -364,6 +380,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 	if (divider < static_cast<float>(minPioClockDividerX1000) / 1000.0F) {
 		divider = static_cast<float>(minPioClockDividerX1000) / 1000.0F;
 	}
+
 	sm_config_set_clkdiv(&config, divider);
 
 	pio_sm_init(engine.pio, static_cast<unsigned>(engine.sm), engine.offset, &config);
@@ -402,6 +419,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 			if (output != nullptr) {
 				output[read] = value;
 			}
+
 			++read;
 			progressed = true;
 		}
@@ -417,6 +435,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 			tight_loop_contents();
 		}
 	}
+
 	return true;
 }
 
@@ -471,6 +490,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 		abortPioEngine(engine);
 		return false;
 	}
+
 	setPioClockLow(engine);
 	setMask(engine.csMask);
 	return true;
@@ -503,6 +523,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 			output[index] = transferByte(bus, 0xFF);
 		}
 	}
+
 	deselect(bus);
 	return true;
 }
@@ -528,6 +549,7 @@ void setPioClockLow(PsramPioEngine const& engine) {
 			stats.backend = "pio";
 			return true;
 		}
+
 		// Do not silently fall back to the software bit-bang path after a PIO
 		// failure. A failed PIO transfer means the ROM staging path is not
 		// trustworthy; continuing with a different backend can corrupt PSRAM and
@@ -551,6 +573,7 @@ bool lexxos::platform::gameBoyRomPsramRegion(GameBoyRomExternalMemoryRegion& out
 	if (!activeBoardDescriptor().psram.spi.isValid()) {
 		return false;
 	}
+
 	output.available = true;
 	output.capacity = psramCapacityBytes;
 	output.preferredTransferBytes = psramPreferredTransferBytes;

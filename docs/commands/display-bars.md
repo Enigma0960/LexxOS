@@ -1,6 +1,6 @@
 # `display-bars`
 
-draw display color bars.
+Рисует цветные полосы на дисплее.
 
 ## Справка shell
 

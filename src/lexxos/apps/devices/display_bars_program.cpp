@@ -8,6 +8,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec optionalNameArgument[] = {
@@ -75,6 +76,7 @@ int DisplayBarsProgram::run(
 					break;
 				}
 			}
+
 			if (error == nullptr && !display->endFrame()) {
 				error = "display-bars: failed to end frame";
 			}
@@ -85,6 +87,7 @@ int DisplayBarsProgram::run(
 		context.writeErrorLine(error);
 		return 1;
 	}
+
 	context.writeLine("display-bars: ok");
 	return 0;
 }

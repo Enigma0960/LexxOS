@@ -23,6 +23,7 @@ namespace {
 			writeUnsigned(context, software.unixSeconds);
 			context.writeLine("");
 		}
+
 		context.write("last-set: ");
 		context.writeLine(lexxos::devices::rtc::software::toString(software.lastSetSource));
 		context.write("set-count: ");
@@ -57,6 +58,7 @@ namespace {
 		} else {
 			context.writeLine("last-network-attempt: none");
 		}
+
 		if (software.lastNetworkSyncUptimeMs != 0U) {
 			context.write("last-network-sync-uptime-ms: ");
 			writeUnsigned(context, software.lastNetworkSyncUptimeMs);
@@ -100,14 +102,17 @@ int RtcStatusProgram::run(lexxos::os::AppContext& context,
 		detail::writeHex2(context, status.raw);
 		context.writeLine("");
 	}
+
 	if (status.oscillatorStoppedValid) {
 		context.write("oscillator stopped: ");
 		context.writeLine(status.oscillatorStopped ? "yes" : "no");
 	}
+
 	if (status.voltageLowValid) {
 		context.write("voltage low: ");
 		context.writeLine(status.voltageLow ? "yes" : "no");
 	}
+
 	if (status.softwareStatusValid) {
 		writeSoftwareStatus(context, status.softwareStatus);
 	}
@@ -121,6 +126,7 @@ int RtcStatusProgram::run(lexxos::os::AppContext& context,
 		writeUnsigned(context, status.jcsFirmware.minorVersion());
 		context.writeLine(status.jcsFirmware.isJcs() ? " jcs=yes" : " jcs=no");
 	}
+
 	if (status.jcsRtcConfigValid) {
 		context.write("rtc alarm: enabled=");
 		context.write(status.jcsRtcConfig.alarmEnabled() ? "yes" : "no");

@@ -1,5 +1,4 @@
 #include <lexxos/devices/storage/sd_sdio_backend.h>
-
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices {
@@ -25,6 +24,7 @@ bool SdSdioBackend::initialize() {
 		setFailure(SdCardState::NoBus);
 		return false;
 	}
+
 	if (!physicalCardPresent()) {
 		recordDiagnostic(SdCardDiagnosticCode::CardRemoved);
 		setFailure(SdCardState::NoCard);
@@ -139,6 +139,7 @@ bool SdSdioBackend::physicalCardPresent() const {
 	if (gpio.read == nullptr || !gpio.read(_cardDetect.detect, value)) {
 		return false;
 	}
+
 	return _cardDetect.insertedLevel == lexxos::platform::GpioActiveLevel::High ? value : !value;
 }
 
@@ -239,6 +240,7 @@ SdCardDiagnostics SdSdioBackend::diagnosticsUnlocked() const {
 	for (std::uint32_t index = 0; index < _diagnosticStoredCount; ++index) {
 		snapshot.entries[index] = _diagnosticEntries[(first + index) % sdCardDiagnosticEntryCount];
 	}
+
 	return snapshot;
 }
 

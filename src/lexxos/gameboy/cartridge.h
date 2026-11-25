@@ -10,7 +10,9 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::gameboy {

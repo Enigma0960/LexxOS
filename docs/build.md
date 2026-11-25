@@ -43,11 +43,12 @@ tools/lexxos-build full-picocalc_pico2w
 | Доступные RTC, PSRAM, сетевые и аудиодрайверы    | По возможностям платы | По возможностям платы         |
 | Game Boy, MIDI, health, аппаратные test commands | Выключены             | Включены с ограничениями ниже |
 | GPIO analyzer                                    | Выключен              | Включён, если доступен плате  |
-| Legacy FAT и legacy I2C debug/status task        | Выключены             | Выключены                     |
+| Legacy FAT и legacy I2C tools/debug/status task  | Выключены             | Выключены                     |
 
 Экспериментальность сама по себе не исключает компонент из full. На PicoCalc Pico W
 сохраняется ограничение RP2040: Game Boy, MIDI и GPIO analyzer выключены из-за SRAM.
-Оба профиля этой платы используют FAT cache 4 сектора и RTOS heap 88 KiB.
+Оба профиля этой платы используют кучу FreeRTOS 88 КиБ. Кэш опережающего
+чтения FAT занимает четыре сектора в minimal и два сектора в full.
 Терминал RP2040 сохраняет обе ориентации LCD, но имеет 32 строки истории и очередь
 2048 символов; буфер передачи RGB888 ограничен 512 пикселями. Для `dev_pico` и
 `dev_pico_sdio` full heap — 96 KiB. Линковка не подтверждает запас памяти во всех
@@ -180,9 +181,9 @@ tools/lexxos-build check all
 tools/lexxos-build check esp32
 ```
 
-## Feature Flags
+## Переключатели возможностей
 
-`LEXXOS_FEATURE_DISPLAY` включает основные display drivers. Legacy I2C debug/status display управляется отдельным
+`LEXXOS_FEATURE_DISPLAY` включает основные display drivers. Legacy I2C tools/debug/status display управляется отдельным
 `LEXXOS_FEATURE_DEBUG_DISPLAY`: по умолчанию он следует за display feature, но отключается для PicoCalc-профилей.
 Debug display source files добавляются только при включённом `LEXXOS_FEATURE_DEBUG_DISPLAY`.
 
@@ -261,7 +262,7 @@ CLion, открывая корень репозитория и выбирая с
 - `Reset platform settings` — сбросить сохранённые значения только для текущей
   платформы.
 
-### Standalone build-tool
+### Отдельный инструмент сборки
 
 После отладки GUI можно собрать standalone-исполняемый файл без необходимости
 устанавливать PySide6 на машине пользователя:

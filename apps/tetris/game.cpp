@@ -1,7 +1,9 @@
 #include "game.h"
 
 namespace tetris {
+
 namespace {
+
 	// Four rows of four bits. The empty top row is the piece spawn margin.
 	constexpr unsigned short shapes[7] = {
 	    0x00F0U, // I  .... / #### / .... / ....
@@ -20,13 +22,16 @@ namespace {
 				if ((source & (1U << (row * 4 + column))) == 0) {
 					continue;
 				}
+
 				int const targetX = clockwise ? 3 - row : row;
 				int const targetY = clockwise ? column : 3 - column;
 				result = static_cast<unsigned short>(result | (1U << (targetY * 4 + targetX)));
 			}
 		}
+
 		return result;
 	}
+
 } // namespace
 
 unsigned short Game::shapeFor(PieceKind piece) {
@@ -49,14 +54,17 @@ PieceKind Game::drawFromBag() {
 		for (unsigned i = 0; i < 7; ++i) {
 			bag[i] = static_cast<PieceKind>(i);
 		}
+
 		for (unsigned i = 6; i > 0; --i) {
 			unsigned const choice = random() % (i + 1U);
 			PieceKind const temp = bag[i];
 			bag[i] = bag[choice];
 			bag[choice] = temp;
 		}
+
 		bagIndex = 0;
 	}
+
 	return bag[bagIndex++];
 }
 
@@ -77,6 +85,7 @@ void Game::reset(unsigned seed) {
 			board[row][column] = 0;
 		}
 	}
+
 	score = 0;
 	lines = 0;
 	level = 1;
@@ -107,16 +116,19 @@ bool Game::canPlace(unsigned short mask, int left, int top) const {
 			if (!hasCell(mask, column, row)) {
 				continue;
 			}
+
 			int const boardX = left + column;
 			int const boardY = top + row;
 			if (boardX < 0 || boardX >= width || boardY >= height) {
 				return false;
 			}
+
 			if (boardY >= 0 && board[boardY][boardX] != 0) {
 				return false;
 			}
 		}
 	}
+
 	return true;
 }
 
@@ -124,9 +136,11 @@ bool Game::move(int deltaX) {
 	if (phase != Phase::Playing || (deltaX != -1 && deltaX != 1)) {
 		return false;
 	}
+
 	if (!canPlace(shape, x + deltaX, y)) {
 		return false;
 	}
+
 	x += deltaX;
 	return true;
 }
@@ -135,9 +149,11 @@ bool Game::rotate(bool clockwise) {
 	if (phase != Phase::Playing) {
 		return false;
 	}
+
 	if (kind == PieceKind::O) {
 		return true; // Do not shift a square when rotating.
 	}
+
 	unsigned short const candidate = rotated(shape, clockwise);
 	// Small wall/floor kicks: not full SRS, but allows turns at borders.
 	constexpr int kicksX[] = {0, -1, 1, -2, 2, 0, -1, 1, 0};
@@ -152,6 +168,7 @@ bool Game::rotate(bool clockwise) {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -163,6 +180,7 @@ Sound Game::lockPiece() {
 			if (!hasCell(shape, column, row)) {
 				continue;
 			}
+
 			int const yy = y + row;
 			if (yy < 0) {
 				topOut = true;
@@ -171,6 +189,7 @@ Sound Game::lockPiece() {
 			}
 		}
 	}
+
 	if (topOut) {
 		phase = Phase::Lost;
 		return Sound::GameOver;
@@ -185,18 +204,22 @@ Sound Game::lockPiece() {
 				break;
 			}
 		}
+
 		if (!full) {
 			continue;
 		}
+
 		++cleared;
 		for (int dest = row; dest > 0; --dest) {
 			for (int column = 0; column < width; ++column) {
 				board[dest][column] = board[dest - 1][column];
 			}
 		}
+
 		for (int column = 0; column < width; ++column) {
 			board[0][column] = 0;
 		}
+
 		++row; // Inspect the row shifted into this position as well.
 	}
 
@@ -206,10 +229,12 @@ Sound Game::lockPiece() {
 		lines += cleared;
 		level = 1U + lines / 10U;
 	}
+
 	spawnPiece();
 	if (phase == Phase::Lost) {
 		return Sound::GameOver;
 	}
+
 	return cleared == 4 ? Sound::Tetris : (cleared != 0 ? Sound::Line : Sound::Lock);
 }
 
@@ -217,11 +242,13 @@ Sound Game::softDrop() {
 	if (phase != Phase::Playing) {
 		return Sound::None;
 	}
+
 	if (canPlace(shape, x, y + 1)) {
 		++y;
 		++score; // One point per manually descended row.
 		return Sound::None;
 	}
+
 	return lockPiece();
 }
 
@@ -229,11 +256,13 @@ Sound Game::hardDrop() {
 	if (phase != Phase::Playing) {
 		return Sound::None;
 	}
+
 	unsigned distance = 0;
 	while (canPlace(shape, x, y + 1)) {
 		++y;
 		++distance;
 	}
+
 	score += 2U * distance;
 	return lockPiece();
 }
@@ -242,10 +271,12 @@ Sound Game::gravityStep() {
 	if (phase != Phase::Playing) {
 		return Sound::None;
 	}
+
 	if (canPlace(shape, x, y + 1)) {
 		++y;
 		return Sound::None;
 	}
+
 	return lockPiece();
 }
 

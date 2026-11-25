@@ -10,6 +10,7 @@
 #include <lexxos/terminal/terminal.h>
 
 namespace lexxos::apps::text_editor_programs::detail {
+
 namespace {
 
 	void appendChar(char* buffer, std::size_t capacity, std::size_t& length, char value) {
@@ -37,6 +38,7 @@ namespace {
 				value /= 10U;
 			}
 		}
+
 		while (digitCount != 0) {
 			appendChar(buffer, capacity, length, digits[--digitCount]);
 		}
@@ -55,10 +57,12 @@ namespace {
 				cursor /= 10U;
 			}
 		}
+
 		while (digitCount < width) {
 			appendChar(buffer, capacity, length, ' ');
 			--width;
 		}
+
 		while (digitCount != 0) {
 			appendChar(buffer, capacity, length, digits[--digitCount]);
 		}
@@ -77,9 +81,11 @@ namespace {
 			state.cursorColumn = 0;
 			return;
 		}
+
 		if (state.cursorLine >= buffer.lineCount) {
 			state.cursorLine = buffer.lineCount - 1U;
 		}
+
 		auto const length = buffer.lineLength(state.cursorLine);
 		if (state.cursorColumn > length) {
 			state.cursorColumn = length;
@@ -92,6 +98,7 @@ namespace {
 		if (state.cursorLine < state.topLine) {
 			state.topLine = state.cursorLine;
 		}
+
 		if (state.cursorLine >= state.topLine + metrics.visibleTextRows) {
 			state.topLine = state.cursorLine - metrics.visibleTextRows + 1U;
 		}
@@ -99,6 +106,7 @@ namespace {
 		if (state.cursorColumn < state.leftColumn) {
 			state.leftColumn = state.cursorColumn;
 		}
+
 		if (state.cursorColumn >= state.leftColumn + metrics.visibleTextColumns) {
 			state.leftColumn = state.cursorColumn - metrics.visibleTextColumns + 1U;
 		}
@@ -126,6 +134,7 @@ namespace {
 				} else {
 					output.write("~");
 				}
+
 				continue;
 			}
 
@@ -140,6 +149,7 @@ namespace {
 			if (state.leftColumn >= line.size()) {
 				continue;
 			}
+
 			writeClipped(output, line.substr(state.leftColumn), metrics.visibleTextColumns);
 		}
 	}
@@ -162,6 +172,7 @@ namespace {
 		if (buffer.modified) {
 			appendText(line, sizeof(line), length, "  modified");
 		}
+
 		writeClipped(output, {line, length}, metrics.screenColumns);
 	}
 

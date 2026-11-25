@@ -1,15 +1,18 @@
 #include <lexxos/app/detail/picocalc_lcd_console_wifi_icon.h>
 
 namespace lexxos::app::picocalc_lcd_console::detail {
+
 namespace {
 
 	std::uint8_t normalizedLevel(lexxos::app::picocalc_lcd_console::StatusBarInfo const& status) {
 		if (!status.wifiValid || !status.wifiConnected) {
 			return 0;
 		}
+
 		if (status.wifiSignalLevel == 0) {
 			return 1;
 		}
+
 		return status.wifiSignalLevel > 3 ? 3 : status.wifiSignalLevel;
 	}
 
@@ -43,9 +46,11 @@ void WifiIcon::draw(lexxos::app::picocalc_lcd_console::StatusBarInfo const& stat
 	if (level >= 1) {
 		_drawLowArc(x, sourceY, pixels, pixelWidth, color);
 	}
+
 	if (level >= 2) {
 		_drawMidArc(x, sourceY, pixels, pixelWidth, color);
 	}
+
 	if (level >= 3) {
 		_drawHighArc(x, sourceY, pixels, pixelWidth, color);
 	}

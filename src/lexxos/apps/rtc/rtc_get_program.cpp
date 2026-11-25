@@ -49,9 +49,11 @@ int RtcGetProgram::run(lexxos::os::AppContext& context,
 	if (detail::readStatus(backend, status) && status.oscillatorStoppedValid && status.oscillatorStopped) {
 		context.writeLine("warning: oscillator stop flag is set, time may be invalid");
 	}
+
 	if (status.voltageLowValid && status.voltageLow) {
 		context.writeLine("warning: voltage low flag is set, time may be invalid");
 	}
+
 	return 0;
 }
 

@@ -167,7 +167,7 @@ $PROJECT_DIR$/tools/openocd-local
 | Target            | `lexxos`                                                                |
 | Executable binary | `$PROJECT_DIR$/build/pico/src/lexxos.elf`                               |
 | Debugger          | `/path/to/pico-toolchain/bin/arm-none-eabi-gdb` |
-| Board config file | `$PROJECT_DIR$/debug/openocd/lexxos-rp2040-cmsis-dap.cfg`               |
+| Board config file | `$PROJECT_DIR$/tools/debug/openocd/lexxos-rp2040-cmsis-dap.cfg`               |
 | GDB port          | `3333`                                                                  |
 | Telnet port       | `4444`                                                                  |
 | Download          | `Always` или `If updated`                                               |

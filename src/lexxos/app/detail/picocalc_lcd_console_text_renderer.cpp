@@ -13,6 +13,7 @@
 namespace lexxos::app::picocalc_lcd_console::detail {
 
 namespace {
+
 #if LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH
 
 	std::uint8_t rgb565Red8(std::uint16_t value) {
@@ -36,6 +37,7 @@ namespace {
 		output[2] = rgb565Blue8(color);
 	}
 #endif
+
 } // namespace
 
 void LcdConsoleTextRenderer::drawRow(LcdConsoleTextRenderFrame const& frame, int row) const {
@@ -53,7 +55,7 @@ void LcdConsoleTextRenderer::drawRow(LcdConsoleTextRenderFrame const& frame, int
 #if LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH
 	_cacheRowGlyphs(frame, row);
 	auto* const rgb888Pixels = _rowRgb888Pixels.data();
-	if (frame.display->beginRgb565Stream(rect)) {
+	if (!frame.display->prefersRgb565Stream() && frame.display->beginRgb565Stream(rect)) {
 		bool directRgb888 = true;
 		for (int y = 0; y < cellHeight; ++y) {
 			_fillCachedRowRgb888Pixels(frame, row, y, rgb888Pixels);
@@ -62,6 +64,7 @@ void LcdConsoleTextRenderer::drawRow(LcdConsoleTextRenderFrame const& frame, int
 				break;
 			}
 		}
+
 		frame.display->endRgb565Stream();
 		if (directRgb888) {
 			frame.screen->clearDirtyCellsInRow(row, frame.columns, frame.rows);
@@ -82,6 +85,7 @@ void LcdConsoleTextRenderer::drawRow(LcdConsoleTextRenderFrame const& frame, int
 #endif
 			frame.display->writeRgb565Stream(pixels, rect.width);
 		}
+
 		frame.display->endRgb565Stream();
 		frame.screen->clearDirtyCellsInRow(row, frame.columns, frame.rows);
 		return;
@@ -97,6 +101,7 @@ void LcdConsoleTextRenderer::drawRow(LcdConsoleTextRenderFrame const& frame, int
 		                          },
 		    pixels, frame.visibleColumns * cellWidth);
 	}
+
 	frame.screen->clearDirtyCellsInRow(row, frame.columns, frame.rows);
 }
 
@@ -113,15 +118,18 @@ void LcdConsoleTextRenderer::drawCell(LcdConsoleTextRenderFrame const& frame, in
 	};
 
 #if LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH
-	auto* const rgb888Pixels = _cellRgb888Pixels.data();
-	for (int sourceY = 0; sourceY < cellHeight; ++sourceY) {
-		_fillCellRowRgb888Pixels(frame, column, row, sourceY, rgb888Pixels + sourceY * cellWidth * rgb888BytesPerPixel);
-	}
-	if (frame.display->beginRgb565Stream(rect)) {
-		bool const directRgb888 = frame.display->writeRgb888Stream(rgb888Pixels, cellWidth * cellHeight);
-		frame.display->endRgb565Stream();
-		if (directRgb888) {
-			return;
+	if (!frame.display->prefersRgb565Stream()) {
+		auto* const rgb888Pixels = _cellRgb888Pixels.data();
+		for (int sourceY = 0; sourceY < cellHeight; ++sourceY) {
+			_fillCellRowRgb888Pixels(frame, column, row, sourceY, rgb888Pixels + sourceY * cellWidth * rgb888BytesPerPixel);
+		}
+
+		if (frame.display->beginRgb565Stream(rect)) {
+			bool const directRgb888 = frame.display->writeRgb888Stream(rgb888Pixels, cellWidth * cellHeight);
+			frame.display->endRgb565Stream();
+			if (directRgb888) {
+				return;
+			}
 		}
 	}
 
@@ -132,6 +140,7 @@ void LcdConsoleTextRenderer::drawCell(LcdConsoleTextRenderFrame const& frame, in
 	for (int sourceY = 0; sourceY < cellHeight; ++sourceY) {
 		_fillCellRowPixels(frame, column, row, sourceY, pixels + sourceY * cellWidth);
 	}
+
 	// frame.display->blitRgb565({
 	//                               .x = column * cellWidth,
 	//                               .y = frame.hardwareScroll->rowTopPixel(row),
@@ -161,10 +170,12 @@ char LcdConsoleTextRenderer::_visibleCell(LcdConsoleTextRenderFrame const& frame
 	if (column < 0 || row < 0 || column >= frame.visibleColumns || row >= frame.rows) {
 		return blankCharacter;
 	}
+
 	auto const logicalColumn = _viewLeftColumn(frame) + column;
 	if (logicalColumn < 0 || logicalColumn >= frame.columns) {
 		return blankCharacter;
 	}
+
 	if (frame.viewport->isFollowingTail()) {
 		return frame.screen->cell(logicalColumn, row);
 	}
@@ -179,6 +190,7 @@ char LcdConsoleTextRenderer::_visibleCell(LcdConsoleTextRenderFrame const& frame
 	if (liveRow >= 0 && liveRow < frame.rows) {
 		return frame.screen->cell(logicalColumn, liveRow);
 	}
+
 	return blankCharacter;
 }
 
@@ -186,10 +198,12 @@ std::uint8_t LcdConsoleTextRenderer::_visibleCellAttribute(LcdConsoleTextRenderF
 	if (column < 0 || row < 0 || column >= frame.visibleColumns || row >= frame.rows) {
 		return defaultCellAttribute;
 	}
+
 	auto const logicalColumn = _viewLeftColumn(frame) + column;
 	if (logicalColumn < 0 || logicalColumn >= frame.columns) {
 		return defaultCellAttribute;
 	}
+
 	if (frame.viewport->isFollowingTail()) {
 		return frame.screen->attribute(logicalColumn, row);
 	}
@@ -204,6 +218,7 @@ std::uint8_t LcdConsoleTextRenderer::_visibleCellAttribute(LcdConsoleTextRenderF
 	if (liveRow >= 0 && liveRow < frame.rows) {
 		return frame.screen->attribute(logicalColumn, liveRow);
 	}
+
 	return defaultCellAttribute;
 }
 
@@ -297,6 +312,7 @@ void LcdConsoleTextRenderer::_cacheRowGlyphs(LcdConsoleTextRenderFrame const& fr
 		for (int index = 0; index < glyphHeight; ++index) {
 			cached[index] = glyph[index];
 		}
+
 		_rowAttributeCache[static_cast<std::size_t>(column)] = _visibleCellAttribute(frame, column, row);
 	}
 }

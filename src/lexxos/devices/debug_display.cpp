@@ -11,7 +11,7 @@ lexxos::devices::Ssd1306TextDisplay& debugDisplay() {
 	return display;
 }
 
-lexxos::platform::BoardDescriptor const& boardFor(lexxos::platform::PlatformServices const& platform) {
+lexxos::platform::LegacyBoardDescriptor const& boardFor(lexxos::platform::PlatformServices const& platform) {
 	auto const& board = platform.board;
 	return board.current != nullptr ? board.current() : lexxos::platform::board();
 }

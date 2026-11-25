@@ -197,7 +197,7 @@
         "LEXXOS_FEATURE_SD_CARD": "ON",
         "LEXXOS_FEATURE_FATFS": "ON",
         "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/config/cmake/toolchains/arm-none-eabi.cmake",
         "LEXXOS_ARM_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
         "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
         "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
@@ -329,6 +329,7 @@
         "LEXXOS_FEATURE_KEYBOARD": "ON",
         "LEXXOS_FEATURE_SD_CARD": "ON",
         "LEXXOS_FEATURE_FATFS": "ON",
+        "LEXXOS_FEATURE_UI_NATIVE_DEMO": "ON",
         "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "ON",
         "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
         "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
@@ -440,7 +441,7 @@
         "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
         "PICOTOOL_FETCH_FROM_GIT_PATH": "${sourceDir}/build/tools/picotool",
         "LEXXOS_PICO_USE_FREERTOS": "ON",
-        "LEXXOS_FAT_READ_CACHE_SECTORS": "4",
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "2",
         "LEXXOS_FEATURE_PSRAM": "ON",
         "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
         "LEXXOS_PICOCALC_PSRAM_SPI_BAUDRATE": "8000000",
@@ -496,7 +497,7 @@
         "LEXXOS_FEATURE_KEYBOARD_TEST_COMMANDS": "ON",
         "LEXXOS_FEATURE_SD_CARD_TEST_COMMANDS": "ON",
         "LEXXOS_FEATURE_GPIO_ANALYZER": "ON",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/config/cmake/toolchains/arm-none-eabi.cmake",
         "LEXXOS_ARM_TOOLCHAIN_PATH": "$env{HOME}/.pico-sdk/toolchain/14_2_Rel1",
         "FREERTOS_KERNEL_PATH": "${sourceDir}/third_party/FreeRTOS",
         "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
@@ -562,7 +563,7 @@
         "LEXXOS_FEATURE_GPIO_ANALYZER": "OFF",
         "IDF_TARGET": "esp32s3",
         "ESP_PLATFORM": "1",
-        "LEXXOS_FAT_READ_CACHE_SECTORS": "16"
+        "LEXXOS_FAT_READ_CACHE_SECTORS": "4"
       }
     },
     {
@@ -700,7 +701,7 @@
       "binaryDir": "${sourceDir}/build/stm32f407",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/config/cmake/toolchains/arm-none-eabi.cmake",
         "LEXXOS_PLATFORM": "stm32f4",
         "LEXXOS_BOARD": "euse_m4_demo_stm32f407",
         "LEXXOS_BOARD_EUSE_M4_DEMO_STM32F407": "ON",
@@ -721,7 +722,8 @@
         "LEXXOS_BOARD": "host_native",
         "LEXXOS_BOARD_HOST_NATIVE": "ON",
         "LEXXOS_ENABLE_GAMEBOY": "ON",
-        "LEXXOS_BUILD_FLAVOR": "full"
+        "LEXXOS_BUILD_FLAVOR": "full",
+        "Python3_EXECUTABLE": "${sourceDir}/work/venvs/project/bin/python"
       }
     },
     {
@@ -768,7 +770,7 @@
       "binaryDir": "${sourceDir}/build/stm32f407-full",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/arm-none-eabi.cmake",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/config/cmake/toolchains/arm-none-eabi.cmake",
         "LEXXOS_PLATFORM": "stm32f4",
         "LEXXOS_BOARD": "euse_m4_demo_stm32f407",
         "LEXXOS_BOARD_EUSE_M4_DEMO_STM32F407": "ON",
@@ -871,7 +873,6 @@
         "CCACHE_ENABLE": "False"
       },
       "environment": {
-        "ESPPORT": "/dev/cu.usbserial-2130",
         "ESPBAUD": "115200"
       }
     },
@@ -1112,6 +1113,100 @@
       "binaryDir": "${sourceDir}/build/release",
       "cacheVariables": {
         "LEXXOS_RELEASE_ONLY": "ON"
+      }
+    },
+    {
+      "name": "picocalc-lyra",
+      "displayName": "PicoCalc Lyra M / RK3506G2 bare-metal",
+      "description": "Validated RGB565 direct16 + PL330 LCD at 46.875 MHz; removable SPI1 SD",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/picocalc-lyra",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/config/cmake/toolchains/arm-none-eabi-rk3506.cmake",
+        "BUILD_TESTING": "OFF",
+        "LEXXOS_RK3506_BRINGUP": "ON",
+        "LEXXOS_RK3506_SHELL": "ON",
+        "LEXXOS_FEATURE_DISPLAY": "ON",
+        "LEXXOS_BOARD_PICOCALC_LYRA": "ON",
+        "LEXXOS_ILI9488_RGB565_WIRE": "ON",
+        "LEXXOS_RK3506_LCD_SPI_HZ": "46875000",
+        "LEXXOS_RK3506_LCD_DIRECT16_DEFAULT": "ON",
+        "LEXXOS_BOARD": "picocalc_lyra"
+      }
+    },
+    {
+      "name": "picocalc-lyra-release",
+      "inherits": "picocalc-lyra",
+      "displayName": "PicoCalc Lyra M / FreeRTOS release",
+      "binaryDir": "${sourceDir}/build/picocalc-lyra-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_COMMANDS_APPLICATIONS": "ON",
+        "LEXXOS_COMMANDS_UTILITIES": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_COMMANDS": "OFF",
+        "LEXXOS_FEATURE_DISPLAY_TEST_TRACE": "OFF",
+        "LEXXOS_FEATURE_KEYBOARD": "ON",
+        "LEXXOS_FEATURE_LWJSON": "ON",
+        "LEXXOS_FEATURE_SD_CARD": "ON",
+        "LEXXOS_FEATURE_TEST_COMMANDS": "ON",
+        "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs",
+        "LEXXOS_RK3506_SCHEDULER": "freertos",
+        "LEXXOS_RK3506_FREERTOS_PERIPHERALS": "ON",
+        "LEXXOS_RK3506_FREERTOS_HEAP_KIB": "512",
+        "LEXXOS_RK3506_MANAGED_TIMER_IRQ": "OFF",
+        "LEXXOS_RK3506_MANAGED_DMA_IRQ": "OFF",
+        "LEXXOS_RK3506_SD_DIAGNOSTICS": "OFF",
+        "LEXXOS_RK3506_PMU_PROFILING": "OFF",
+        "LEXXOS_RK3506_SWD_DEBUG": "OFF",
+        "LEXXOS_RK3506_VM_FAST_LOOP": "ON",
+        "LEXXOS_RK3506_MMU_NORMAL_NC": "OFF",
+        "LEXXOS_RK3506_MMU_MANAGED": "ON",
+        "LEXXOS_RK3506_DDR_EXTENDED": "ON",
+        "LEXXOS_RK3506_DMA_SAFE": "ON",
+        "LEXXOS_RK3506_DCACHE_BOOTRAM": "OFF",
+        "LEXXOS_RK3506_LCD_DMA_CHUNK_KIB": "16",
+        "LEXXOS_RK3506_LCD_DMA_BURST_UNITS": "2",
+        "LEXXOS_RK3506_LCD_DMA_NOTIFY_ISR": "ON",
+        "LEXXOS_RK3506_LCD_DMA_WAIT_WFE": "OFF",
+        "LEXXOS_RK3506_LCD_DMA_DRAIN_SPIN_US": "200",
+        "LEXXOS_RK3506_FIT_TEMPLATE": "",
+        "LEXXOS_VM_PROFILE": "fast",
+        "LEXXOS_VM_LOCAL_PC": "ON"
+      }
+    },
+    {
+      "name": "picocalc-lyra-debug",
+      "inherits": "picocalc-lyra",
+      "displayName": "PicoCalc Lyra / SWD RAM Debug",
+      "binaryDir": "${sourceDir}/build/picocalc-lyra-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LEXXOS_COMMANDS_TESTS": "ON",
+        "LEXXOS_FEATURE_TEST_COMMANDS": "ON",
+        "LEXXOS_FEATURE_DISPLAY_TEST_TRACE": "OFF"
+      }
+    },
+    {
+      "name": "picocalc-lyra-rgb565",
+      "inherits": "picocalc-lyra-debug",
+      "displayName": "PicoCalc Lyra / RGB565 compatibility preset",
+      "binaryDir": "${sourceDir}/build/picocalc-lyra-rgb565",
+      "cacheVariables": {
+        "LEXXOS_ILI9488_RGB565_WIRE": "on",
+        "LEXXOS_RK3506_LCD_SPI_HZ": "46875000"
+      }
+    },
+    {
+      "name": "ce-sdk-esp32",
+      "displayName": "LexxCE SDK / ESP32",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/ce-sdk-esp32",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MinSizeRel",
+        "LEXXOS_EDITION": "ce",
+        "LEXXOS_PLATFORM": "espidf",
+        "IDF_TARGET": "esp32"
       }
     }
   ],
@@ -1656,6 +1751,66 @@
       "configurePreset": "release",
       "targets": [
         "release-archives"
+      ]
+    },
+    {
+      "name": "picocalc-lyra-build",
+      "displayName": "Build RK3506G2 / PicoCalc Lyra M FIT image",
+      "configurePreset": "picocalc-lyra",
+      "targets": [
+        "lexxos_fit"
+      ]
+    },
+    {
+      "name": "picocalc-lyra-release",
+      "configurePreset": "picocalc-lyra-release",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "picocalc-lyra-flash",
+      "displayName": "Flash entire RK3506G2 / PicoCalc Lyra M SD card (interactive)",
+      "configurePreset": "picocalc-lyra",
+      "targets": [
+        "flash-rk3506"
+      ]
+    },
+    {
+      "name": "picocalc-lyra-update",
+      "displayName": "Update Lyra boot and optional U-Boot partitions (interactive)",
+      "configurePreset": "picocalc-lyra",
+      "targets": [
+        "update-rk3506"
+      ]
+    },
+    {
+      "name": "picocalc-lyra-disks",
+      "displayName": "List RK3506G2 removable SD cards (read only)",
+      "configurePreset": "picocalc-lyra",
+      "targets": [
+        "list-rk3506-disks"
+      ]
+    },
+    {
+      "name": "picocalc-lyra-debug",
+      "configurePreset": "picocalc-lyra-debug",
+      "targets": [
+        "lexxos"
+      ]
+    },
+    {
+      "name": "picocalc-lyra-rgb565",
+      "configurePreset": "picocalc-lyra-rgb565",
+      "targets": [
+        "lexxos_fit"
+      ]
+    },
+    {
+      "name": "ce-sdk-esp32",
+      "configurePreset": "ce-sdk-esp32",
+      "targets": [
+        "ce-sdk"
       ]
     }
   ]

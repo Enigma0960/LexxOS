@@ -1,5 +1,6 @@
 #pragma once
 
+#include <lexxos/io/null_output_stream.h>
 #include <lexxos/program/program.h>
 
 namespace lexxos::apps::system_programs {

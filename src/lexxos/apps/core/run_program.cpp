@@ -8,6 +8,7 @@
 #include <lexxos/program/program_supervisor.h>
 
 namespace lexxos::apps::system_programs {
+
 namespace {
 
 	bool equals(char const* value, char const* expected) {

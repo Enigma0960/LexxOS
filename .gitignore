@@ -43,6 +43,7 @@
 build/
 Build/
 build-*/
+!/tools/build-tool/
 cmake-build-*/
 
 # CMake generated files
@@ -50,6 +51,7 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+!/apps/fileman/Makefile
 install_manifest.txt
 compile_commands.json
 
@@ -78,7 +80,7 @@ __MACOSX/
 __pycache__/
 *.pyc
 
-emulator/.venv/
+tools/emulator/.venv/
 temp*/
 backups/
 
@@ -92,3 +94,8 @@ managed_components/
 
 # Generated release archives
 /dist/
+
+# Local work data, dumps, environments and emulator media
+/work/
+/managed_components
+/tools/emulator/.venv

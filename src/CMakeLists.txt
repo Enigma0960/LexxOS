@@ -40,11 +40,23 @@ if (LEXXOS_PLATFORM STREQUAL "pico"
 endif ()
 
 # Keep the effective common source groups in one shared catalog.
-include("${CMAKE_CURRENT_LIST_DIR}/../cmake/lexxos_sources.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../config/cmake/lexxos_sources.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../config/cmake/MemoryProfiles.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../config/cmake/VMExecution.cmake")
 
 function(lexxos_configure_common_target target_name)
+    lexxos_configure_vm_target(${target_name} "${LEXXOS_PLATFORM}")
+
+    include("${CMAKE_CURRENT_LIST_DIR}/../config/cmake/LwJson.cmake")
+    lexxos_attach_lwjson(${target_name})
+
+    if (LEXXOS_PLATFORM STREQUAL "pico")
+        lexxos_attach_sdk_memory_profile(${target_name})
+    endif ()
+
     target_sources(${target_name}
             PRIVATE
+            ${LEXXOS_CORE_SOURCES}
             ${LEXXOS_RUNTIME_SOURCES}
             ${LEXXOS_PROGRAM_SOURCES}
             ${LEXXOS_CORE_PROGRAM_SOURCES}
@@ -177,8 +189,13 @@ function(lexxos_configure_common_target target_name)
     target_include_directories(${target_name}
             PRIVATE
             ${CMAKE_CURRENT_LIST_DIR}
+            ${CMAKE_CURRENT_LIST_DIR}/../apps/sdk
+            ${CMAKE_CURRENT_LIST_DIR}/../apps
             ${LEXXOS_GENERATED_INCLUDE_DIR}
     )
+    # Native C++ UI uses the same widget headers with the native transport.
+    # RV32I application targets do not define LEXXOS_UI_NATIVE.
+    target_compile_definitions(${target_name} PRIVATE LEXXOS_UI_NATIVE=1)
     target_compile_features(${target_name} PRIVATE cxx_std_20)
     if (LEXXOS_FEATURE_FATFS)
         target_link_libraries(${target_name} PRIVATE fatfs)
@@ -237,7 +254,22 @@ function(lexxos_configure_common_target target_name)
 endfunction()
 
 if (LEXXOS_PLATFORM STREQUAL "stm32f4")
-    add_executable(lexxos)
+    if (LEXXOS_SYSTEM_SDK)
+        add_library(lexxos STATIC)
+        set(_stm32_compile_scope PUBLIC)
+        set(_stm32_link_scope INTERFACE)
+        # Startup, newlib and FreeRTOS reference these entry points after the SDK archive.
+        target_link_options(lexxos INTERFACE
+                -Wl,-u,Reset_Handler -Wl,-u,_sbrk -Wl,-u,_init
+                -Wl,-u,ucHeap -Wl,-u,vApplicationMallocFailedHook)
+        set_property(TARGET lexxos PROPERTY INTERFACE_LINK_DEPENDS
+                "${CMAKE_CURRENT_SOURCE_DIR}/lexxos/platform/stm32/linker/stm32f407zg.ld")
+        set(LEXXOS_STM32F4_BRINGUP_ONLY OFF)
+    else ()
+        add_executable(lexxos)
+        set(_stm32_compile_scope PRIVATE)
+        set(_stm32_link_scope PRIVATE)
+    endif ()
     target_sources(lexxos
             PRIVATE
             lexxos/platform/stm32/bringup/startup_stm32f407xx.c
@@ -252,11 +284,14 @@ if (LEXXOS_PLATFORM STREQUAL "stm32f4")
             LEXXOS_BOARD_NAME="${LEXXOS_BOARD}"
     )
     target_compile_options(lexxos
-            PRIVATE
+            ${_stm32_compile_scope}
             -mcpu=cortex-m4
             -mthumb
             -mfpu=fpv4-sp-d16
             -mfloat-abi=hard
+    )
+    target_compile_options(lexxos
+            PRIVATE
             -ffunction-sections
             -fdata-sections
             -fno-common
@@ -264,14 +299,13 @@ if (LEXXOS_PLATFORM STREQUAL "stm32f4")
             -Wextra
     )
     target_link_options(lexxos
-            PRIVATE
+            ${_stm32_link_scope}
             -mcpu=cortex-m4
             -mthumb
             -mfpu=fpv4-sp-d16
             -mfloat-abi=hard
             -T${CMAKE_CURRENT_LIST_DIR}/lexxos/platform/stm32/linker/stm32f407zg.ld
             -Wl,--gc-sections
-            -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/lexxos.map
             -nostartfiles
     )
 
@@ -291,7 +325,6 @@ if (LEXXOS_PLATFORM STREQUAL "stm32f4")
         )
         target_sources(lexxos
                 PRIVATE
-                main.cpp
                 lexxos/platform/stm32/board_euse_m4_demo_stm32f407.cpp
                 lexxos/platform/stm32/detail/stm32_console.cpp
                 lexxos/platform/stm32/detail/stm32_gpio.cpp
@@ -306,6 +339,9 @@ if (LEXXOS_PLATFORM STREQUAL "stm32f4")
                 lexxos/kernel/freertos/hooks.cpp
                 lexxos/kernel/freertos/scheduler_freertos.cpp
         )
+        if (NOT LEXXOS_SYSTEM_SDK)
+            target_sources(lexxos PRIVATE main.cpp)
+        endif ()
 
         if (LEXXOS_FEATURE_SD_CARD AND LEXXOS_EFFECTIVE_SD_BACKEND STREQUAL "sdio")
             target_sources(lexxos
@@ -330,14 +366,17 @@ if (LEXXOS_PLATFORM STREQUAL "stm32f4")
         )
     endif ()
 
-    set_target_properties(lexxos PROPERTIES SUFFIX ".elf")
+    if (NOT LEXXOS_SYSTEM_SDK)
+        target_link_options(lexxos PRIVATE -Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/lexxos.map)
+        set_target_properties(lexxos PROPERTIES SUFFIX ".elf")
 
-    add_custom_command(TARGET lexxos POST_BUILD
-            COMMAND ${CMAKE_SIZE} $<TARGET_FILE:lexxos>
-            COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:lexxos> ${CMAKE_CURRENT_BINARY_DIR}/lexxos.bin
-            COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:lexxos> ${CMAKE_CURRENT_BINARY_DIR}/lexxos.hex
-            COMMENT "Generating STM32F407 binary and Intel HEX images"
-    )
+        add_custom_command(TARGET lexxos POST_BUILD
+                COMMAND ${CMAKE_SIZE} $<TARGET_FILE:lexxos>
+                COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:lexxos> ${CMAKE_CURRENT_BINARY_DIR}/lexxos.bin
+                COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:lexxos> ${CMAKE_CURRENT_BINARY_DIR}/lexxos.hex
+                COMMENT "Generating STM32F407 binary and Intel HEX images"
+        )
+    endif ()
 elseif (LEXXOS_PLATFORM STREQUAL "sim")
     find_package(Threads REQUIRED)
     add_library(lexxos_sim SHARED)
@@ -345,37 +384,40 @@ elseif (LEXXOS_PLATFORM STREQUAL "sim")
     target_compile_definitions(lexxos_sim PRIVATE LEXXOS_PLATFORM_SIM=1)
     target_include_directories(lexxos_sim
             PRIVATE
-            ${CMAKE_CURRENT_LIST_DIR}/../emulator/native
+            ${CMAKE_CURRENT_LIST_DIR}/../tools/emulator/native
     )
     target_sources(lexxos_sim
             PRIVATE
-            ../emulator/native/lexxos_sim_api.cpp
-            ../emulator/native/platform_sim.cpp
-            ../emulator/native/scheduler_sim.cpp
-            ../emulator/native/sim_audio_device.cpp
-            ../emulator/native/sim_i2c_bus.cpp
-            ../emulator/native/sim_runtime.cpp
+            ../tools/emulator/native/lexxos_sim_api.cpp
+            ../tools/emulator/native/platform_sim.cpp
+            ../tools/emulator/native/scheduler_sim.cpp
+            ../tools/emulator/native/sim_audio_device.cpp
+            ../tools/emulator/native/sim_i2c_bus.cpp
+            ../tools/emulator/native/sim_runtime.cpp
     )
 
     if (LEXXOS_FEATURE_DISPLAY)
-        target_sources(lexxos_sim PRIVATE ../emulator/native/sim_display_device.cpp)
+        target_sources(lexxos_sim PRIVATE ../tools/emulator/native/sim_display_device.cpp)
     endif ()
     if (LEXXOS_FEATURE_KEYBOARD)
-        target_sources(lexxos_sim PRIVATE ../emulator/native/sim_input_device.cpp)
+        target_sources(lexxos_sim PRIVATE ../tools/emulator/native/sim_input_device.cpp)
     endif ()
     if (LEXXOS_FEATURE_SD_CARD)
-        target_sources(lexxos_sim PRIVATE ../emulator/native/sim_sd_card.cpp)
+        target_sources(lexxos_sim PRIVATE ../tools/emulator/native/sim_sd_card.cpp)
     endif ()
 
     target_link_libraries(lexxos_sim PRIVATE Threads::Threads)
     set_target_properties(lexxos_sim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 else ()
-    add_executable(lexxos)
+    if (LEXXOS_SYSTEM_SDK)
+        add_library(lexxos STATIC)
+        if (LEXXOS_PLATFORM STREQUAL "host")
+            set_target_properties(lexxos PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        endif ()
+    else ()
+        add_executable(lexxos main.cpp)
+    endif ()
     lexxos_configure_common_target(lexxos)
-    target_sources(lexxos
-            PRIVATE
-            main.cpp
-    )
 
     if (LEXXOS_PLATFORM STREQUAL "host")
         target_compile_definitions(lexxos PRIVATE LEXXOS_PLATFORM_HOST=1)
@@ -403,8 +445,12 @@ else ()
                 lexxos/platform/pico/detail/pico_gpio_interrupts.cpp
                 lexxos/platform/pico/stdio_wrap_stubs.cpp
                 lexxos/devices/pico/pico_i2c_bus.cpp
+        lexxos/devices/pico/detail/i2c_bus_mutex.cpp
+        lexxos/devices/pico/detail/i2c_bus_guard.cpp
                 lexxos/devices/pico/i2c_bus_pico.cpp
                 lexxos/devices/pico/pico_spi_bus.cpp
+        lexxos/devices/pico/detail/spi_bus_mutex.cpp
+        lexxos/devices/pico/detail/spi_bus_guard.cpp
                 lexxos/devices/pico/spi_bus_pico.cpp
         )
 
@@ -547,6 +593,39 @@ else ()
             pico_enable_stdio_usb(lexxos 0)
         endif ()
         pico_enable_stdio_uart(lexxos 0)
-        pico_add_extra_outputs(lexxos)
+        if (NOT LEXXOS_SYSTEM_SDK)
+            pico_add_extra_outputs(lexxos)
+        else ()
+            target_link_libraries(lexxos INTERFACE pico_stdlib_headers)
+            if (LEXXOS_PICO_FREERTOS_HEAP_KB)
+                target_compile_definitions(lexxos INTERFACE
+                        LEXXOS_PICO_FREERTOS_HEAP_KB=${LEXXOS_PICO_FREERTOS_HEAP_KB})
+            endif ()
+        endif ()
     endif ()
+endif ()
+
+if (LEXXOS_SYSTEM_SDK)
+    if (TARGET lexxos_sim)
+        set(_sdk_target lexxos_sim)
+        set_target_properties(lexxos_sim PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+        target_include_directories(lexxos_sim INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/../tools/emulator/native")
+    else ()
+        set(_sdk_target lexxos)
+    endif ()
+    target_include_directories(${_sdk_target} INTERFACE
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../apps/sdk"
+            "${LEXXOS_GENERATED_INCLUDE_DIR}")
+    string(TOUPPER "${LEXXOS_PLATFORM}" _sdk_platform)
+    target_compile_definitions(${_sdk_target} INTERFACE
+            LEXXOS_UI_NATIVE=1 LEXXOS_PLATFORM_${_sdk_platform}=1 LEXXOS_BOARD_NAME="${LEXXOS_BOARD}")
+    if (TARGET FreeRTOS-Kernel)
+        target_compile_definitions(${_sdk_target} INTERFACE LEXXOS_KERNEL_FREERTOS=1)
+        target_link_libraries(${_sdk_target} INTERFACE FreeRTOS-Config)
+        target_include_directories(${_sdk_target} SYSTEM INTERFACE
+                "$<TARGET_PROPERTY:FreeRTOS-Kernel,INTERFACE_INCLUDE_DIRECTORIES>")
+    endif ()
+    target_compile_features(${_sdk_target} INTERFACE cxx_std_20)
+    add_library(LexxSDK::LexxSDK ALIAS ${_sdk_target})
 endif ()

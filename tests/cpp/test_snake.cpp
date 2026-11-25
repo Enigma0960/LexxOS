@@ -1,15 +1,15 @@
-#include "../../apps/snake/game.h"
-
 #include <cassert>
 
-using snake::width;
+#include "../../apps/snake/game.h"
+
+using snake::Direction;
+using snake::Game;
 using snake::height;
 using snake::maxLength;
-using snake::Direction;
 using snake::Phase;
-using snake::Sound;
 using snake::Point;
-using snake::Game;
+using snake::Sound;
+using snake::width;
 
 int main() {
 	Game g{};
@@ -93,9 +93,11 @@ int main() {
 			if ((x == 1 && y == 1) || (x == 2 && y == 1)) {
 				continue;
 			}
+
 			g.body[i++] = {x, y};
 		}
 	}
+
 	assert(i == g.length);
 	g.direction = g.pending = Direction::Right;
 	assert(g.step() == Sound::Win);

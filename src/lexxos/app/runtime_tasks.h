@@ -6,11 +6,15 @@
 #include <lexxos/program/program_manager.h>
 
 namespace lexxos::shell {
+
 class Shell;
-}
+
+} // namespace lexxos::shell
 
 namespace lexxos::os {
+
 class OperatingSystem;
+
 } // namespace lexxos::os
 
 namespace lexxos::app {

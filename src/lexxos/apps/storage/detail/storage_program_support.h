@@ -9,7 +9,9 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::os {
+
 class AppContext;
+
 } // namespace lexxos::os
 
 namespace lexxos::apps::storage_programs::detail {

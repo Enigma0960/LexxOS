@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "**/.git/**",
+    "**/.hg/**",
+    "**/.idea/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/node_modules/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/__pycache__/**",
+    "**/.mypy_cache/**",
+    "**/.pytest_cache/**",
+    "**/.ruff_cache/**",
+    "**/third_party/**",
+    "**/work/**",
+    "**/managed_components/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.run/**",
+    "**/.github/**",
+    "**/cmake-build-*/**",
+    "**/CMakeFiles/**"
+  ],
+  "extensions": [
+    ".c",
+    ".cpp",
+    ".h"
+  ],
+  "max_file_size_kib": 1024,
+  "clang_format": {
+    "enabled": true,
+    "binary": "clang-format",
+    "style": "file",
+    "sort_includes": false,
+    "timeout_seconds": 15
+  },
+  "rules": [
+    {
+      "id": "cpp-blank-line-after-brace",
+      "description": "Example: }\\nword -> }\\n\\nword (opt-in; may affect code inside functions)",
+      "kind": "regex",
+      "enabled": true,
+      "languages": [
+        "cpp"
+      ],
+      "pattern": "(?<=})\\n(?=[A-Za-z_])",
+      "replacement": "\n\n"
+    },
+    {
+      "id": "cpp-group-includes",
+      "description": "Sort unconditional, comment-free #include runs into configured groups",
+      "kind": "includes",
+      "enabled": true,
+      "languages": [
+        "cpp"
+      ],
+      "groups": [
+        {
+          "name": "Local",
+          "pattern": "^\""
+        },
+        {
+          "name": "Standard / system",
+          "pattern": "^<[^/]+>$"
+        },
+        {
+          "name": "Third-party",
+          "pattern": "^<"
+        }
+      ],
+      "sort": true
+    },
+    {
+      "id": "cpp-namespace-closing-comment",
+      "description": "Close named C++ namespaces with a qualified // scope comment",
+      "kind": "namespace_comment",
+      "enabled": true,
+      "languages": [
+        "cpp"
+      ]
+    },
+    {
+      "id": "cpp-control-block-spacing",
+      "description": "Separate completed control blocks; leave short functions compact",
+      "kind": "control_spacing",
+      "enabled": true,
+      "languages": [
+        "cpp"
+      ],
+      "skip_functions_up_to_lines": 7
+    },
+    {
+      "id": "cpp-own-header-first",
+      "description": "Move foo.h to the first include in foo.cpp, then add a blank line",
+      "kind": "own_header",
+      "enabled": true,
+      "languages": [
+        "cpp"
+      ]
+    },
+    {
+      "id": "cpp-namespace-inner-spacing",
+      "description": "Add blank lines inside nonempty C++ namespace braces",
+      "kind": "namespace_spacing",
+      "enabled": true,
+      "languages": [
+        "cpp"
+      ]
+    },
+    {
+      "id": "cpp-class-member-sections",
+      "description": "Group class access sections into method declarations then data fields",
+      "kind": "class_members",
+      "enabled": true,
+      "languages": [
+        "cpp"
+      ]
+    }
+  ]
+}

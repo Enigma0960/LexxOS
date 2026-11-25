@@ -6,10 +6,12 @@
 
 #include <lexxos/program/program.h>
 #include <lexxos/program/program_memory_arena.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 
 namespace lexxos::os {
+
 class AppContext;
+
 } // namespace lexxos::os
 
 namespace lexxos::program {

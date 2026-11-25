@@ -1,6 +1,6 @@
 # `rm`
 
-remove a writable VFS file.
+Удаляет доступный для записи файл VFS.
 
 ## Справка shell
 

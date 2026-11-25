@@ -18,6 +18,7 @@ enum class InputEventType : std::uint8_t {
 		case InputEventType::KeyUp:
 			return "key-up";
 	}
+
 	return "unknown";
 }
 
@@ -261,6 +262,7 @@ enum class KeyCode : std::uint16_t {
 		case KeyCode::Insert:
 			return "insert";
 	}
+
 	return "unknown";
 }
 

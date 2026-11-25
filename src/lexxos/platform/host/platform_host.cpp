@@ -1,25 +1,25 @@
-#include <lexxos/platform/platform.h>
-
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+
+#include <lexxos/platform/platform.h>
 
 #if defined(__unix__) || defined(__APPLE__)
 	#include <cerrno>
 	#include <poll.h>
 	#include <unistd.h>
 #elif defined(_WIN32)
-	#include <io.h>
 	#include <cstdio>
+	#include <io.h>
 #endif
 
-using lexxos::platform::BoardDescriptor;
 using lexxos::platform::GameBoyRomFlashRegion;
 using lexxos::platform::GpioInterruptEdge;
 using lexxos::platform::GpioInterruptHandler;
 using lexxos::platform::GpioPin;
 using lexxos::platform::GpioPull;
+using lexxos::platform::LegacyBoardDescriptor;
 using lexxos::platform::ProcessorFamily;
 
 namespace {
@@ -30,8 +30,8 @@ Clock::time_point g_startTime;
 
 } // namespace
 
-BoardDescriptor const& lexxos::platform::activeBoardDescriptor() {
-	static BoardDescriptor const descriptor{
+LegacyBoardDescriptor const& lexxos::platform::activeBoardDescriptor() {
+	static LegacyBoardDescriptor const descriptor{
 	    .boardId = "host_native",
 	    .boardName = "Native host simulation",
 	    .vendor = "LexxOS",
@@ -46,7 +46,7 @@ void lexxos::platform::initialize() {
 	g_startTime = Clock::now();
 }
 
-BoardDescriptor const& lexxos::platform::board() {
+LegacyBoardDescriptor const& lexxos::platform::board() {
 	return activeBoardDescriptor();
 }
 
@@ -71,6 +71,7 @@ bool lexxos::platform::readConsoleChar(char& value) {
 	do {
 		count = ::read(STDIN_FILENO, &value, 1);
 	} while (count < 0 && errno == EINTR);
+
 	return count == 1;
 #else
 	int const next = std::cin.get();
@@ -96,13 +97,16 @@ std::size_t lexxos::platform::readConsoleAvailable(char* buffer, std::size_t cap
 	do {
 		ready = ::poll(&input, 1, 0);
 	} while (ready < 0 && errno == EINTR);
+
 	if (ready <= 0 || (input.revents & (POLLIN | POLLHUP)) == 0) {
 		return 0;
 	}
+
 	ssize_t count;
 	do {
 		count = ::read(STDIN_FILENO, buffer, capacity);
 	} while (count < 0 && errno == EINTR);
+
 	return count > 0 ? static_cast<std::size_t>(count) : 0;
 #else
 	auto available = std::cin.rdbuf()->in_avail();
@@ -116,9 +120,11 @@ std::size_t lexxos::platform::readConsoleAvailable(char* buffer, std::size_t cap
 		if (next == EOF) {
 			break;
 		}
+
 		buffer[count++] = static_cast<char>(next);
 		--available;
 	}
+
 	return count;
 #endif
 }

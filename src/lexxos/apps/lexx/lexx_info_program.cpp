@@ -8,10 +8,12 @@
 
 #include <lexxos/apps/common/core_programs_support.h>
 #include <lexxos/external_program/external_program_runner.h>
+#include <lexxos/external_program/lexx_resources.h>
 #include <lexxos/os/app_context.h>
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::lexx_programs {
+
 namespace {
 
 	constexpr std::uint32_t kManifestFooterSize = 12;
@@ -26,8 +28,10 @@ namespace {
 			if (file.read(output + completed, bytes - completed, received) != lexxos::vfs::ReadStatus::Ok || received == 0) {
 				return false;
 			}
+
 			completed += received;
 		}
+
 		return true;
 	}
 
@@ -38,6 +42,7 @@ namespace {
 				crc = (crc >> 1U) ^ ((crc & 1U) != 0U ? 0xEDB88320U : 0U);
 			}
 		}
+
 		return crc;
 	}
 
@@ -47,6 +52,7 @@ namespace {
 		if (!file.seek(offset)) {
 			return false;
 		}
+
 		std::array<std::uint8_t, kIoBufferSize> buffer{};
 		std::uint32_t remaining = length;
 		std::uint32_t crc = 0xFFFFFFFFU;
@@ -55,18 +61,22 @@ namespace {
 			if (!readExact(file, buffer.data(), count)) {
 				return false;
 			}
+
 			for (std::size_t index = 0; index < count; ++index) {
 				auto const character = buffer[index];
 				if (character < 0x20U && character != '\r' && character != '\n' && character != '\t') {
 					return false;
 				}
 			}
+
 			crc = updateCrc32(crc, buffer.data(), count);
 			if (print) {
 				context.write(std::string_view{reinterpret_cast<char const*>(buffer.data()), count});
 			}
+
 			remaining -= static_cast<std::uint32_t>(count);
 		}
+
 		return (crc ^ 0xFFFFFFFFU) == expectedCrc;
 	}
 
@@ -109,7 +119,7 @@ lexxos::program::ProgramDescriptor LexxInfoProgram::descriptor() {
 	return {
 	    .name = "lexx-info",
 	    .help = "inspect an external .lexx file without running it",
-	    .description = "Shows an external executable's header and embedded version, author, license and build timestamp.",
+	    .description = "Shows an external executable's header, manifest and embedded resource table.",
 	    .usage = "lexx-info [--json] <file.lexx>",
 	    .handler = run,
 	    .allowExtraArguments = true,
@@ -126,6 +136,7 @@ int LexxInfoProgram::run(
 		printUsage(context);
 		return 2;
 	}
+
 	bool jsonOnly = false;
 	int pathIndex = 1;
 	if (invocation.argc > 1 && std::string_view{invocation.argv[1]} == "--json") {
@@ -156,6 +167,7 @@ int LexxInfoProgram::run(
 		context.writeErrorLine("lexx-info: short or unreadable header");
 		return 1;
 	}
+
 	auto const imageOffset = lexxos::apps::readLe32(header.data() + 24);
 	auto const imageSize = lexxos::apps::readLe32(header.data() + 28);
 	auto const imageEnd = static_cast<std::uint64_t>(imageOffset) + imageSize;
@@ -167,6 +179,7 @@ int LexxInfoProgram::run(
 		context.writeErrorLine("lexx-info: invalid .lexx file/header");
 		return 1;
 	}
+
 	if (!jsonOnly) {
 		printHeader(context, path.data(), header.data(), file.size());
 	}
@@ -177,22 +190,27 @@ int LexxInfoProgram::run(
 			context.writeErrorLine("lexx-info: this file has no embedded manifest");
 			return 1;
 		}
+
 		context.writeLine("manifest: not present (legacy)");
 		return 0;
 	}
+
 	std::array<std::uint8_t, kManifestFooterSize> footer{};
 	if (!file.seek(file.size() - footer.size()) || !readExact(file, footer.data(), footer.size())) {
 		context.writeErrorLine("lexx-info: failed to read manifest footer");
 		return 1;
 	}
+
 	if (footer[0] != 'L' || footer[1] != 'X' || footer[2] != 'M' || footer[3] != 'F') {
 		if (jsonOnly) {
 			context.writeErrorLine("lexx-info: this file has no embedded manifest");
 			return 1;
 		}
+
 		context.writeLine("manifest: not present (legacy)");
 		return 0;
 	}
+
 	auto const length = lexxos::apps::readLe32(footer.data() + 4);
 	auto const checksum = lexxos::apps::readLe32(footer.data() + 8);
 	auto const trailerStart = file.size() - footer.size();
@@ -200,18 +218,52 @@ int LexxInfoProgram::run(
 		context.writeErrorLine("lexx-info: invalid manifest location or size");
 		return 1;
 	}
+
 	auto const manifestStart = trailerStart - length;
 	if (!streamManifest(context, file, manifestStart, length, checksum, false)) {
 		context.writeErrorLine("lexx-info: manifest checksum/read failed");
 		return 1;
 	}
+
+	lexxos::external_program::resources::Index resources{};
+	auto const resourceStatus = lexxos::external_program::resources::inspect(file, imageEnd, resources);
+	if (resourceStatus == lexxos::external_program::resources::InspectStatus::Invalid) {
+		context.writeErrorLine("lexx-info: invalid resource directory");
+		return 1;
+	}
+
 	if (!jsonOnly) {
 		context.writeLine("manifest:");
 	}
+
 	if (!streamManifest(context, file, manifestStart, length, checksum, true)) {
 		context.writeErrorLine("lexx-info: manifest read failed");
 		return 1;
 	}
+
+	if (!jsonOnly) {
+		context.write("resources: ");
+		lexxos::apps::writeUnsigned(context, resources.count);
+		context.writeLine("");
+		if (resources.present) {
+			context.writeLine("  alias                                  offset       bytes");
+			if (!lexxos::external_program::resources::enumerate(file, resources,
+			        [&](lexxos::external_program::resources::Entry const& entry) {
+				        context.write("  ");
+				        context.write(entry.alias.data());
+				        context.write("    ");
+				        lexxos::apps::writeUnsigned(context, entry.offset);
+				        context.write("    ");
+				        lexxos::apps::writeUnsigned(context, entry.size);
+				        context.writeLine("");
+				        return true;
+			        })) {
+				context.writeErrorLine("lexx-info: failed reading resource directory");
+				return 1;
+			}
+		}
+	}
+
 	return 0;
 }
 

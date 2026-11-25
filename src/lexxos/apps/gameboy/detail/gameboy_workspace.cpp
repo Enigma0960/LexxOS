@@ -1,7 +1,7 @@
+#include <new>
+
 #include <lexxos/apps/gameboy/detail/gameboy_program_arguments.h>
 #include <lexxos/apps/gameboy/detail/gameboy_program_support.h>
-
-#include <new>
 
 #if defined(LEXXOS_KERNEL_ESPIDF)
 	#include <freertos/FreeRTOS.h>
@@ -29,6 +29,7 @@ GameBoyWorkspace* gameBoyWorkspaceStorage() {
 	if (memory == nullptr) {
 		return nullptr;
 	}
+
 	workspace = new (memory) GameBoyWorkspace{};
 #else
 	workspace = new (std::nothrow) GameBoyWorkspace{};
@@ -49,9 +50,11 @@ GameBoyWorkspace* gameBoyWorkspace(lexxos::os::AppContext& context) {
 		context.write("\r\n");
 #endif
 	}
+
 	if (workspace != nullptr) {
 		workspace->cartridge.bindPlatformServices(context.platform());
 	}
+
 	return workspace;
 }
 

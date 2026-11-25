@@ -25,7 +25,7 @@ using PsramTestBuffer = std::array<std::uint8_t, psramMaxTestLength>;
 void writeHexAddress(lexxos::os::AppContext& context, std::uint32_t value);
 
 [[nodiscard]] bool readPsramJedecId(
-    lexxos::platform::BoardDescriptor const& board,
+    lexxos::platform::LegacyBoardDescriptor const& board,
     std::array<std::uint8_t, 8>& output);
 [[nodiscard]] bool readPsramMemory(
     lexxos::platform::PsramPins const& pins,

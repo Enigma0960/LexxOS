@@ -88,9 +88,9 @@ cmake --build --preset apps
 - `apps/fileman/input_reader.{h,cpp}` — преобразование UART/ANSI в команды;
 - `apps/fileman/file_operations.{h,cpp}` — операции с файлами и каталогами;
 - `apps/fileman/runtime.cpp` — freestanding функции для RV32I без расширения M;
-- `sdk/lexx/lexx.h` — `syscall_seek = 12`;
+- `apps/sdk/lexx/lexx.h` — `syscall_seek = 12`;
 - `src/lexxos/external_program/external_program_runner.cpp` — read-only `seek` для гостевого fd;
-- `emulator/lexxos_emu/terminal_widget.py` — передача F9 через `CSI 20 ~`.
+- `tools/emulator/lexxos_emu/terminal_widget.py` — передача F9 через `CSI 20 ~`.
 
 Directory ABI: syscall 10 (`list_directory`, 8 записей), 11 (`stat`). Reader ABI: 8 (`open_read`), 3 (`read`), 12
 (`seek`), 9 (`close`). В текущем приложении максимум 96 видимых записей на панель, каталог просматривается до 4096

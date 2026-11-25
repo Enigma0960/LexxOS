@@ -58,6 +58,7 @@ int GbInfoProgram::run(
 		context.write(", ");
 		writeBytesField(context, expectedRomSize);
 	}
+
 	context.writeLine(")");
 
 	context.write("ram size: ");

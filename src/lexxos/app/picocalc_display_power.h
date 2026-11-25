@@ -7,7 +7,9 @@
 #include <lexxos/devices/display_device.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::app::picocalc_display_power {

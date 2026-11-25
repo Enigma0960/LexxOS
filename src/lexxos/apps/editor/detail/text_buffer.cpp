@@ -1,6 +1,6 @@
-#include <lexxos/apps/editor/detail/text_editor_types.h>
-
 #include <cstring>
+
+#include <lexxos/apps/editor/detail/text_editor_types.h>
 
 namespace lexxos::apps::text_editor_programs::detail {
 
@@ -10,6 +10,7 @@ void TextBuffer::clear() {
 	for (auto& length : lengths) {
 		length = 0;
 	}
+
 	for (auto& lineBuffer : lines) {
 		lineBuffer[0] = '\0';
 	}
@@ -34,9 +35,11 @@ bool TextBuffer::setLine(std::size_t index, std::string_view text) {
 	if (index >= lineCount || text.size() >= maxEditorLineLength) {
 		return false;
 	}
+
 	if (!text.empty()) {
 		std::memcpy(lines[index].data(), text.data(), text.size());
 	}
+
 	lines[index][text.size()] = '\0';
 	lengths[index] = static_cast<std::uint8_t>(text.size());
 	modified = true;
@@ -47,14 +50,17 @@ bool TextBuffer::insertLine(std::size_t index, std::string_view text) {
 	if (index > lineCount || full() || text.size() >= maxEditorLineLength) {
 		return false;
 	}
+
 	for (std::size_t cursor = lineCount; cursor > index; --cursor) {
 		lines[cursor] = lines[cursor - 1];
 		lengths[cursor] = lengths[cursor - 1];
 	}
+
 	++lineCount;
 	if (!setLine(index, text)) {
 		return false;
 	}
+
 	modified = true;
 	return true;
 }
@@ -67,10 +73,12 @@ bool TextBuffer::deleteLine(std::size_t index) {
 	if (index >= lineCount) {
 		return false;
 	}
+
 	for (std::size_t cursor = index; cursor + 1 < lineCount; ++cursor) {
 		lines[cursor] = lines[cursor + 1];
 		lengths[cursor] = lengths[cursor + 1];
 	}
+
 	--lineCount;
 	lengths[lineCount] = 0;
 	lines[lineCount][0] = '\0';
@@ -89,13 +97,16 @@ bool TextBuffer::insertChar(std::size_t lineIndex, std::size_t column, char valu
 	if (!ensureEditableLine() || lineIndex >= lineCount) {
 		return false;
 	}
+
 	auto const length = lengths[lineIndex];
 	if (column > length || length + 1U >= maxEditorLineLength) {
 		return false;
 	}
+
 	for (std::size_t cursor = length; cursor > column; --cursor) {
 		lines[lineIndex][cursor] = lines[lineIndex][cursor - 1];
 	}
+
 	lines[lineIndex][column] = value;
 	lengths[lineIndex] = static_cast<std::uint8_t>(length + 1U);
 	lines[lineIndex][length + 1U] = '\0';
@@ -107,10 +118,12 @@ bool TextBuffer::deleteChar(std::size_t lineIndex, std::size_t column) {
 	if (lineIndex >= lineCount || column >= lengths[lineIndex]) {
 		return false;
 	}
+
 	auto const length = lengths[lineIndex];
 	for (std::size_t cursor = column; cursor + 1U < length; ++cursor) {
 		lines[lineIndex][cursor] = lines[lineIndex][cursor + 1U];
 	}
+
 	lengths[lineIndex] = static_cast<std::uint8_t>(length - 1U);
 	lines[lineIndex][length - 1U] = '\0';
 	modified = true;
@@ -128,6 +141,7 @@ bool TextBuffer::splitLine(std::size_t lineIndex, std::size_t column) {
 	if (tailLength != 0) {
 		std::memcpy(tail.data(), lines[lineIndex].data() + column, tailLength);
 	}
+
 	tail[tailLength] = '\0';
 
 	lengths[lineIndex] = static_cast<std::uint8_t>(column);
@@ -139,14 +153,17 @@ bool TextBuffer::joinWithNextLine(std::size_t lineIndex) {
 	if (lineIndex + 1U >= lineCount) {
 		return false;
 	}
+
 	auto const leftLength = lengths[lineIndex];
 	auto const rightLength = lengths[lineIndex + 1U];
 	if (leftLength + rightLength >= maxEditorLineLength) {
 		return false;
 	}
+
 	if (rightLength != 0) {
 		std::memcpy(lines[lineIndex].data() + leftLength, lines[lineIndex + 1U].data(), rightLength);
 	}
+
 	lengths[lineIndex] = static_cast<std::uint8_t>(leftLength + rightLength);
 	lines[lineIndex][leftLength + rightLength] = '\0';
 	(void) deleteLine(lineIndex + 1U);

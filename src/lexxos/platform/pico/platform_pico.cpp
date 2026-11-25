@@ -1,5 +1,3 @@
-#include <lexxos/platform/platform.h>
-
 #include <hardware/clocks.h>
 #include <hardware/vreg.h>
 #include <hardware/watchdog.h>
@@ -8,6 +6,7 @@
 
 #include <lexxos/platform/pico/detail/pico_console.h>
 #include <lexxos/platform/pico/detail/pico_gpio.h>
+#include <lexxos/platform/platform.h>
 
 namespace {
 
@@ -32,7 +31,7 @@ void lexxos::platform::initialize() {
 	pico::detail::initializeStatusLed();
 }
 
-lexxos::platform::BoardDescriptor const& lexxos::platform::board() {
+lexxos::platform::LegacyBoardDescriptor const& lexxos::platform::board() {
 	return activeBoardDescriptor();
 }
 

@@ -1,6 +1,6 @@
 # `fs-smoke`
 
-run VFS writable filesystem smoke test.
+Проверяет основные операции файловой системы VFS с записью.
 
 ## Справка shell
 

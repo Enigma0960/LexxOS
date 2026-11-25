@@ -1,6 +1,6 @@
 # `shell`
 
-start interactive LexxOS shell.
+Запускает интерактивную оболочку LexxOS.
 
 ## Справка shell
 

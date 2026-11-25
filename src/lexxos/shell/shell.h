@@ -6,21 +6,27 @@
 #include <string_view>
 
 #include <lexxos/program/cancellation_token.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 #include <lexxos/shell/command_registry.h>
 #include <lexxos/shell/shell_escape_sequence_parser.h>
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::program {
+
 class ProgramManager;
+
 } // namespace lexxos::program
 
 namespace lexxos::os {
+
 class OperatingSystem;
+
 } // namespace lexxos::os
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::shell {
@@ -102,7 +108,7 @@ private:
 	void _trySaveShellConfigIfDirty();
 	bool _writeShellConfig();
 	bool _readShellConfig(bool loadHistory);
-	bool _parseShellConfigLine(std::string_view line, bool loadHistory, std::array<char, maxLineLength>& decoded);
+	bool _parseShellConfigLine(char* line, std::size_t length, bool loadHistory);
 	[[nodiscard]] bool _lineIsBlank() const;
 	[[nodiscard]] bool _matchesLastHistoryEntry(std::string_view text) const;
 	[[nodiscard]] bool _matchesLastHistoryEntry() const;

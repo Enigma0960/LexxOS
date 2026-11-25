@@ -1,6 +1,6 @@
 # `cp`
 
-copy readable VFS file to writable VFS file.
+Копирует файл VFS в доступный для записи файл.
 
 ## Справка shell
 

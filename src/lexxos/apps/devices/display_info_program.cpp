@@ -8,16 +8,17 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec optionalNameArgument[] = {
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -63,6 +64,7 @@ int DisplayInfoProgram::run(
 	} else {
 		context.writeLine("unsupported");
 	}
+
 	return 0;
 }
 

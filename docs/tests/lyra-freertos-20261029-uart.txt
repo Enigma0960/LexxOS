@@ -1,0 +1,784 @@
+DDR 0ac6b06a19 typ 24/11/13-17:22:48,fwver: v1.04
+tREFI:4x, sr_idle:93, pd_idle:13
+PHY drv:clk:60,ca:160,DQ:80,odt:480
+vrefinner:50%, vrefout:50%
+dram drv:40,odt:0
+sr_dq:0, sr_ca:0, sr_clk:0
+rg:0x25-0x0-0x2, 0x17-0x0-0x2,status:a007
+rdtrn:0x11-0x29-0x42(0x31)
+wrtrn:0xa-0x23-0x3d(0x33)
+DDR3, 750MHz
+BW=16 Col=10 Bk=8 CS0 Row=13 CS=1 Size=128MB
+out
+U-Boot SPL board init
+U-Boot SPL 2017.09-g4d88b0a #hxj (Nov 24 2025 - 20:11:45)
+sfc cmd=9fH(6BH-x4)
+unrecognized JEDEC id bytes: ff, ff, ff
+Trying to boot from MMC1
+No misc partition
+Trying fit image at 0x2000 sector
+## Verified-boot: 0
+## Checking optee 0x00001000 ... sha256(25ecab7018...) + OK
+## Checking uboot 0x00200000 ... sha256(b523b043a3...) + OK
+## Checking fdt 0x002aab48 ... sha256(4c7bf9a02f...) + OK
+Jumping to U-Boot(0x00200000) via OP-TEE(0x00001000)
+Total: 520.136/1489.20 ms
+
+I/TC: 
+I/TC: OP-TEE version: 3.13.0-1059-g79c61ac91c0 #chenjh (gcc version 10.2.1 20201103 (GNU Toolchain for the A-profile Architecture 10.2-2020.11 (arm-10.16))) #2 Tue Mar 10 10:59:55 CST 2026 arm, fwver: v2.50 
+I/TC: Status: cluster=0xc00, core=0xe100, bootcpu=0
+I/TC: Next entry point address: 0x00200000
+I/TC: OP-TEE memory size: TEEOS 0x5e000 TA 0x1000 SHM 0x1000
+I/TC: Primary CPU initializing
+I/TC: Primary CPU switching to normal world boot
+
+
+U-Boot next-dev-lexxos (Nov 14 2023 - 22:13:20 +0000)
+
+Model: Luckfox Lyra
+MPIDR: 0xf00
+PreSerial: 0, raw, 0xff0a0000
+DRAM:  128 MiB
+Sysmem: init
+Relocation Offset: 053ea000
+Relocation fdt: 043fa930 - 043fede8
+CR: M/C/I
+Using default environment
+
+DM: v2
+mmc@ff480000: 0
+Bootdev(atags): mmc 0
+MMC0: Legacy, 52Mhz
+PartType: EFI
+No misc partition
+boot mode: None
+RESC: 'boot', blk@0x0000652e
+resource: sha256+
+FIT: no signed, no conf required
+DTB: rk-kernel.dtb
+HASH(c): OK
+use 0x5800000 as drm logo base memory
+Could not find baseparameter partition
+Model: Luckfox Lyra
+Rockchip UBOOT DRM driver version: v1.0.1
+Using display timing dts
+dsi@ff640000:  detailed mode clock 70000 kHz, flags[a]
+    H: 0800 0840 0860 0880
+    V: 1280 1310 1314 1324
+bus_format: 100a
+VOP:0xff600000 update mode to: 800x1280p60, type: MIPI0
+VOP:0xff600000 set crtc_clock to 70000KHz, get 68181818Hz
+Unsupported bt709f at 10bit csc depth, use bt601f instead
+VOP:0xff600000 set plane [654x270->654x270@73x505] fmt[0] addr[0x5800000]
+final DSI-Link bandwidth: 936 Mbps x 2
+CLK: (arm clk use pvtpll, rate = 1200M)
+  gpll 1500000 KHz
+  v0pll 1179648 KHz
+  v1pll 903168 KHz
+  clk_gpll_div 187500 KHz
+  clk_gpll_div_100m 93750 KHz
+  clk_v0pll_div 147456 KHz
+  clk_v1pll_div 129024 KHz
+  aclk_bus_root 187500 KHz
+  hclk_bus_root 147456 KHz
+  pclk_bus_root 93750 KHz
+  aclk_hsperi_root 147456 KHz
+  hclk_ksperi_root 93750 KHz
+Net:   No ethernet found.
+Hit key to stop autoboot('CTRL+C'):  0 
+## Booting FIT Image at 0x415b300 with size 0x0009c600
+Fdt Ramdisk skip relocation
+No misc partition
+## Loading kernel from FIT Image at 0415b300 ...
+   Using 'conf' configuration
+## Verified-boot: 0
+   Trying 'kernel' kernel subimage
+     Description:  unavailable
+     Type:         Kernel Image
+     Compression:  uncompressed
+     Data Start:   0x0416cb00
+     Data Size:    568740 Bytes = 555.4 KiB
+     Architecture: ARM
+     OS:           Linux
+     Load Address: 0x02000000
+     Entry Point:  0x02000000
+     Hash algo:    sha256
+     Hash value:   c6aca92754488d978ac69ce18d868691bdb670fa3c329b01112e2a3d8a6882c9
+   Verifying Hash Integrity ... sha256+ OK
+## Loading fdt from FIT Image at 0415b300 ...
+   Using 'conf' configuration
+   Trying 'fdt' fdt subimage
+     Description:  unavailable
+     Type:         Flat Device Tree
+     Compression:  uncompressed
+     Data Start:   0x0415bb00
+     Data Size:    69359 Bytes = 67.7 KiB
+     Architecture: ARM
+     Load Address: 0x00063000
+     Hash algo:    sha256
+     Hash value:   aac7a994cbf1838da707dcc02bab245be017854cc40e69abd6289a62e4c08e1a
+   Verifying Hash Integrity ... sha256+ OK
+   Loading fdt from 0x00063000 to 0x00063000
+   Booting using the fdt blob at 0x00063000
+   Loading Kernel Image from 0x0416cb00 to 0x02000000 ... OK
+   kernel loaded at 0x02000000, end = 0x0208ada4
+   Using Device Tree in place at 00063000, end 00076eee
+## reserved-memory:
+  trust@0: addr=0 size=62000
+  drm-logo@0: addr=5800000 size=15a000
+  ramoops@83000: addr=83000 size=2d000
+Adding bank: 0x00000000 - 0x08000000 (size: 0x08000000)
+Total: 1565.751/3063.167 ms
+
+Starting kernel ...
+
+
+LexxOS / RK3506G2 bare-metal bootstrap
+CPU MIDR: 0x410FC075
+.data: OK
+.bss: OK
+.init_array: OK
+UART0: inherited from U-Boot
+Exception vectors: installed (VBAR)
+Generic Timer: 24000000 Hz, PPI 27, tick 1 ms
+GIC: 192 interrupt IDs
+GIC / IRQ: FreeRTOS tick deferred until scheduler start
+C++ new/delete: OK
+Platform: PicoCalc / Luckfox Lyra
+LexxOS Runtime: FreeRTOS UART shell mode
+FreeRTOS: built-in programs registered; board drivers deferred
+LexxOS Runtime: creating shell task
+LexxOS Runtime: starting FreeRTOS
+FreeRTOS scheduler: starting
+FreeRTOS task start: console
+
+ _                     ___  ____
+| |    _____  ____  __/ _ \/ ___|
+| |   / _ \ \/ /\ \/ / | | \___ \
+| |__|  __/>  <  >  <| |_| |___) |
+|_____\___/_/\_\/_/\_\\___/|____/
+
+         kernel console
+
+
+LexxOS shell
+board: PicoCalc / Luckfox Lyra
+cpu: Rockchip RK3506G2 (Cortex-A7, CPU0) (rk3506)
+type 'help' to list programs
+
+lexx:/> ls
+FreeRTOS task start: ls
++------+------+------+
+| type | name | size |
++------+------+------+
+| dir  | dev  |    0 |
+| dir  | mnt  |    0 |
+| dir  | proc |    0 |
+| dir  | sys  |    0 |
+| dir  | tmp  |    0 |
++------+------+------+
+lexx:/> info
+FreeRTOS task start: info
+info: missing-required-argument: path
+usage: info <path>
+lexx:/> info / 
+FreeRTOS task start: info
+name: /
+path: /
+type: directory
+created: 
+modified: 
+files: 0
+directories: 5
+permissions: 
+lexx:/> help
+shell - start interactive LexxOS shell
+append - append text to a writable VFS file
+autostart - configure startup shortcuts
+board - show active board descriptor
+cat - print readable VFS file or stdin
+cd - change current VFS directory
+clear - clear ANSI terminal
+cp - copy readable VFS file to writable VFS file
+devices - list registered devices
+echo - print program arguments
+fs-info - show VFS diagnostic information
+help - show program list
+hexdump - print file or stdin as hexadecimal bytes
+info - show file or directory information
+jobs - show supervised program processes
+lexx-info - inspect an external .lexx file without running it
+link - create, inspect or launch .lnk shortcuts
+ls - list VFS directory
+mem - show kernel memory statistics or configured limits
+mkdir - create a writable VFS directory
+mv - rename a writable VFS file or directory
+poweroff - power off target device
+pwd - show current VFS directory
+reboot - reboot target device
+rename - rename a writable VFS file or directory
+rm - remove a writable VFS file
+rmdir - remove an empty writable VFS directory
+rtc-status - read RTC backend status
+run - run a program through ProgramSupervisor
+sd-bench - verify block batches and file sector/cluster boundaries
+stat - show VFS node metadata
+stop - request supervised process stop
+sync - synchronize mounted writable filesystems
+tasks - show registered kernel tasks
+tmp-info - show /tmp diagnostic information
+top - watch memory, tasks and supervised jobs
+touch - create an empty writable VFS file
+uptime - show system uptime
+version - show LexxOS build and feature milestone
+write - write text to a writable VFS file
+yrx - receive a file over YMODEM/CRC
+ysend - send a VFS file over YMODEM/CRC
+lexx:/> DDR 0ac6b06a19 typ 24/11/13-17:22:48,fwver: v1.04
+tREFI:4x, sr_idle:93, pd_idle:13
+PHY drv:clkrdtrn:0x11-0x29-0x42(0x31)
+wrtrn:0xa-0x23-0x3d(0x33)
+DDR3, 750MHz
+BW=16 Col=10 Bk=8 CS0 Row=13 CS=1 Size=128MB
+out
+U-Boot SPL board init
+U-Boot SPL 2017.09-g4d88b0a #hxj (Nov 24 2025 - 20:11:45)
+sfc cmd=9fH(6BH-x4)
+unrecognized JEDEC id bytes: ff, ff, ff
+Trying to boot from MMC1
+No misc partition
+Trying fit image at 0x2000 sector
+## Verified-boot: 0
+## Checking optee 0x00001000 ... sha256(25ecab7018...) + OK
+## Checking uboot 0x00200000 ... sha256(b523b043a3...) + OK
+## Checking fdt 0x002aab48 ... sha256(4c7bf9a02f...) + OK
+Jumping to U-Boot(0x00200000) via OP-TEE(0x00001000)
+Total: 520.134/1489.1 ms
+
+I/TC: 
+I/TC: OP-TEE version: 3.13.0-1059-g79c61ac91c0 #chenjh (gcc version 10.2.1 20201103 (GNU Toolchain for the A-profile Architecture 10.2-2020.11 (arm-10.16))) #2 Tue Mar 10 10:59:55 CST 2026 arm, fwver: v2.50 
+I/TC: Status: cluster=0xc00, core=0xe100, bootcpu=0
+I/TC: Next entry point address: 0x00200000
+I/TC: OP-TEE memory size: TEEOS 0x5e000 TA 0x1000 SHM 0x1000
+I/TC: Primary CPU initializing
+I/TC: Primary CPU switching to normal world boot
+
+
+U-Boot next-dev-lexxos (Nov 14 2023 - 22:13:20 +0000)
+
+Model: Luckfox Lyra
+MPIDR: 0xf00
+PreSerial: 0, raw, 0xff0a0000
+DRAM:  128 MiB
+Sysmem: init
+Relocation Offset: 053ea000
+Relocation fdt: 043fa930 - 043fede8
+CR: M/C/I
+Using default environment
+
+DM: v2
+mmc@ff480000: 0
+Bootdev(atags): mmc 0
+MMC0: Legacy, 52Mhz
+PartType: EFI
+No misc partition
+boot mode: None
+RESC: 'boot', blk@0x0000652e
+resource: sha256+
+FIT: no signed, no conf required
+DTB: rk-kernel.dtb
+HASH(c): OK
+use 0x5800000 as drm logo base memory
+Could not find baseparameter partition
+Model: Luckfox Lyra
+Rockchip UBOOT DRM driver version: v1.0.1
+Using display timing dts
+dsi@ff640000:  detailed mode clock 70000 kHz, flags[a]
+    H: 0800 0840 0860 0880
+    V: 1280 1310 1314 1324
+bus_format: 100a
+VOP:0xff600000 update mode to: 800x1280p60, type: MIPI0
+VOP:0xff600000 set crtc_clock to 70000KHz, get 68181818Hz
+Unsupported bt709f at 10bit csc depth, use bt601f instead
+VOP:0xff600000 set plane [654x270->654x270@73x505] fmt[0] addr[0x5800000]
+final DSI-Link bandwidth: 936 Mbps x 2
+CLK: (arm clk use pvtpll, rate = 1200M)
+  gpll 1500000 KHz
+  v0pll 1179648 KHz
+  v1pll 903168 KHz
+  clk_gpll_div 187500 KHz
+  clk_gpll_div_100m 93750 KHz
+  clk_v0pll_div 147456 KHz
+  clk_v1pll_div 129024 KHz
+  aclk_bus_root 187500 KHz
+  hclk_bus_root 147456 KHz
+  pclk_bus_root 93750 KHz
+  aclk_hsperi_root 147456 KHz
+  hclk_ksperi_root 93750 KHz
+Net:   No ethernet found.
+Hit key to stop autoboot('CTRL+C'):  0 
+## Booting FIT Image at 0x40f1d00 with size 0x00105c00
+Fdt Ramdisk skip relocation
+No misc partition
+## Loading kernel from FIT Image at 040f1d00 ...
+   Using 'conf' configuration
+## Verified-boot: 0
+   Trying 'kernel' kernel subimage
+     Description:  unavailable
+     Type:         Kernel Image
+     Compression:  uncompressed
+     Data Start:   0x04103500
+     Data Size:    1000100 Bytes = 976.7 KiB
+     Architecture: ARM
+     OS:           Linux
+     Load Address: 0x02000000
+     Entry Point:  0x02000000
+     Hash algo:    sha256
+     Hash value:   8a66d5db2d3e003fba60325b4e59b3c62c292182c84823006631ef8ddf56e581
+   Verifying Hash Integrity ... sha256+ OK
+## Loading fdt from FIT Image at 040f1d00 ...
+   Using 'conf' configuration
+   Trying 'fdt' fdt subimage
+     Description:  unavailable
+     Type:         Flat Device Tree
+     Compression:  uncompressed
+     Data Start:   0x040f2500
+     Data Size:    69359 Bytes = 67.7 KiB
+     Architecture: ARM
+     Load Address: 0x00063000
+     Hash algo:    sha256
+     Hash value:   aac7a994cbf1838da707dcc02bab245be017854cc40e69abd6289a62e4c08e1a
+   Verifying Hash Integrity ... sha256+ OK
+   Loading fdt from 0x00063000 to 0x00063000
+   Booting using the fdt blob at 0x00063000
+   Loading Kernel Image from 0x04103500 to 0x02000000 ... OK
+   kernel loaded at 0x02000000, end = 0x020f42a4
+   Using Device Tree in place at 00063000, end 00076eee
+## reserved-memory:
+  trust@0: addr=0 size=62000
+  drm-logo@0: addr=5800000 size=15a000
+  ramoops@83000: addr=83000 size=2d000
+Adding bank: 0x00000000 - 0x08000000 (size: 0x08000000)
+Total: 1602.955/3100.341 ms
+
+Starting kernel ...
+
+
+LexxOS / RK3506G2 bare-metal bootstrap
+CPU MIDR: 0x410FC075
+.data: OK
+.bss: OK
+.init_array: OK
+UART0: inherited from U-Boot
+Exception vectors: installed (VBAR)
+Generic Timer: 24000000 Hz, PPI 27, tick 1 ms
+GIC: 192 interrupt IDs
+GIC / IRQ: FreeRTOS tick deferred until scheduler start
+C++ new/delete: OK
+Platform: PicoCalc / Luckfox Lyra
+LexxOS Runtime: FreeRTOS UART shell mode
+LexxOS Runtime: creating shell task
+LexxOS Runtime: starting FreeRTOS
+FreeRTOS scheduler: starting
+FreeRTOS task start: console-mirror
+FreeRTOS task start: console
+FreeRTOS: mounting PicoCalc sd1...
+storage: /dev/sd1 => /mnt/sd FAT READ ONLY; sectors=62333952
+
+ _                     ___  ____
+| |    _____  ____  __/ _ \/ ___|
+| |   / _ \ \/ /\ \/ / | | \___ \
+| |__|  __/>  <  >  <| |_| |___) |
+|_____\___/_/\_\/_/\_\\___/|____/
+
+         kernel console
+
+
+LexxOS shell
+board: PicoCalc / Luckfox Lyra
+cpu: Rockchip RK3506G2 (Cortex-A7, CPU0) (rk3506)
+type 'help' to list programs
+
+FreeRTOS task start: lcd-present
+lexx:/> [lcd] FreeRTOS: SPI0 PIO; DMA disabled
+[lcd] RGB565 packed8 fallback
+
+lexx:/> 
+lexx:/> 
+lexx:/> 
+lexx:/> 
+lexx:/> clear
+lexx:/> help
+shell - start interactive LexxOS shell
+append - append text to a writable VFS file
+autostart - configure startup shortcuts
+block-devs - show registered block devices
+board - show active board descriptor
+cat - print readable VFS file or stdin
+cd - change current VFS directory
+clear - clear ANSI terminal
+console-info - show LCD console state
+cp - copy readable VFS file to writable VFS file
+devices - list registered devices
+devs - show registered devices
+display-info - show display device information
+echo - print program arguments
+fat-cache - show FAT disk cache statistics
+fs-info - show VFS diagnostic information
+help - show program list
+hexdump - print file or stdin as hexadecimal bytes
+info - show file or directory information
+jobs - show supervised program processes
+lexx-info - inspect an external .lexx file without running it
+link - create, inspect or launch .lnk shortcuts
+ls - list VFS directory
+mem - show kernel memory statistics or configured limits
+mkdir - create a writable VFS directory
+mv - rename a writable VFS file or directory
+poweroff - power off target device
+pwd - show current VFS directory
+reboot - reboot target device
+rename - rename a writable VFS file or directory
+rm - remove a writable VFS file
+rmdir - remove an empty writable VFS directory
+rtc-status - read RTC backend status
+run - run a program through ProgramSupervisor
+sd-bench - verify block batches and file sector/cluster boundaries
+stat - show VFS node metadata
+stop - request supervised process stop
+storage - show, probe, read or diagnose block storage
+sync - synchronize mounted writable filesystems
+tasks - show registered kernel tasks
+tmp-info - show /tmp diagnostic information
+top - watch memory, tasks and supervised jobs
+touch - create an empty writable VFS file
+uptime - show system uptime
+version - show LexxOS build and feature milestone
+write - write text to a writable VFS file
+yrx - receive a file over YMODEM/CRC
+ysend - send a VFS file over YMODEM/CRC
+sdmmc - RK3506 SDMMC register status / read-only card probe
+sdmount - mount RK3506 GPT partition 3 as read-only FAT32
+sd-media - PicoCalc removable SD FAT mount and hotplug status
+debug - Switch RK3506 console UART and Cortex-A7 SWD at runtime
+sd-hw-bench - profile RK3506 SPI1 clock/FIFO/CRC/DMA matrix and read-only DMA stress
+sd-diag - PicoCalc microSD GPIO/SPI1 diagnostics (maintenance builds)
+lexx:/> ls /mnt/sd/
+FreeRTOS task start: ls
++------+-----------------+------+
+| type | name            | size |
++------+-----------------+------+
+| dir  | gb              |    0 |
+| file | ._gb            | 4096 |
+| dir  | gb-tests        |    0 |
+| file | ._gb-tests      | 4096 |
+| file | test.txt        |   74 |
+| file | ._test.txt      | 4096 |
+| dir  | lexxos          |    0 |
+| dir  | midi            |    0 |
+| dir  | apps            |    0 |
+| dir  | .lexx           |    0 |
+| dir  | ext             |    0 |
+| dir  | lexx            |    0 |
+| dir  | .Spotlight-V100 |    0 |
+[23:47:32.984] | dir  | .Trashes        |    0 |
+[23:47:35.270] | dir  | .fseventsd      |    0 |
+[23:47:35.386] | dir  | picocalc        |    0 |
+[23:47:35.502] | file | write-test.txt  |   74 |
+[23:47:35.619] | file | ._lexx          | 4096 |
+[23:47:35.735] +------+-----------------+------+
+[23:47:35.805] lexx:/> ls /mnt/sd/
+[23:47:39.228] FreeRTOS task start: ls
+[23:47:42.557] +------+-----------------+------+
+[23:47:42.575] | type | name            | size |
+[23:47:42.593] +------+-----------------+------+
+[23:47:42.642] | dir  | gb              |    0 |
+[23:47:42.673] | file | ._gb            | 4096 |
+[23:47:42.710] | dir  | gb-tests        |    0 |
+[23:47:42.746] | file | ._gb-tests      | 4096 |
+[23:47:42.783] | file | test.txt        |   74 |
+[23:47:42.820] | file | ._test.txt      | 4096 |
+[23:47:47.197] | dir  | lexxos          |    0 |
+[23:47:47.239] | dir  | midi            |    0 |
+[23:47:47.288] | dir  | apps            |    0 |
+[23:47:47.331] | dir  | .lexx           |    0 |
+[23:47:47.380] | dir  | ext             |    0 |
+[23:47:47.429] | dir  | lexx            |    0 |
+[23:47:47.509] | dir  | .Spotlight-V100 |    0 |
+[23:47:47.613] | dir  | .Trashes        |    0 |
+[23:47:47.724] | dir  | .fseventsd      |    0 |
+[23:47:47.834] | dir  | picocalc        |    0 |
+[23:47:47.950] | file | write-test.txt  |   74 |
+[23:47:52.851] +------+-----------------+------+
+[23:47:52.913] lexx:/> DDR 0ac6b06a19 typ 24/11/13-17:22:48,fwver: v1.04
+[10:45:41.017] tREFI:4x, sr_idle:93, pd_idle:13
+[10:45:41.018] PHY drv:clkrdtrn:0x11-0x29-0x42(0x31)
+[10:45:41.018] wrtrBW=16 Col=10 Bk=8 CS0 Row=13 CS=1 Size=128MB
+[10:45:41.019] out
+[10:45:41.979] U-Boot SPL board init
+[10:45:41.980] U-Boot SPL 2017.09-g4d88b0a #hxj (Nov 24 2025 - 20:11:45)
+[10:45:41.980] sfc cmd=9fH(6BH-x4)
+[10:45:42.380] unrecognized JEDEC id bytes: ff, ff, ff
+[10:45:42.381] Trying to boot from MMC1
+[10:45:42.411] No misc partition
+[10:45:42.411] Trying fit image at 0x2000 sector
+[10:45:42.412] ## Verified-boot: 0
+[10:45:42.423] ## Checking optee 0x00001000 ... sha256(25ecab7018...) + OK
+[10:45:42.486] ## Checking uboot 0x00200000 ... sha256(b523b043a3...) + OK
+[10:45:42.494] ## Checking fdt 0x002aab48 ... sha256(4c7bf9a02f...) + OK
+[10:45:42.497] Jumping to U-Boot(0x00200000) via OP-TEE(0x00001000)
+[10:45:42.498] Total: 520.148/1489.7 ms
+[10:45:42.500] 
+[10:45:42.502] I/TC: 
+[10:45:42.502] I/TC: OP-TEE version: 3.13.0-1059-g79c61ac91c0 #chenjh (gcc version 10.2.1 20201103 (GNU Toolchain[10:45:42.502]  for the A-profile Architecture 10.2-2020.11 (arm-10.16))) #2 Tue Mar 10 10:59:55 CST 2026 arm, fw[10:45:42.503] ver: v2.50 
+[10:45:42.503] I/TC: Status: cluster=0xc00, core=0xe100, bootcpu=0
+[10:45:42.504] I/TC: Next entry point address: 0x00200000
+[10:45:42.504] I/TC: OP-TEE memory size: TEEOS 0x5e000 TA 0x1000 SHM 0x1000
+[10:45:42.504] I/TC: Primary CPU initializing
+[10:45:42.506] I/TC: Primary CPU switching to normal world boot
+[10:45:42.537] 
+[10:45:42.537] 
+[10:45:42.537] U-Boot next-dev-lexxos (Nov 14 2023 - 22:13:20 +0000)
+[10:45:42.537] 
+[10:45:42.537] Model: Luckfox Lyra
+[10:45:42.538] MPIDR: 0xf00
+[10:45:42.538] PreSerial: 0, raw, 0xff0a0000
+[10:45:42.538] DRAM:  128 MiB
+[10:45:42.543] Sysmem: init
+[10:45:42.543] Relocation Offset: 053ea000
+[10:45:42.543] Relocation fdt: 043fa930 - 043fede8
+[10:45:42.564] CR: M/C/I
+[10:45:42.564] Using default environment
+[10:45:42.564] 
+[10:45:42.565] DM: v2
+[10:45:42.565] mmc@ff480000: 0
+[10:45:42.599] Bootdev(atags): mmc 0
+[10:45:42.599] MMC0: Legacy, 52Mhz
+[10:45:42.601] PartType: EFI
+[10:45:42.605] No misc partition
+[10:45:42.605] boot mode: None
+[10:45:42.606] RESC: 'boot', blk@0x0000652e
+[10:45:42.729] resource: sha256+
+[10:45:42.735] FIT: no signed, no conf required
+[10:45:42.736] DTB: rk-kernel.dtb
+[10:45:42.736] HASH(c): OK
+[10:45:42.745] use 0x5800000 as drm logo base memory
+[10:45:42.745] Could not find baseparameter partition
+[10:45:42.745] Model: Luckfox Lyra
+[10:45:42.794] Rockchip UBOOT DRM driver version: v1.0.1
+[10:45:42.794] Using display timing dts
+[10:45:42.794] dsi@ff640000:  detailed mode clock 70000 kHz, flags[a]
+[10:45:42.795]     H: 0800 0840 0860 0880
+[10:45:42.795]     V: 1280 1310 1314 1324
+[10:45:42.795] bus_format: 100a
+[10:45:42.795] VOP:0xff600000 update mode to: 800x1280p60, type: MIPI0
+[10:45:42.796] VOP:0xff600000 set crtc_clock to 70000KHz, get 68181818Hz
+[10:45:42.796] Unsupported bt709f at 10bit csc depth, use bt601f instead
+[10:45:42.797] VOP:0xff600000 set plane [654x270->654x270@73x505] fmt[0] addr[0x5800000]
+[10:45:42.797] final DSI-Link bandwidth: 936 Mbps x 2
+[10:45:43.287] CLK: (arm clk use pvtpll, rate = 1200M)
+[10:45:43.287]   gpll 1500000 KHz
+[10:45:43.287]   v0pll 1179648 KHz
+[10:45:43.287]   v1pll 903168 KHz
+[10:45:43.287]   clk_gpll_div 187500 KHz
+[10:45:43.287]   clk_gpll_div_100m 93750 KHz
+[10:45:43.288]   clk_v0pll_div 147456 KHz
+[10:45:43.288]   clk_v1pll_div 129024 KHz
+[10:45:43.288]   aclk_bus_root 187500 KHz
+[10:45:43.288]   hclk_bus_root 147456 KHz
+[10:45:43.288]   pclk_bus_root 93750 KHz
+[10:45:43.289]   aclk_hsperi_root 147456 KHz
+[10:45:43.289]   hclk_ksperi_root 93750 KHz
+[10:45:43.960] Net:   No ethernet found.
+[10:45:43.963] Hit key to stop autoboot('CTRL+C'):  0 
+[10:45:43.965] ## Booting FIT Image at 0x40e3900 with size 0x00114000
+[10:45:44.057] Fdt Ramdisk skip relocation
+[10:45:44.058] No misc partition
+[10:45:44.058] ## Loading kernel from FIT Image at 040e3900 ...
+[10:45:44.058]    Using 'conf' configuration
+[10:45:44.059] ## Verified-boot: 0
+[10:45:44.059]    Trying 'kernel' kernel subimage
+[10:45:44.059]      Description:  unavailable
+[10:45:44.059]      Type:         Kernel Image
+[10:45:44.059]      Compression:  uncompressed
+[10:45:44.060]      Data Start:   0x040f5100
+[10:45:44.060]      Data Size:    1058332 Bytes = 1 MiB
+[10:45:44.060]      Architecture: ARM
+[10:45:44.061]      OS:           Linux
+[10:45:44.061]      Load Address: 0x02000000
+[10:45:44.061]      Entry Point:  0x02000000
+[10:45:44.061]      Hash algo:    sha256
+[10:45:44.061]      Hash value:   8afaa0ee65a291349350ca331375c09c9169023c8918836fd1355de09b083baf
+[10:45:44.062]    Verifying Hash Integrity ... sha256+ OK
+[10:45:44.069] ## Loading fdt from FIT Image at 040e3900 ...
+[10:45:44.069]    Using 'conf' configuration
+[10:45:44.069]    Trying 'fdt' fdt subimage
+[10:45:44.069]      Description:  unavailable
+[10:45:44.070]      Type:         Flat Device Tree
+[10:45:44.070]      Compression:  uncompressed
+[10:45:44.070]      Data Start:   0x040e4100
+[10:45:44.070]      Data Size:    69359 Bytes = 67.7 KiB
+[10:45:44.071]      Architecture: ARM
+[10:45:44.071]      Load Address: 0x00063000
+[10:45:44.071]      Hash algo:    sha256
+[10:45:44.071]      Hash value:   aac7a994cbf1838da707dcc02bab245be017854cc40e69abd6289a62e4c08e1a
+[10:45:44.072]    Verifying Hash Integrity ... sha256+ OK
+[10:45:44.073]    Loading fdt from 0x00063000 to 0x00063000
+[10:45:44.074]    Booting using the fdt blob at 0x00063000
+[10:45:44.074]    Loading Kernel Image from 0x040f5100 to 0x02000000 ... OK
+[10:45:44.075]    kernel loaded at 0x02000000, end = 0x0210261c
+[10:45:44.076]    Using Device Tree in place at 00063000, end 00076eee
+[10:45:44.105] ## reserved-memory:
+[10:45:44.105]   trust@0: addr=0 size=62000
+[10:45:44.105]   drm-logo@0: addr=5800000 size=15a000
+[10:45:44.105]   ramoops@83000: addr=83000 size=2d000
+[10:45:44.105] Adding bank: 0x00000000 - 0x08000000 (size: 0x08000000)
+[10:45:44.115] Total: 1607.934/3105.335 ms
+[10:45:44.115] 
+[10:45:44.115] Starting kernel ...
+[10:45:44.117] 
+[10:45:44.205] 
+[10:45:44.205] LexxOS / RK3506G2 bare-metal bootstrap
+[10:45:44.206] CPU MIDR: 0x410FC075
+[10:45:44.206] .data: OK
+[10:45:44.206] .bss: OK
+[10:45:44.206] .init_array: OK
+[10:45:44.206] UART0: inherited from U-Boot
+[10:45:44.207] Exception vectors: installed (VBAR)
+[10:45:44.207] Generic Timer: 24000000 Hz, PPI 27, tick 1 ms
+[10:45:44.207] GIC: 192 interrupt IDs
+[10:45:44.208] GIC / IRQ: FreeRTOS tick deferred until scheduler start
+[10:45:44.208] C++ new/delete: OK
+[10:45:44.208] Platform: PicoCalc / Luckfox Lyra
+[10:45:44.293] LexxOS Runtime: FreeRTOS UART shell mode
+[10:45:44.307] picocalc i2c: hardware I2C2, 10 kHz, OSC24M
+[10:45:45.338] LexxOS Runtime: creating shell task
+[10:45:45.371] LexxOS Runtime: starting FreeRTOS
+[10:45:45.371] FreeRTOS scheduler: starting
+[10:45:45.379] FreeRTOS task start: console-mirror
+[10:45:45.381] FreeRTOS task start: console
+[10:45:45.382] FreeRTOS: mounting PicoCalc sd1...
+[10:45:45.404] storage: sd1 probe failed
+[10:45:45.404] FreeRTOS: continuing without mounted SD
+[10:45:45.548] 
+[10:45:45.645] 
+[10:45:45.645]  _                     ___  ____
+[10:45:45.647] | |    _____  ____  __/ _ \/ ___|
+[10:45:45.649] | |   / _ \ \/ /\ \/ / | | \___ \
+[10:45:45.650] | |__|  __/>  <  >  <| |_| |___) |
+[10:45:45.652] |_____\___/_/\_\/_/\_\\___/|____/
+[10:45:45.654] 
+[10:45:45.654]          kernel console
+[10:45:45.656] 
+[10:45:45.656] 
+[10:45:45.656] LexxOS shell
+[10:45:45.659] board: PicoCalc / Luckfox Lyra
+[10:45:45.659] cpu: Rockchip RK3506G2 (Cortex-A7, CPU0) (rk3506)
+[10:45:45.662] type 'help' to list programs
+[10:45:45.663] 
+[10:45:45.679] FreFreeRTOS task start: lcd-preseRTOS task start: picocalc-inputent
+[10:45:48.883] lexx:/
+[10:45:50.588] > [lcd] FreeRTOS: SPI0 PIO; DMA disabled
+[10:45:50.589] [lcd] RGB565 packed8 fallback
+[10:45:51.381] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=5943 ready=ye[10:45:51.629] s comm-failures=1 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 las[10:45:51.809] t-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:46:01.039] hel[picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=16788 read[10:46:02.402] y=yes comm-failures=2 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0[10:46:02.411]  last-state=0x00 fifo=0 raw=0x0000016C snapshot-ok=yes snapshot-failures=0
+[10:46:04.502] p[picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=18951 ready=[10:46:04.603] yes comm-failures=3 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 l[10:46:04.620] ast-state=0x00 fifo=0 raw=0x00000170 snapshot-ok=yes snapshot-failures=0
+[10:46:05.452] 
+[10:46:05.455] shell - start interactive LexxOS shell
+[10:46:05.456] append - append text to a writable VFS file
+[10:46:05.457] autostart - configure startup shortcuts
+[10:46:05.459] block-devs - show registered block devices
+[10:46:05.460] board - show active board descriptor
+[10:46:05.461] cat - print readable VFS file or stdin
+[10:46:05.462] cd - change current VFS directory
+[10:46:05.464] clear - clear ANSI terminal
+[10:46:05.465] console-info - show LCD console state
+[10:46:05.466] cp - copy readable VFS file to writable VFS file
+[10:46:05.467] devices - list registered devices
+[10:46:05.468] devs - show registered devices
+[10:46:05.470] display-info - show display device information
+[10:46:05.471] echo - print program arguments
+[10:46:05.472] fat-cache - show FAT disk cache statistics
+[10:46:05.473] fs-info - show VFS diagnostic information
+[10:46:05.474] help - show program list
+[10:46:05.475] hexdump - print file or stdin as hexadecimal bytes
+[10:46:05.476] info - show file or directory information
+[10:46:05.478] jobs - show supervised program processes
+[10:46:05.479] lexx-info - inspect an external .lexx file without running it
+[10:46:05.481] link - create, inspect or launch .lnk shortcuts
+[10:46:05.483] ls - list VFS directory
+[10:46:05.483] mem - show kernel memory statistics or configured limits
+[10:46:05.485] mkdir - create a writable VFS directory
+[10:46:05.486] mv - rename a writable VFS file or directory
+[10:46:05.488] poweroff - power off target device
+[10:46:05.489] pwd - show current VFS directory
+[10:46:05.489] reboot - reboot target device
+[10:46:05.490] rename - rename a writable VFS file or directory
+[10:46:05.492] rm - remove a writable VFS file
+[10:46:05.493] rmdir - remove an empty writable VFS directory
+[10:46:05.495] rtc-status - read RTC backend status
+[10:46:05.496] run - run a program through ProgramSupervisor
+[10:46:05.497] sd-bench - verify block batches and file sector/cluster boundaries
+[10:46:05.499] stat - show VFS node metadata
+[10:46:05.500] stop - request supervised process stop
+[10:46:05.502] storage - show, probe, read or diagnose block storage
+[10:46:05.503] sync - synchronize mounted writable filesystems
+[10:46:05.504] tasks - show registered kernel tasks
+[10:46:05.505] tmp-info - show /tmp diagnostic information
+[10:46:05.507] top - watch memory, tasks and supervised jobs
+[10:46:05.508] touch - create an empty writable VFS file
+[10:46:05.510] uptime - show system uptime
+[10:46:05.510] version - show LexxOS build and feature milestone
+[10:46:05.512] write - write text to a writable VFS file
+[10:46:05.513] yrx - receive a file over YMODEM/CRC
+[10:46:05.515] ysend - send a VFS file over YMODEM/CRC
+[10:46:05.516] sdmmc - RK3506 SDMMC register status / read-only card probe
+[10:46:05.518] sdmount - mount RK3506 GPT partition 3 as read-only FAT32
+[10:46:05.519] sd-media - PicoCalc removable SD FAT mount and hotplug status
+[10:46:05.521] debug - Switch RK3506 console UART and Cortex-A7 SWD at runtime
+[10:46:05.523] sd-hw-bench - profile RK3506 SPI1 clock/FIFO/CRC/DMA matrix and read-only DMA stress
+[10:46:05.525] sd-diag - PicoCalc microSD GPIO/SPI1 diagnostics (maintenance builds)
+[10:46:05.577] lexx:/> [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=42584[10:46:28.535]  ready=yes comm-failures=5 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-succes[10:46:28.550] ses=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:46:39.705] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=53619 ready=y[10:46:39.725] es comm-failures=6 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 la[10:46:39.742] st-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:46:52.944] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=66670 ready=y[10:46:52.962] es comm-failures=7 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 la[10:46:52.988] st-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:46:54.984] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=68682 ready=y[10:46:55.003] es comm-failures=8 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 la[10:46:55.021] st-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:46:57.015] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=70686 ready=y[10:46:57.035] es comm-failures=9 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 la[10:46:57.052] st-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:47:04.139] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=77710 ready=y[10:47:04.159] es comm-failures=10 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 l[10:47:04.184] ast-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:47:05.161] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=78716 ready=y[10:47:05.186] es comm-failures=11 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 l[10:47:05.204] ast-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:47:10.243] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=83728 ready=y[10:47:10.263] es comm-failures=12 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 l[10:47:10.279] ast-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:47:10.866] ls [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=85797 read[10:47:12.360] y=yes comm-failures=14 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=[10:47:12.378] 0 last-state=0x00 fifo=0 raw=0x00000120 snapshot-ok=yes snapshot-failures=0
+[10:47:14.510] lexx:/> ls /mnt/s[picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime[10:47:18.501] -ms=91851 ready=yes comm-failures=15 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-re[10:47:18.517] set-successes=0 last-state=0x00 fifo=0 raw=0x00000309 snapshot-ok=yes snapshot-failures=0
+[10:47:20.158] d
+[10:47:22.781] FreeRTOS task start: ls
+[10:47:22.785] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=96104 ready=y[10:47:25.301] es comm-failures=16 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0l [10:47:25.335] last-state=0x00 fifo=0 raw=s: cannot access: 0x0000010A snapshot-ok=yes/mnt/sd
+[10:47:25.398] lexx:/>  snapshot-failures=0
+[10:47:26.303] [picocalc-keyboard] communication failure: stage=update-keyboard-fifo-read uptime-ms=99574 ready=y[10:47:26.323] es comm-failures=17 consecutive=1 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successes=0 l[10:47:26.340] ast-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=yes snapshot-failures=0
+[10:47:29.753] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=102979 r[10:47:29.771] eady=no comm-failures=18 consecutive=2 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successe[10:47:29.788] s=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:30.912] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=104119 r[10:47:30.931] eady=no comm-failures=19 consecutive=3 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successe[10:47:30.949] s=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:32.363] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=105544 r[10:47:32.372] eady=no comm-failures=21 consecutive=5 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successe[10:47:32.381] s=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:33.693] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=106853 r[10:47:33.698] eady=no comm-failures=23 consecutive=7 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successe[10:47:33.710] s=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:35.023] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=108166 r[10:47:35.031] eady=no comm-failures=25 consecutive=9 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-successe[10:47:35.040] s=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:36.359] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=109484 r[10:47:36.367] eady=no comm-failures=27 consecutive=11 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:36.376] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:37.688] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=110798 r[10:47:37.696] eady=no comm-failures=29 consecutive=13 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:37.706] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:39.011] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=112104 r[10:47:39.022] eady=no comm-failures=31 consecutive=15 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:39.032] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:40.339] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=113414 r[10:47:40.354] eady=no comm-failures=33 consecutive=17 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:40.357] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:41.669] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=114726 r[10:47:41.678] eady=no comm-failures=35 consecutive=19 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:41.687] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:43.001] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=116038 r[10:47:43.006] eady=no comm-failures=37 consecutive=21 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:43.018] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:43.635] 
+[10:47:43.635] lexx:/> 
+[10:47:43.822] lexx:/> 
+[10:47:43.990] lexx:/> ls /mnt/sd
+[10:47:46.400]   dev/
+[10:47:46.400]   mnt/
+[10:47:46.400]   proc/
+[10:47:46.400]   sys/
+[10:47:46.403]   tmp/
+[10:47:46.403] lexx:/> ls /mnt/sd
+[10:47:51.079] [picocalc-keyboard] communication failure: stage=iniFreeRTOS task start: tialize-keyboard-state-re[10:47:51.088] ad uptime-ls
+[10:47:51.099] ms=124034 ready=no comm-failures=38 consecutive=22 sb-refresh-failures=0 sb-reset-attempts=0 sb-re[10:47:51.125] set-successes=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failuresls: cannot a[10:47:51.148] ccess: =0
+[10:47:51.154] /mnt/sd
+[10:47:51.213] lexx:/> [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=[10:47:55.409] 128293 ready=no comm-failures=40 consecutive=24 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset[10:47:55.430] -successes=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:56.541] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=129416 r[10:47:56.560] eady=no comm-failures=41 consecutive=25 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:56.576] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+[10:47:57.989] [picocalc-keyboard] communication failure: stage=initialize-keyboard-state-read uptime-ms=130838 r[10:47:57.997] eady=no comm-failures=43 consecutive=27 sb-refresh-failures=0 sb-reset-attempts=0 sb-reset-success[10:47:58.007] es=0 last-state=0x00 fifo=0 raw=0x00000000 snapshot-ok=no snapshot-failures=0
+
+

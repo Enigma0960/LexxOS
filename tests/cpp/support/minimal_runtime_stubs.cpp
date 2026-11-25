@@ -1,5 +1,9 @@
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/devices/sd_card.h>
+#include <lexxos/io/console_output_stream.h>
+#include <lexxos/io/input_stream.h>
+#include <lexxos/io/null_input_stream.h>
+#include <lexxos/io/null_output_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/kernel/scheduler.h>
 #include <lexxos/platform/platform.h>
@@ -74,6 +78,7 @@ char const* toString(SdCardState state) {
 		case SdCardState::CardRemoved:
 			return "card-removed";
 	}
+
 	return "unknown";
 }
 
@@ -88,6 +93,7 @@ char const* toString(SdCardType type) {
 		case SdCardType::SdV2BlockAddressed:
 			return "sd-v2-block";
 	}
+
 	return "unknown";
 }
 
@@ -117,7 +123,7 @@ namespace sd_card {
 		return 0;
 	}
 
-} // namespace sd_card
+} // namespace lexxos::devices::sd_card
 
 } // namespace lexxos::devices
 
@@ -127,8 +133,8 @@ bool readConsoleChar(char&) {
 	return false;
 }
 
-BoardDescriptor const& board() {
-	static constexpr BoardDescriptor descriptor{};
+LegacyBoardDescriptor const& board() {
+	static constexpr LegacyBoardDescriptor descriptor{};
 	return descriptor;
 }
 
@@ -144,9 +150,13 @@ char const* toString(ProcessorFamily family) {
 			return "esp32";
 		case ProcessorFamily::Stm32f4:
 			return "stm32f4";
+		case ProcessorFamily::Rk3506:
+			return "rk3506";
 		case ProcessorFamily::Unknown:
+		default:
 			return "unknown";
 	}
+
 	return "unknown";
 }
 

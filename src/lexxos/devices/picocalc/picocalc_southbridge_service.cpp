@@ -65,6 +65,7 @@ bool PicoCalcSouthbridgeService::writeJcsRtcConfig(PicoCalcJcsRtcConfig config, 
 	if (ok) {
 		_snapshots.publishJcsRtcConfig(acceptedConfig, nowMs);
 	}
+
 	return ok;
 }
 
@@ -80,6 +81,7 @@ bool PicoCalcSouthbridgeService::writeJcsRtcDateTime(
 	if (ok) {
 		_snapshots.publishJcsRtcDateTime(value, nowMs);
 	}
+
 	return ok;
 }
 
@@ -95,6 +97,7 @@ bool PicoCalcSouthbridgeService::writeJcsRtcAlarm(
 	if (ok) {
 		_snapshots.publishJcsRtcAlarm(value, nowMs);
 	}
+
 	return ok;
 }
 #endif

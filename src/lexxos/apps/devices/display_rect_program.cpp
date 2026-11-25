@@ -8,6 +8,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec displayRectArguments[] = {
@@ -60,6 +61,7 @@ int DisplayRectProgram::run(
 		context.writeErrorLine("display-rect: invalid argument");
 		return 1;
 	}
+
 	if (width == 0 || height == 0 || x > 0x7FFFFFFFU || y > 0x7FFFFFFFU || width > 0x7FFFFFFFU || height > 0x7FFFFFFFU) {
 		context.writeErrorLine("display-rect: invalid rectangle");
 		return 1;
@@ -89,6 +91,7 @@ int DisplayRectProgram::run(
 		context.writeErrorLine("display-rect: draw failed");
 		return 1;
 	}
+
 	context.writeLine("display-rect: ok");
 	return 0;
 }

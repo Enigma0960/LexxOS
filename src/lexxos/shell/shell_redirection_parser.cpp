@@ -1,9 +1,11 @@
 #include <lexxos/shell/shell_redirection_parser.h>
 
+#include <lexxos/io/input_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::shell::detail {
+
 namespace {
 
 	bool startsWith(std::string_view value, std::string_view prefix) {
@@ -33,22 +35,26 @@ namespace {
 			isRedirection = true;
 			return true;
 		}
+
 		if (token == ">>" || token == "1>>") {
 			isRedirection = true;
 			append = true;
 			return true;
 		}
+
 		if (token == "2>") {
 			isRedirection = true;
 			redirectStdErr = true;
 			return true;
 		}
+
 		if (token == "2>>") {
 			isRedirection = true;
 			redirectStdErr = true;
 			append = true;
 			return true;
 		}
+
 		if (token == "<" || token == "0<") {
 			isRedirection = true;
 			redirectInput = true;
@@ -61,21 +67,25 @@ namespace {
 			inlineTarget = token.data() + 2;
 			return true;
 		}
+
 		if (startsWith(token, ">") && token.size() > 1) {
 			isRedirection = true;
 			inlineTarget = token.data() + 1;
 			return true;
 		}
+
 		if (startsWith(token, "1>>") && token.size() > 3) {
 			isRedirection = true;
 			inlineTarget = token.data() + 3;
 			return true;
 		}
+
 		if (startsWith(token, "1>") && token.size() > 2) {
 			isRedirection = true;
 			inlineTarget = token.data() + 2;
 			return true;
 		}
+
 		if (startsWith(token, "2>>") && token.size() > 3) {
 			isRedirection = true;
 			redirectStdErr = true;
@@ -83,18 +93,21 @@ namespace {
 			inlineTarget = token.data() + 3;
 			return true;
 		}
+
 		if (startsWith(token, "2>") && token.size() > 2) {
 			isRedirection = true;
 			redirectStdErr = true;
 			inlineTarget = token.data() + 2;
 			return true;
 		}
+
 		if (startsWith(token, "0<") && token.size() > 2) {
 			isRedirection = true;
 			redirectInput = true;
 			inlineTarget = token.data() + 2;
 			return true;
 		}
+
 		if (startsWith(token, "<") && token.size() > 1) {
 			isRedirection = true;
 			redirectInput = true;
@@ -133,6 +146,7 @@ RedirectionParseResult applyRedirections(
 			if (commandArgc >= static_cast<int>(commandArgv.size())) {
 				return {.status = RedirectionParseStatus::UnexpectedTarget, .token = token};
 			}
+
 			commandArgv[static_cast<std::size_t>(commandArgc)] = argv[static_cast<std::size_t>(index)];
 			++commandArgc;
 			continue;
@@ -143,6 +157,7 @@ RedirectionParseResult applyRedirections(
 			if (index + 1 >= argc) {
 				return {.status = RedirectionParseStatus::MissingTarget, .token = token};
 			}
+
 			target = argv[static_cast<std::size_t>(++index)];
 		}
 
@@ -155,6 +170,7 @@ RedirectionParseResult applyRedirections(
 			} else {
 				redirection.standardOutput = &lexxos::io::nullOutputStream();
 			}
+
 			continue;
 		}
 

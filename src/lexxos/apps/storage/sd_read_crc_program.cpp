@@ -8,16 +8,17 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec arguments[] = {
 	    {
-         .name = "state",
-         .valueName = "on|off",
-         .help = "enable or disable CRC16 validation for SD read blocks",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "state",
+	     .valueName = "on|off",
+	     .help = "enable or disable CRC16 validation for SD read blocks",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 

@@ -7,6 +7,7 @@
 #include <lexxos/apps/music/midi/detail/midi_file_loader.h>
 
 namespace lexxos::apps::music::midi::detail {
+
 namespace {
 
 	struct Patch {
@@ -175,6 +176,7 @@ namespace {
 			channel.pitchBend = 8192;
 			channel.sustain = false;
 		}
+
 		state.tempoUsPerQuarter = defaultTempoUsPerQuarter;
 	}
 
@@ -183,66 +185,86 @@ namespace {
 			if (note == 35 || note == 36) {
 				return Patch{MidiRenderWaveform::Sine, 1, 80, 0, 50, 240};
 			}
+
 			if (note == 38 || note == 40) {
 				return Patch{MidiRenderWaveform::Noise, 1, 65, 0, 80, 180};
 			}
+
 			if (note == 41 || note == 43 || note == 45 || note == 47 || note == 48 || note == 50) {
 				return Patch{MidiRenderWaveform::Triangle, 1, 90, 0, 70, 170};
 			}
+
 			if (note == 42 || note == 44 || note == 46) {
 				return Patch{MidiRenderWaveform::Noise, 1, 22, 0, 24, 105};
 			}
+
 			if (note == 49 || note == 51 || note == 52 || note == 55 || note == 57 || note == 59) {
 				return Patch{MidiRenderWaveform::Noise, 1, 120, 0, 160, 95};
 			}
+
 			return Patch{MidiRenderWaveform::Noise, 1, 45, 0, 55, 100};
 		}
 
 		if (program <= 7) {
 			return Patch{MidiRenderWaveform::Triangle, 1, 650, 110, 380, 170};
 		}
+
 		if (program <= 15) {
 			return Patch{MidiRenderWaveform::Sine, 1, 320, 20, 260, 145};
 		}
+
 		if (program <= 23) {
 			return Patch{MidiRenderWaveform::Square, 8, 70, 225, 130, 115};
 		}
+
 		if (program <= 31) {
 			return Patch{MidiRenderWaveform::Triangle, 2, 150, 42, 150, 145};
 		}
+
 		if (program <= 39) {
 			return Patch{MidiRenderWaveform::Square, 3, 120, 135, 110, 165};
 		}
+
 		if (program <= 47) {
 			return Patch{MidiRenderWaveform::Saw, 80, 240, 215, 420, 115};
 		}
+
 		if (program <= 55) {
 			return Patch{MidiRenderWaveform::Sine, 90, 260, 220, 520, 105};
 		}
+
 		if (program <= 63) {
 			return Patch{MidiRenderWaveform::Saw, 28, 160, 190, 220, 135};
 		}
+
 		if (program <= 71) {
 			return Patch{MidiRenderWaveform::Square, 22, 130, 180, 180, 118};
 		}
+
 		if (program <= 79) {
 			return Patch{MidiRenderWaveform::Sine, 24, 90, 220, 220, 120};
 		}
+
 		if (program <= 87) {
 			return Patch{MidiRenderWaveform::Square, 4, 80, 180, 130, 130};
 		}
+
 		if (program <= 95) {
 			return Patch{MidiRenderWaveform::Saw, 120, 320, 210, 650, 95};
 		}
+
 		if (program <= 103) {
 			return Patch{MidiRenderWaveform::Noise, 30, 220, 90, 260, 80};
 		}
+
 		if (program <= 111) {
 			return Patch{MidiRenderWaveform::Triangle, 2, 110, 35, 130, 135};
 		}
+
 		if (program <= 119) {
 			return Patch{MidiRenderWaveform::Sine, 1, 180, 20, 140, 130};
 		}
+
 		return Patch{MidiRenderWaveform::Noise, 5, 180, 70, 180, 90};
 	}
 
@@ -254,9 +276,11 @@ namespace {
 		} else {
 			factorQ16 += (bend * 7135) / 8192;
 		}
+
 		if (factorQ16 < 1) {
 			factorQ16 = 1;
 		}
+
 		return (static_cast<std::uint32_t>(baseHz) * static_cast<std::uint32_t>(factorQ16)) >> 16U;
 	}
 
@@ -285,6 +309,7 @@ namespace {
 				++count;
 			}
 		}
+
 		return count;
 	}
 
@@ -292,16 +317,20 @@ namespace {
 		if (!note.active) {
 			return 0;
 		}
+
 		auto score = static_cast<std::uint32_t>(note.envLevel >> 8U) + static_cast<std::uint32_t>(note.velocity);
 		if (note.envelope == MidiEnvelopeStage::Release || note.envelope == MidiEnvelopeStage::Off) {
 			return score;
 		}
+
 		if (note.sustained) {
 			return 512U + score;
 		}
+
 		if (note.envelope == MidiEnvelopeStage::Sustain) {
 			return 1024U + score;
 		}
+
 		return 1536U + score;
 	}
 
@@ -311,6 +340,7 @@ namespace {
 				return &note;
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -320,6 +350,7 @@ namespace {
 				return &note;
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -337,6 +368,7 @@ namespace {
 				selectedScore = score;
 			}
 		}
+
 		return selected;
 	}
 
@@ -347,12 +379,14 @@ namespace {
 			if (!track.hasEvent) {
 				continue;
 			}
+
 			if (selected == nullptr
 			    || track.event.tick < selected->event.tick
 			    || (track.event.tick == selected->event.tick && track.trackIndex < selected->trackIndex)) {
 				selected = &track;
 			}
 		}
+
 		return selected;
 	}
 
@@ -366,12 +400,15 @@ namespace {
 			minGain = maxGain;
 			maxGain = tmp;
 		}
+
 		if (value < minGain) {
 			return minGain;
 		}
+
 		if (value > maxGain) {
 			return maxGain;
 		}
+
 		return static_cast<std::uint16_t>(value);
 	}
 
@@ -379,6 +416,7 @@ namespace {
 		if (!options.adaptiveBoost || normalizationGainQ8 <= 256U) {
 			return 256;
 		}
+
 		auto const excess = static_cast<std::uint32_t>(normalizationGainQ8 - 256U);
 		auto const boost = 256U + ((excess * options.adaptiveBoostSlopeQ8) / 256U);
 		return clampGainQ8(boost, 256, options.adaptiveMaxBoostQ8);
@@ -401,6 +439,7 @@ namespace {
 		while (bit > value) {
 			bit >>= 2U;
 		}
+
 		while (bit != 0) {
 			if (value >= result + bit) {
 				value -= result + bit;
@@ -408,8 +447,10 @@ namespace {
 			} else {
 				result >>= 1U;
 			}
+
 			bit >>= 2U;
 		}
+
 		return result;
 	}
 
@@ -437,6 +478,7 @@ namespace {
 					voice.envLevel = maxEnvQ8;
 					voice.envelope = MidiEnvelopeStage::Decay;
 				}
+
 				break;
 			}
 			case MidiEnvelopeStage::Decay: {
@@ -445,6 +487,7 @@ namespace {
 					voice.envelope = MidiEnvelopeStage::Sustain;
 					break;
 				}
+
 				auto const delta = static_cast<std::uint32_t>(voice.envLevel - sustainQ8);
 				auto const step = delta / samplesForMs(voice.decayMs) + 1U;
 				voice.envLevel = step >= voice.envLevel ? sustainQ8 : static_cast<std::uint16_t>(voice.envLevel - step);
@@ -457,10 +500,12 @@ namespace {
 						voice.active = false;
 						break;
 					}
+
 					voice.envLevel = static_cast<std::uint16_t>(voice.envLevel - 1U);
 				} else {
 					voice.envLevel = sustainQ8;
 				}
+
 				break;
 			case MidiEnvelopeStage::Release: {
 				if (voice.envLevel == 0) {
@@ -468,15 +513,18 @@ namespace {
 					voice.active = false;
 					break;
 				}
+
 				auto const step = static_cast<std::uint32_t>(voice.releaseStartLevel) / samplesForMs(voice.releaseMs) + 1U;
 				voice.envLevel = step >= voice.envLevel ? 0 : static_cast<std::uint16_t>(voice.envLevel - step);
 				if (voice.envLevel == 0) {
 					voice.envelope = MidiEnvelopeStage::Off;
 					voice.active = false;
 				}
+
 				break;
 			}
 		}
+
 		return voice.envLevel > maxEnvQ8 ? 255U : static_cast<std::uint16_t>(voice.envLevel >> 8U);
 	}
 
@@ -531,9 +579,11 @@ namespace {
 		if (sample > 32767) {
 			return 32767;
 		}
+
 		if (sample < -32767) {
 			return -32767;
 		}
+
 		return static_cast<std::int16_t>(sample);
 	}
 
@@ -565,6 +615,7 @@ namespace {
 			case MidiRenderWaveform::Noise:
 				return 0;
 		}
+
 		return 0;
 	}
 
@@ -577,6 +628,7 @@ namespace {
 			voice.noiseLevel += (target - voice.noiseLevel) / 4;
 			return static_cast<std::int16_t>(voice.noiseLevel);
 		}
+
 		return waveformSampleAtPhase(voice.waveform, voice.phase);
 	}
 
@@ -599,9 +651,11 @@ namespace {
 				gain = 0;
 				break;
 		}
+
 		if (env < 96U) {
 			gain = static_cast<std::uint16_t>((static_cast<std::uint32_t>(gain) * env) / 96U);
 		}
+
 		return gain;
 	}
 
@@ -609,6 +663,7 @@ namespace {
 		if (voice.channel == 9 || voice.program > 7 || voice.waveform == MidiRenderWaveform::Noise) {
 			return fundamental;
 		}
+
 		auto const phaseOffset = static_cast<std::uint32_t>((static_cast<std::uint32_t>(voice.note) * 0x1F123BB5U) ^ 0x6D2B79F5U);
 		auto const octave = static_cast<std::int32_t>(waveformSampleAtPhase(voice.waveform, (voice.phase << 1U) + phaseOffset));
 		auto const fifth = static_cast<std::int32_t>(waveformSampleAtPhase(voice.waveform, voice.phase + (phaseOffset >> 1U)));
@@ -623,13 +678,16 @@ namespace {
 		if (env == 0) {
 			return 0;
 		}
+
 		std::uint32_t weight = env;
 		if (voice.envelope == MidiEnvelopeStage::Release || voice.sustained) {
 			weight = (weight * 3U) / 4U;
 		}
+
 		if (isNaturalDecayVoice(voice) && weight < 24U) {
 			weight = 0;
 		}
+
 		return weight;
 	}
 
@@ -637,14 +695,17 @@ namespace {
 		if (weightedVoicesQ8 <= 256U) {
 			return 256;
 		}
+
 		auto const root = integerSqrt(weightedVoicesQ8);
 		if (root == 0) {
 			return 256;
 		}
+
 		auto gain = 4608U / root;
 		if (gain > 256U) {
 			gain = 256U;
 		}
+
 		return static_cast<std::uint16_t>(gain < 56U ? 56U : gain);
 	}
 
@@ -652,11 +713,13 @@ namespace {
 		if (pan > 127U) {
 			pan = 127U;
 		}
+
 		if (pan <= 64U) {
 			left = 255;
 			right = static_cast<std::int32_t>(pan) * 255 / 64;
 			return;
 		}
+
 		left = static_cast<std::int32_t>(127U - pan) * 255 / 63;
 		right = 255;
 	}
@@ -677,6 +740,7 @@ namespace {
 			auto const over = magnitude - limiterThreshold;
 			limited = limiterThreshold + (over >> 2U);
 		}
+
 		if (limited > limiterCeiling) {
 			limited = limiterCeiling;
 		}
@@ -688,6 +752,7 @@ namespace {
 				stats.peakAfterLimiter = outputPeak;
 			}
 		}
+
 		return output;
 	}
 
@@ -700,11 +765,13 @@ namespace {
 			if (!voice.active) {
 				continue;
 			}
+
 			voice.phase += voice.phaseStep;
 			auto const env = envelopeStep(voice, options.sampleRateHz);
 			if (!voice.active || env == 0) {
 				continue;
 			}
+
 			weightedVoicesQ8 += voiceMixWeightQ8(voice, env);
 			auto raw = static_cast<std::int32_t>(waveformSample(voice));
 			raw = pianoVoiceSample(voice, raw, env);
@@ -749,6 +816,7 @@ namespace {
 		if (frameCount == 0 || audio == nullptr) {
 			return true;
 		}
+
 		return audio->playPcmBuffer(lexxos::devices::AudioPcmBufferRequest{
 		    .channel = lexxos::devices::AudioChannel::Stereo,
 		    .frames = frames.data(),
@@ -769,11 +837,14 @@ namespace {
 			for (std::size_t index = 0; index < chunkFrames; ++index) {
 				frames[index] = renderFrame(state, options, stats);
 			}
+
 			if (!outputFrames(audio, frames, chunkFrames, options)) {
 				return false;
 			}
+
 			framesToRender -= chunkFrames;
 		}
+
 		return true;
 	}
 
@@ -800,10 +871,12 @@ namespace {
 		if (midiState.division != 0) {
 			deltaUs = (static_cast<std::uint64_t>(deltaTicks) * state.tempoUsPerQuarter) / midiState.division;
 		}
+
 		auto const framesToRender = (deltaUs * options.sampleRateHz) / 1000000ULL;
 		if (!renderFrames(audio, state, framesToRender, options, stats)) {
 			return false;
 		}
+
 		state.currentTimeUs += deltaUs;
 		state.currentTick = event.tick;
 		return true;
@@ -813,6 +886,7 @@ namespace {
 		if (!note.active || note.envelope == MidiEnvelopeStage::Release || note.envelope == MidiEnvelopeStage::Off) {
 			return;
 		}
+
 		note.sustained = false;
 		note.releaseStartLevel = note.envLevel;
 		note.envelope = MidiEnvelopeStage::Release;
@@ -828,6 +902,7 @@ namespace {
 		if (slot == nullptr) {
 			slot = stealNoteSlot(state, event);
 		}
+
 		if (slot == nullptr) {
 			++stats.droppedNotes;
 			return;
@@ -876,12 +951,14 @@ namespace {
 			if (!note.active || note.channel != event.channel || note.note != event.a) {
 				continue;
 			}
+
 			if (channel.sustain) {
 				note.sustained = true;
 			} else {
 				releaseNote(note);
 			}
 		}
+
 		++stats.noteOffEvents;
 	}
 
@@ -917,11 +994,13 @@ namespace {
 				if (wasSustain && !channel.sustain) {
 					releaseSustainedNotes(state, event.channel);
 				}
+
 				break;
 			}
 			default:
 				break;
 		}
+
 		++stats.controlEvents;
 	}
 
@@ -930,6 +1009,7 @@ namespace {
 			++stats.otherEvents;
 			return;
 		}
+
 		state.channels[event.channel].program = clampMidi7(event.a);
 		++stats.programEvents;
 	}
@@ -939,6 +1019,7 @@ namespace {
 			++stats.otherEvents;
 			return;
 		}
+
 		state.channels[event.channel].pitchBend = event.a > 16383U ? 16383U : event.a;
 		++stats.pitchBendEvents;
 	}
@@ -966,6 +1047,7 @@ namespace {
 					state.tempoUsPerQuarter = event.tempo;
 					midiState.tempo = event.tempo;
 				}
+
 				++stats.tempoEvents;
 				break;
 			case MidiEventType::EndOfTrack:
@@ -974,6 +1056,7 @@ namespace {
 				++stats.otherEvents;
 				break;
 		}
+
 		updateMaxActive(state, stats);
 	}
 
@@ -988,6 +1071,7 @@ namespace {
 		if (midiFile.state.division == 0 || options.sampleRateHz == 0) {
 			return false;
 		}
+
 		if (!primeTracks(file, midiFile)) {
 			return false;
 		}
@@ -1011,6 +1095,7 @@ namespace {
 			if (!advanceTimeAndRender(audio, state, event, midiFile.state, options, stats)) {
 				return false;
 			}
+
 			dispatchEvent(state, midiFile.state, event, options, stats);
 			stats.finalTick = state.currentTick;
 			stats.renderedTimeUs = state.currentTimeUs;
@@ -1024,6 +1109,7 @@ namespace {
 		if (!renderFrames(audio, state, tailFrames, options, stats)) {
 			return false;
 		}
+
 		stats.renderedTimeUs = state.currentTimeUs + (static_cast<std::uint64_t>(options.tailMs) * 1000ULL);
 		return true;
 	}
@@ -1048,6 +1134,7 @@ bool renderMidiFile(
 	if (!renderMidiFilePass(context, file, midiFile, &audio, effectiveOptions, stats)) {
 		return false;
 	}
+
 	stats.normalizationScanPeak = 0;
 	stats.normalizationTargetPeak = 0;
 	stats.normalizationGainQ8 = 256;

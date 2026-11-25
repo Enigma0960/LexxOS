@@ -12,6 +12,7 @@
 #include <lexxos/apps/gameboy/detail/gameboy_program_support.h>
 #include <lexxos/apps/gameboy/detail/gameboy_settings.h>
 #include <lexxos/devices/device_manager.h>
+#include <lexxos/io/fixed_buffer_output_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/kernel/system.h>
 #include <lexxos/program/arguments.h>
@@ -19,6 +20,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::gameboy_programs {
+
 namespace {
 
 	constexpr std::size_t maxLauncherRoms = 64;
@@ -38,14 +40,17 @@ namespace {
 			if (available == 0) {
 				return false;
 			}
+
 			auto count = text.size();
 			if (count >= available) {
 				count = available - 1U;
 			}
+
 			if (count != 0) {
 				std::memcpy(data.data() + size, text.data(), count);
 				size += count;
 			}
+
 			data[size] = '\0';
 			return count == text.size();
 		}
@@ -57,11 +62,13 @@ namespace {
 				digits[count++] = static_cast<char>('0' + (value % 10U));
 				value /= 10U;
 			} while (value != 0 && count < sizeof(digits));
+
 			for (std::size_t index = 0; index < count; ++index) {
 				if (!append(std::string_view{&digits[count - index - 1U], 1})) {
 					return false;
 				}
 			}
+
 			return true;
 		}
 
@@ -75,10 +82,12 @@ namespace {
 		if (text.size() >= output.size()) {
 			return false;
 		}
+
 		std::memset(output.data(), 0, output.size());
 		if (!text.empty()) {
 			std::memcpy(output.data(), text.data(), text.size());
 		}
+
 		output[text.size()] = '\0';
 		return true;
 	}
@@ -91,11 +100,13 @@ namespace {
 		if (left.size() != right.size()) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < left.size(); ++index) {
 			if (lowerAscii(left[index]) != lowerAscii(right[index])) {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -107,10 +118,12 @@ namespace {
 			if (l < r) {
 				return true;
 			}
+
 			if (l > r) {
 				return false;
 			}
 		}
+
 		return left.size() < right.size();
 	}
 
@@ -118,10 +131,12 @@ namespace {
 		if (name.empty() || name.front() == '.') {
 			return false;
 		}
+
 		auto const dot = name.rfind('.');
 		if (dot == std::string_view::npos) {
 			return false;
 		}
+
 		auto const extension = name.substr(dot);
 		return equalsIgnoreCase(extension, ".gb") || equalsIgnoreCase(extension, ".gbc");
 	}
@@ -189,6 +204,7 @@ namespace {
 			roms.overflow = true;
 			return true;
 		}
+
 		++roms.count;
 		return true;
 	}
@@ -213,6 +229,7 @@ namespace {
 			roms.directoryMissing = true;
 			return;
 		}
+
 		if (stat.type != lexxos::vfs::NodeType::Directory) {
 			roms.notDirectory = true;
 			return;
@@ -227,6 +244,7 @@ namespace {
 			menu.clamp(roms.count, 1);
 			return;
 		}
+
 		for (std::size_t index = 0; index < roms.count; ++index) {
 			if (entryPath(roms.entries[index]) == lastRom) {
 				menu.selected = index;
@@ -292,6 +310,7 @@ namespace {
 				return index;
 			}
 		}
+
 		return 0;
 	}
 
@@ -303,6 +322,7 @@ namespace {
 		} else {
 			index = (index + 1U) % Size;
 		}
+
 		return values[index];
 	}
 
@@ -361,6 +381,7 @@ namespace {
 			case SettingItem::Back:
 				return "Back";
 		}
+
 		return "";
 	}
 
@@ -395,6 +416,7 @@ namespace {
 				} else {
 					line.appendUnsigned(settings.frames);
 				}
+
 				return;
 			case SettingItem::StepsPerFrame:
 				line.appendUnsigned(settings.stepsPerFrame);
@@ -466,9 +488,11 @@ namespace {
 				if (!copyFixed(settings.speedMode, value) || !copyFixed(settings.playbackProfile, value == "playable" ? "playable" : "none")) {
 					return false;
 				}
+
 				if (value == "manual" && settings.cyclesPerFrame == 0) {
 					settings.syncRealtime = false;
 				}
+
 				return true;
 			}
 			case SettingItem::Frames:
@@ -495,6 +519,7 @@ namespace {
 				if (!copyFixed(settings.romStorage, value)) {
 					return false;
 				}
+
 				settings.romFlashReuse = value == "flash-reuse";
 				return true;
 			}
@@ -519,6 +544,7 @@ namespace {
 			case SettingItem::Back:
 				return false;
 		}
+
 		return false;
 	}
 
@@ -530,9 +556,11 @@ namespace {
 		if (!launchArguments.addPositional("rom", path)) {
 			return false;
 		}
+
 		if (settings.audioEnabled && !launchArguments.setNamed("audio", "", true)) {
 			return false;
 		}
+
 		return true;
 	}
 
@@ -542,6 +570,7 @@ namespace {
 			status.append("Settings saved");
 			return;
 		}
+
 		status.append("Save failed: ");
 		switch (result.status) {
 			case detail::GbEmuSettingsStatus::StorageUnavailable:
@@ -637,6 +666,7 @@ namespace {
 				if (index >= roms.count) {
 					break;
 				}
+
 				FixedLine line;
 				line.append(index == menu.selected ? "> " : "  ");
 				line.append(entryName(roms.entries[index]));
@@ -650,6 +680,7 @@ namespace {
 		if (roms.overflow) {
 			countLine.append("+");
 		}
+
 		screen.drawText(1, screen.rows() - 3, countLine.view(), {.foreground = palette.muted, .background = palette.background}, true);
 		screen.drawText(1, screen.rows() - 2, status.view(), {.foreground = palette.muted, .background = palette.background}, true);
 		screen.endFrame();
@@ -675,6 +706,7 @@ namespace {
 			if (index >= settingItemCount) {
 				break;
 			}
+
 			auto const item = settingItemAt(index);
 			FixedLine line;
 			line.append(index == menu.selected ? "> " : "  ");
@@ -683,6 +715,7 @@ namespace {
 				line.append(": ");
 				appendSettingValue(line, settings, item);
 			}
+
 			screen.drawMenuItem(firstRow + static_cast<int>(row), line.view(), index == menu.selected, palette);
 		}
 
@@ -696,8 +729,10 @@ namespace {
 			if (lexxos::kernel::isShutdownRequested()) {
 				return false;
 			}
+
 			sleepMs(context, 10);
 		}
+
 		return !lexxos::kernel::isShutdownRequested();
 	}
 
@@ -711,12 +746,14 @@ namespace {
 			if (!waitForInteractiveFocus(context)) {
 				return false;
 			}
+
 			if (!displayLock) {
 				displayLock = context.devices().lockDisplayDevice(
 				    display.name(),
 				    lexxos::devices::DeviceResourcePriority::Interactive,
 				    "gbemu-launcher");
 			}
+
 			if (displayLock && !gamepadLock) {
 				gamepadLock = context.devices().lockGamepadDevice(
 				    gamepad.name(),
@@ -726,14 +763,18 @@ namespace {
 					displayLock.release();
 				}
 			}
+
 			if (displayLock && gamepadLock) {
 				return true;
 			}
+
 			if (context.pollCancellationRequest()) {
 				return false;
 			}
+
 			sleepMs(context, 5);
 		}
+
 		return false;
 	}
 
@@ -748,6 +789,7 @@ namespace {
 			status.append("Launch failed: arguments");
 			return 2;
 		}
+
 		std::array<char, 512> output{};
 		lexxos::io::FixedBufferOutputStream capture{output.data(), output.size()};
 		auto launchContext = context.createChild({
@@ -766,16 +808,20 @@ namespace {
 			while (lineEnd != 0 && (text[lineEnd - 1U] == '\r' || text[lineEnd - 1U] == '\n')) {
 				--lineEnd;
 			}
+
 			auto lineBegin = lineEnd;
 			while (lineBegin != 0 && text[lineBegin - 1U] != '\r' && text[lineBegin - 1U] != '\n') {
 				--lineBegin;
 			}
+
 			if (lineBegin < lineEnd) {
 				lastLine = text.substr(lineBegin, lineEnd - lineBegin);
 				break;
 			}
+
 			lineEnd = lineBegin;
 		}
+
 		if (lastLine.substr(0, 7) == "gbemu: ") {
 			lastLine.remove_prefix(7);
 		}
@@ -788,6 +834,7 @@ namespace {
 			status.append("exit ");
 			status.appendUnsigned(static_cast<std::uint32_t>(exitCode < 0 ? 0 : exitCode));
 		}
+
 		return exitCode;
 	}
 
@@ -799,10 +846,12 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 		context.writeErrorLine("gbemu: display device is not registered");
 		return 1;
 	}
+
 	if (!display->isReady()) {
 		context.writeErrorLine("gbemu: display device is not ready");
 		return 1;
 	}
+
 	if (display->nativeFormat() != lexxos::devices::PixelFormat::Rgb565) {
 		context.writeErrorLine("gbemu: only rgb565 displays are supported by the launcher");
 		return 1;
@@ -813,12 +862,13 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 		context.writeErrorLine("gbemu: gamepad device is not registered");
 		return 1;
 	}
+
 	if (!gamepad->isReady()) {
 		context.writeErrorLine("gbemu: gamepad device is not ready");
 		return 1;
 	}
 
-	auto const settingsResult = detail::loadOrCreateGbEmuSettings();
+	auto const settingsResult = detail::loadOrCreateGbEmuSettings(context.vfs());
 	auto settings = settingsResult.settings;
 	FixedLine status;
 	loadStatus(status, settingsResult);
@@ -836,7 +886,7 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 
 	auto graphicsMode = lexxos::app::ScopedConsoleMirrorMode{lexxos::app::ConsoleMirrorMode::Graphics};
 	lexxos::tui::Screen screen{*display};
-	lexxos::tui::InputReader input{gamepad};
+	lexxos::tui::InputReader input{gamepad, context.programInput()};
 	lexxos::tui::Palette palette{};
 	lexxos::tui::MenuState romMenu{};
 	lexxos::tui::MenuState settingsMenu{};
@@ -861,6 +911,7 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 			if (!acquireLauncherLocks(context, *display, *gamepad, displayLock, gamepadLock)) {
 				return context.cancellationRequested() ? 130 : 1;
 			}
+
 			input.reset();
 			redraw = true;
 		}
@@ -871,6 +922,7 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 			} else {
 				renderSettings(screen, palette, settings, settingsMenu, status);
 			}
+
 			redraw = false;
 		}
 
@@ -894,7 +946,7 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 						auto& launchPath = workspace.launchPath;
 						copyFixed(launchPath, entryPath(roms.entries[romMenu.selected]));
 						(void) detail::setGbEmuLastRom(settings, launchPath.data());
-						saveStatus(status, detail::saveGbEmuSettings(settings));
+						saveStatus(status, detail::saveGbEmuSettings(context.vfs(), settings));
 						renderRomLauncher(screen, palette, settings, roms, romMenu, status);
 
 						displayLock.release();
@@ -905,16 +957,19 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 						if (!acquireLauncherLocks(context, *display, *gamepad, displayLock, gamepadLock)) {
 							return context.cancellationRequested() ? 130 : lastLaunchExitCode;
 						}
+
 						input.reset();
 						scanRoms(settings.romDirectoryPath(), roms);
 						if (lastLaunchExitCode == 0) {
 							status.clear();
 							status.append("Last exit: 0");
 						}
+
 						romStatus(status, roms, settings.romDirectoryPath());
 						selectLastRom(romMenu, roms, settings.lastRomPath());
 						redraw = true;
 					}
+
 					break;
 				case lexxos::tui::Action::Start:
 					status.clear();
@@ -926,7 +981,7 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 				case lexxos::tui::Action::Back:
 					running = false;
 					break;
-				case lexxos::tui::Action::Left:
+				case lexxos::tui::Action::Left :
 				case lexxos::tui::Action::Right:
 				case lexxos::tui::Action::None:
 					break;
@@ -941,7 +996,7 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 				case lexxos::tui::Action::Down:
 					redraw = settingsMenu.moveDown(settingItemCount, visibleRows);
 					break;
-				case lexxos::tui::Action::Left:
+				case lexxos::tui::Action::Left :
 				case lexxos::tui::Action::Right:
 				case lexxos::tui::Action::Confirm:
 					if (selectedItem == SettingItem::Back) {
@@ -949,15 +1004,18 @@ int runGameBoyLauncher(lexxos::os::AppContext& context) {
 						redraw = true;
 						break;
 					}
+
 					if (changeSetting(settings, selectedItem, action == lexxos::tui::Action::Left ? -1 : 1)) {
-						saveStatus(status, detail::saveGbEmuSettings(settings));
+						saveStatus(status, detail::saveGbEmuSettings(context.vfs(), settings));
 						if (selectedItem == SettingItem::Display || selectedItem == SettingItem::Palette || selectedItem == SettingItem::RenderEvery || selectedItem == SettingItem::InputEvery) {
 							scanRoms(settings.romDirectoryPath(), roms);
 						}
+
 						redraw = true;
 					}
+
 					break;
-				case lexxos::tui::Action::Back:
+				case lexxos::tui::Action::Back  :
 				case lexxos::tui::Action::Select:
 				case lexxos::tui::Action::Start:
 					status.clear();

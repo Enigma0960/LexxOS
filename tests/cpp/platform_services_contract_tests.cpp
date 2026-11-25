@@ -7,7 +7,9 @@
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include <lexxos/app/console_mirror.h>
 #include <lexxos/app/console_output.h>
 #include <lexxos/apps/fs/move_program.h>
 #include <lexxos/apps/fs/rename_program.h>
@@ -25,6 +27,7 @@
 #include <lexxos/kernel/scheduler.h>
 #include <lexxos/kernel/system.h>
 #include <lexxos/os/operating_system.h>
+#include <lexxos/os/storage_mount_policy.h>
 #include <lexxos/platform/platform_services.h>
 #include <lexxos/program/program_manager.h>
 #include <lexxos/runtime/capabilities.h>
@@ -38,6 +41,7 @@ constexpr std::size_t fakeFlashSize = 32U * 1024U;
 constexpr std::size_t fakeFlashEraseSize = 4096U;
 
 std::string g_console;
+std::vector<std::string> g_consoleWrites;
 std::uint32_t g_uptimeMs = 100;
 std::uint32_t g_sleepCalls = 0;
 std::uint32_t g_sleptMs = 0;
@@ -49,6 +53,34 @@ void expect(bool condition, char const* message) {
 		std::cerr << "platform services contract test failed: " << message << '\n';
 		std::exit(1);
 	}
+}
+
+// Локальный double проверяет изоляцию двух экземпляров ОС.
+class TestMountPolicy final : public lexxos::os::StorageMountPolicy {
+public:
+	std::string_view rejectionReason() const override { return "test refusal"; }
+
+	bool prepareMount(std::string_view, std::string_view) override { return true; }
+
+	void mountFinished(std::string_view, std::string_view, bool) override {}
+
+	void unmounted(std::string_view) override {}
+};
+
+void checkStorageMountPolicyIsolation() {
+	lexxos::vfs::Vfs firstVfs, secondVfs;
+	lexxos::platform::PlatformServices services{};
+	lexxos::os::OperatingSystem first{services, firstVfs}, second{services, secondVfs};
+	TestMountPolicy policy;
+	auto context = first.createAppContext({});
+	expect(context.storageMountPolicy() == nullptr, "policy is optional");
+	first.setStorageMountPolicy(&policy);
+	expect(context.storageMountPolicy() == &policy, "context resolves OS policy");
+	expect(context.createChild({}).storageMountPolicy() == &policy, "child inherits policy");
+	expect(second.createAppContext({}).storageMountPolicy() == nullptr, "policy does not leak between OS instances");
+	first.setStorageMountPolicy(nullptr);
+	expect(context.storageMountPolicy() == nullptr, "policy can be detached");
+	expect(lexxos::os::AppContext{}.storageMountPolicy() == nullptr, "unbound context has no policy");
 }
 
 void checkRenameInheritsMoveRuntime() {
@@ -82,6 +114,7 @@ void resetFakeState() {
 }
 
 void writeConsole(std::string_view text) {
+	g_consoleWrites.emplace_back(text);
 	g_console.append(text.data(), text.size());
 }
 
@@ -99,8 +132,8 @@ std::uint32_t uptimeMs() {
 	return g_uptimeMs;
 }
 
-lexxos::platform::BoardDescriptor const& fakeBoard() {
-	static constexpr lexxos::platform::BoardDescriptor board{
+lexxos::platform::LegacyBoardDescriptor const& fakeBoard() {
+	static constexpr lexxos::platform::LegacyBoardDescriptor board{
 	    .boardId = "contract-dev-board",
 	    .boardName = "Contract Dev Board",
 	    .vendor = "LexxOS tests",
@@ -162,8 +195,8 @@ lexxos::platform::PlatformServices const& fakeServices() {
 	return services;
 }
 
-lexxos::platform::BoardDescriptor const& capabilityBoard() {
-	static constexpr lexxos::platform::BoardDescriptor board{
+lexxos::platform::LegacyBoardDescriptor const& capabilityBoard() {
+	static constexpr lexxos::platform::LegacyBoardDescriptor board{
 	    .boardId = "capability-dev-board",
 	    .boardName = "Capability Dev Board",
 	    .vendor = "LexxOS tests",
@@ -569,12 +602,14 @@ public:
 			output.ready = true;
 			return true;
 		}
+
 		if (path == "/fake.gb") {
 			output.type = lexxos::vfs::NodeType::RegularFile;
 			output.sizeBytes = _size;
 			output.ready = true;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -582,6 +617,7 @@ public:
 		if (path != "/") {
 			return false;
 		}
+
 		return visitor(
 		    {
 		        .name = "fake.gb",
@@ -601,9 +637,11 @@ public:
 		if (path != "/fake.gb") {
 			return lexxos::vfs::ReadStatus::NotFound;
 		}
+
 		if (buffer == nullptr) {
 			return lexxos::vfs::ReadStatus::InvalidPath;
 		}
+
 		if (offset >= _size || capacity == 0) {
 			return lexxos::vfs::ReadStatus::Ok;
 		}
@@ -644,12 +682,14 @@ public:
 			output.ready = true;
 			return true;
 		}
+
 		if (path == "/.lexx/shell.conf" && _hasConfigFile) {
 			output.type = lexxos::vfs::NodeType::RegularFile;
 			output.sizeBytes = _config.size();
 			output.ready = true;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -657,6 +697,7 @@ public:
 		if (path == "/" && _hasConfigDirectory) {
 			return visitor({.name = ".lexx", .type = lexxos::vfs::NodeType::Directory}, userData);
 		}
+
 		if (path == "/.lexx" && _hasConfigFile) {
 			return visitor(
 			    {
@@ -666,6 +707,7 @@ public:
 			    },
 			    userData);
 		}
+
 		return path == "/" || path == "/.lexx";
 	}
 
@@ -679,12 +721,15 @@ public:
 		if (path != "/.lexx/shell.conf" || !_hasConfigFile) {
 			return lexxos::vfs::ReadStatus::NotFound;
 		}
+
 		if (buffer == nullptr) {
 			return lexxos::vfs::ReadStatus::InvalidPath;
 		}
+
 		if (offset >= _config.size() || capacity == 0) {
 			return lexxos::vfs::ReadStatus::Ok;
 		}
+
 		auto const available = _config.size() - static_cast<std::size_t>(offset);
 		bytesRead = std::min(available, capacity);
 		std::memcpy(buffer, _config.data() + offset, bytesRead);
@@ -703,9 +748,11 @@ public:
 		if (path != "/.lexx/shell.conf") {
 			return lexxos::vfs::WriteStatus::InvalidPath;
 		}
+
 		if (!_hasConfigDirectory) {
 			return lexxos::vfs::WriteStatus::NotFound;
 		}
+
 		_pending = mode == lexxos::vfs::WriteMode::Append && _hasConfigFile ? _config : std::string{};
 		_writeOpen = true;
 		return lexxos::vfs::WriteStatus::Ok;
@@ -715,17 +762,21 @@ public:
 		if (path != "/.lexx/shell.conf" || !_writeOpen) {
 			return lexxos::vfs::WriteStatus::NotWritable;
 		}
+
 		if (offset > _pending.size()) {
 			return lexxos::vfs::WriteStatus::InvalidPath;
 		}
+
 		auto const position = static_cast<std::size_t>(offset);
 		if (position == _pending.size()) {
 			_pending.append(data);
 			return lexxos::vfs::WriteStatus::Ok;
 		}
+
 		if (position + data.size() > _pending.size()) {
 			_pending.resize(position + data.size());
 		}
+
 		_pending.replace(position, data.size(), data);
 		return lexxos::vfs::WriteStatus::Ok;
 	}
@@ -734,6 +785,7 @@ public:
 		if (path != "/.lexx/shell.conf" || !_writeOpen) {
 			return;
 		}
+
 		_config = _pending;
 		_pending.clear();
 		_hasConfigFile = true;
@@ -799,11 +851,13 @@ void writeUnsignedImpl(lexxos::os::AppContext& context, std::uint64_t value) {
 		context.write("0");
 		return;
 	}
+
 	while (value != 0 && position > 0) {
 		--position;
 		buffer[position] = static_cast<char>('0' + (value % 10));
 		value /= 10;
 	}
+
 	context.write(&buffer[position]);
 }
 
@@ -900,6 +954,7 @@ std::array<std::uint8_t, lexxos::gameboy::Cartridge::romBankSize * 2U> makeTestR
 	for (std::size_t offset = 0x134; offset <= 0x14CU; ++offset) {
 		checksum = static_cast<std::uint8_t>(checksum - rom[offset] - 1U);
 	}
+
 	rom[lexxos::gameboy::cartridgeHeaderChecksumOffset] = checksum;
 	return rom;
 }
@@ -937,6 +992,43 @@ void checkExternalConsoleOutputPreservesShellInputLine() {
 	std::string const expected =
 	    "lexx:/> ps\r\x1B[Kwifi-autoconnect: connecting to <SSID>\r\n\rlexx:/> ps\x1B[K";
 	expect(g_console.find(expected) != std::string::npos, "external console output redraws active shell input line");
+}
+
+void checkConsoleMirrorSuspensionSurvivesFocusModeChanges() {
+	namespace app = lexxos::app;
+	app::console_mirror::setMode(app::ConsoleMirrorMode::Text);
+	expect(!app::console_mirror::isSuspended(), "mirror initially active");
+	{
+		app::ScopedConsoleMirrorSuspension outer;
+		expect(app::console_mirror::isSuspended(), "mirror suspension inactive");
+
+		{
+			app::ScopedConsoleMirrorSuspension inner;
+			app::console_mirror::setMode(app::ConsoleMirrorMode::Text); // input task reapplies focus
+			expect(app::console_mirror::isSuspended(), "focus must not override suspension");
+		}
+
+		expect(app::console_mirror::isSuspended(), "nested scope prematurely resumed mirror");
+	}
+	expect(!app::console_mirror::isSuspended() && app::console_mirror::mode() == app::ConsoleMirrorMode::Text, "suspension changed focus mode");
+}
+
+void checkNormalizedConsoleRecords() {
+	resetFakeState();
+	lexxos::app::console_output::setInteractiveLineGuard({});
+	g_consoleWrites.clear();
+	bool cr = false;
+	lexxos::app::console_output::writeNormalized(fakeServices(), "section\tmetric\tvalue\n", cr);
+	expect(g_consoleWrites.size() == 1 && g_consoleWrites[0] == "section\tmetric\tvalue\r\n", "short record must be one platform write");
+	g_console.clear();
+	lexxos::app::console_output::writeNormalized(fakeServices(), "one\r", cr);
+	lexxos::app::console_output::writeNormalized(fakeServices(), "\ntwo\nthree\r\n", cr);
+	expect(g_console == "one\r\ntwo\r\nthree\r\n" && !cr, "CRLF across write boundary was duplicated");
+	g_console.clear();
+	std::string longRecord(1200, 'x');
+	longRecord += "\n";
+	lexxos::app::console_output::writeNormalized(fakeServices(), longRecord, cr);
+	expect(g_console == std::string(1200, 'x') + "\r\n", "bounded buffer truncated long output");
 }
 
 void checkPathCompletionKeepsLongFileNames() {
@@ -1073,7 +1165,13 @@ void checkSensitiveShellHistory() {
 	shell.feed(0x03);
 
 	// Simulate SD history written by old firmware, including unavailable Wi-Fi commands.
-	std::string_view legacy = "autosuggest=on\nhistory=fake safe-import\nhistory=wifi-connect TestNet OldSecret\nhistory=wifi-config set TestNet OldSecret\nhistory=test-login OldSecret\n";
+	std::string_view legacy =
+	    "autosuggest=on\n"
+	    "  history=fake safe-\\x69mport\n"
+	    "history=wi\\x66i-connect TestNet OldSecret\n"
+	    "history=wifi-config set TestNet OldSecret\n"
+	    "history=test-login OldSecret\n"
+	    "history=fake malformed-\\xGG\n";
 	expect(filesystem.beginWrite("/.lexx/shell.conf", lexxos::vfs::WriteMode::CreateTruncate) == lexxos::vfs::WriteStatus::Ok,
 	    "open legacy history");
 	expect(filesystem.write("/.lexx/shell.conf", 0, legacy) == lexxos::vfs::WriteStatus::Ok, "seed legacy history");
@@ -1089,6 +1187,10 @@ void checkSensitiveShellHistory() {
 	restored.feed(0x03);
 	expect(restored.saveShellConfig(), "rewrite sanitized legacy history");
 	expect(filesystem.config().find("OldSecret") == std::string_view::npos, "legacy secrets removed on save");
+	expect(filesystem.config().find("history=fake safe-import\n") != std::string_view::npos,
+	    "escaped ordinary history decoded on import");
+	expect(filesystem.config().find("malformed-") == std::string_view::npos,
+	    "history with invalid escape skipped on import");
 }
 
 void checkStorageProgramUsesFakeServicesAndDeviceManager() {
@@ -1297,11 +1399,12 @@ namespace lexxos::platform {
 void initialize() {
 }
 
-BoardDescriptor const& board() {
+LegacyBoardDescriptor const& board() {
 	return fakeBoard();
 }
 
 void writeConsole(std::string_view text) {
+	g_consoleWrites.emplace_back(text);
 	::writeConsole(text);
 }
 
@@ -1475,9 +1578,12 @@ BlockDevice* blockDevice(lexxos::platform::PlatformServices const&) {
 } // namespace lexxos::devices::sd_card
 
 int main() {
+	checkStorageMountPolicyIsolation();
 	checkRenameInheritsMoveRuntime();
 	checkShellUsesInjectedConsoleService();
 	checkExternalConsoleOutputPreservesShellInputLine();
+	checkNormalizedConsoleRecords();
+	checkConsoleMirrorSuspensionSurvivesFocusModeChanges();
 	checkPathCompletionKeepsLongFileNames();
 	checkShellAutosuggestUsesHistory();
 	checkShellConfigPersistsHistoryAndAutosuggest();

@@ -7,6 +7,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec displayFillArguments[] = {
@@ -64,6 +65,7 @@ int DisplayFillProgram::run(
 		context.writeErrorLine("display-fill: failed to clear display");
 		return 1;
 	}
+
 	context.writeLine("display-fill: ok");
 	return 0;
 }

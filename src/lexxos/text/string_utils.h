@@ -15,6 +15,7 @@ inline std::size_t length(char const* text, std::size_t maxLength = static_cast<
 	while (size < maxLength && text[size] != '\0') {
 		++size;
 	}
+
 	return size;
 }
 
@@ -29,6 +30,7 @@ inline int compare(std::string_view left, std::string_view right) {
 		if (result < 0) {
 			return -1;
 		}
+
 		if (result > 0) {
 			return 1;
 		}
@@ -37,6 +39,7 @@ inline int compare(std::string_view left, std::string_view right) {
 	if (left.size() == right.size()) {
 		return 0;
 	}
+
 	return left.size() < right.size() ? -1 : 1;
 }
 
@@ -62,6 +65,7 @@ inline int comparePrefix(std::string_view left, std::string_view right, std::siz
 		if (result < 0) {
 			return -1;
 		}
+
 		if (result > 0) {
 			return 1;
 		}
@@ -70,6 +74,7 @@ inline int comparePrefix(std::string_view left, std::string_view right, std::siz
 	if (leftCount == rightCount) {
 		return 0;
 	}
+
 	return leftCount < rightCount ? -1 : 1;
 }
 
@@ -97,11 +102,13 @@ inline bool equalsIgnoreCaseAscii(std::string_view left, std::string_view right)
 	if (left.size() != right.size()) {
 		return false;
 	}
+
 	for (std::size_t index = 0; index < left.size(); ++index) {
 		if (toLowerAscii(left[index]) != toLowerAscii(right[index])) {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -118,6 +125,7 @@ inline bool contains(std::string_view value, std::string_view needle) {
 	if (needle.empty()) {
 		return true;
 	}
+
 	if (needle.size() > value.size()) {
 		return false;
 	}
@@ -127,6 +135,7 @@ inline bool contains(std::string_view value, std::string_view needle) {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -158,9 +167,11 @@ inline bool copy(char* output, std::size_t outputCapacity, std::string_view sour
 	if (output == nullptr || outputCapacity == 0 || source.size() + 1 > outputCapacity) {
 		return false;
 	}
+
 	if (!source.empty()) {
 		std::memcpy(output, source.data(), source.size());
 	}
+
 	output[source.size()] = '\0';
 	return true;
 }
@@ -173,9 +184,11 @@ inline bool copyRaw(char* output, std::size_t outputCapacity, std::string_view s
 	if (source.size() > outputCapacity || (output == nullptr && !source.empty())) {
 		return false;
 	}
+
 	if (!source.empty()) {
 		std::memcpy(output, source.data(), source.size());
 	}
+
 	return true;
 }
 

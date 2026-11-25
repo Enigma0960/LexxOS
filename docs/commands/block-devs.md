@@ -1,6 +1,6 @@
 # `block-devs`
 
-show registered block devices.
+Показывает зарегистрированные блочные устройства.
 
 ## Справка shell
 

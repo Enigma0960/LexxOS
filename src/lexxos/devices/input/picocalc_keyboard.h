@@ -8,7 +8,9 @@
 #include <lexxos/devices/input_device.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices {

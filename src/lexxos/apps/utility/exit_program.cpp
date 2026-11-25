@@ -21,6 +21,7 @@ int ExitProgram::run(lexxos::os::AppContext& context, lexxos::program::ProgramIn
 	if (auto* shell = context.shell(); shell != nullptr) {
 		shell->requestStop();
 	}
+
 	lexxos::kernel::requestShutdown();
 #else
 	context.writeLine("exit is available only on host or simulator platform");

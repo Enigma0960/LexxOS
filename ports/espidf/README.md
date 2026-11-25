@@ -59,7 +59,7 @@ Wrapper сам перейдёт в корень проекта и запусти
 
 Этот каталог всё ещё содержит данные ESP-IDF порта:
 
-- `components/lexxos` — ESP-IDF component LexxOS;
+- `components/lexxos` — компонент LexxOS для ESP-IDF;
 - `sdkconfig.defaults` — настройки ESP-IDF по умолчанию;
 - `partitions_m5stack_basic_v1_4mb.csv` — partition table для M5Stack Basic v1;
 - `CMakePresets.legacy.json` — старые presets для справки.
@@ -73,9 +73,12 @@ Wrapper сам перейдёт в корень проекта и запусти
 В CLion нужно открывать только корень репозитория LexxOS. Профиль ESP32 должен
 выбираться в общем списке CMake profiles как `debug-esp32`.
 
-# LexxOS ESP-IDF port
+## История первичного запуска ESP-IDF
 
-Эта папка содержит отдельный ESP-IDF проект для запуска LexxOS на ESP32.
+Ниже сохранено описание раннего порта. Команды отдельного проекта относятся
+к той версии; для актуальной сборки используйте инструкции в начале документа.
+
+Первоначально эта папка содержала отдельный ESP-IDF проект для запуска LexxOS на ESP32.
 Первый поддерживаемый профиль платы — `m5stack_basic_v1`.
 
 Текущий bring-up поднимает:
@@ -287,7 +290,7 @@ m5stack-buttons
 Кнопки читаются как `a`, `b`, `c` и доступны через `input-test`,
 `keyboard-live` и `keyboard-raw`.
 
-## SPI backend
+## Реализация SPI
 
 Команда `esp32-spi-test` инициализирует общую SPI-шину M5Stack Basic
 по board descriptor и отправляет 10 idle-байт `0xFF` при неактивном CS.

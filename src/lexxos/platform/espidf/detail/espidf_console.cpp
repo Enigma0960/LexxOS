@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <cstring>
 
+#include <driver/gpio.h>
 #include <driver/uart.h>
 #include <esp_err.h>
-#include <freertos/FreeRTOS.h>
 #include <soc/soc_caps.h>
 
+#include <freertos/FreeRTOS.h>
 #include <lexxos/platform/platform.h>
 
 #ifndef SOC_USB_SERIAL_JTAG_SUPPORTED
@@ -64,12 +65,19 @@ void initializeUartConsole() {
 	if (uart_param_config(uart, &config) != ESP_OK) {
 		return;
 	}
+
 	if (uart_set_pin(uart, toEspGpio(pins.tx), toEspGpio(pins.rx), UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
 		return;
 	}
+	// Keep an unplugged external UART RX at its idle level.
+	if (pins.rx.isValid()) {
+		(void) gpio_set_pull_mode(static_cast<gpio_num_t>(pins.rx.number), GPIO_PULLUP_ONLY);
+	}
+
 	if (uart_driver_install(uart, consoleBufferBytes, 0, 0, nullptr, 0) != ESP_OK) {
 		return;
 	}
+
 	g_uartConsoleReady = true;
 }
 
@@ -159,5 +167,6 @@ std::size_t lexxos::platform::readConsoleAvailable(char* buffer, std::size_t cap
 	if (uartBytesRead > 0) {
 		count += static_cast<std::size_t>(uartBytesRead);
 	}
+
 	return count;
 }

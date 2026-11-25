@@ -1,29 +1,26 @@
-#include <lexxos/kernel/scheduler.h>
-
 #include <algorithm>
 #include <array>
 #include <cstdint>
 
 #include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <freertos/task.h>
-
+#include <lexxos/kernel/espidf/task_registry_guard.h>
 #include <lexxos/kernel/freertos/freertos_scheduler_types.h>
+#include <lexxos/kernel/scheduler.h>
+#include <lexxos/kernel/task_policy.h>
 
 namespace {
 
+using lexxos::kernel::espidf::detail::TaskRegistryGuard;
 using lexxos::kernel::freertos::detail::FreeRtosTask;
+
+// Mutex допускает блокирующие API FreeRTOS и защищает реестр на обоих ядрах.
+StaticSemaphore_t g_registryMutexStorage;
+SemaphoreHandle_t const g_registryMutex = xSemaphoreCreateMutexStatic(&g_registryMutexStorage);
 
 constexpr std::size_t maxTasks = 8;
 std::array<FreeRtosTask, maxTasks> g_tasks{};
-
-configSTACK_DEPTH_TYPE stackSizeToDepth(std::uint32_t stackSizeBytes) {
-	auto const depth = stackSizeBytes / static_cast<std::uint32_t>(sizeof(StackType_t));
-	return static_cast<configSTACK_DEPTH_TYPE>(std::max<std::uint32_t>(depth, configMINIMAL_STACK_SIZE));
-}
-
-std::uint32_t stackDepthToBytes(configSTACK_DEPTH_TYPE stackDepth) {
-	return static_cast<std::uint32_t>(stackDepth) * static_cast<std::uint32_t>(sizeof(StackType_t));
-}
 
 TickType_t millisecondsToTicks(std::uint32_t milliseconds) {
 	auto const ticks = pdMS_TO_TICKS(milliseconds);
@@ -41,20 +38,46 @@ int effectiveCoreAffinity(int coreAffinity) {
 	if (coreAffinity >= 0 && coreAffinity <= 1) {
 		return coreAffinity;
 	}
+
 	return 0;
 #endif
 }
 
 void taskTrampoline(void* parameter) {
 	auto& task = *static_cast<FreeRtosTask*>(parameter);
-	task.snapshot.started = true;
+	{
+		// Создатель удерживает mutex до публикации handle: задача может стартовать на другом ядре.
+		TaskRegistryGuard guard;
+		task.snapshot.started = true;
+	}
+
 	task.entry(task.userData);
-	task.snapshot.started = false;
-	task.handle = nullptr;
-	task.entry = nullptr;
-	task.userData = nullptr;
-	task.allocated = false;
-	vTaskDelete(nullptr);
+	{
+		TaskRegistryGuard guard;
+		task.snapshot.started = false;
+		task.retiring = true;
+	}
+
+	// Слот остаётся занят до подтверждённой остановки trampoline и удаления задачи.
+	for (;;) {
+		vTaskSuspend(nullptr);
+	}
+}
+
+std::size_t reapRetiredTasks() {
+	TaskRegistryGuard guard;
+	std::size_t count = 0;
+	for (auto& task : g_tasks) {
+		if (!task.allocated || !task.retiring || task.handle == nullptr || eTaskGetState(task.handle) != eSuspended) {
+			continue;
+		}
+
+		vTaskDelete(task.handle);
+		task = FreeRtosTask{};
+		++count;
+	}
+
+	return count;
 }
 
 FreeRtosTask* allocateTaskSlot() {
@@ -64,15 +87,16 @@ FreeRtosTask* allocateTaskSlot() {
 			return &task;
 		}
 	}
+
 	return nullptr;
 }
 
-BaseType_t createEspIdfTask(FreeRtosTask& task, configSTACK_DEPTH_TYPE stackDepth, std::uint8_t priority) {
+BaseType_t createEspIdfTask(FreeRtosTask& task, std::uint32_t stackSizeBytes, UBaseType_t priority) {
 #if CONFIG_FREERTOS_UNICORE
 	return xTaskCreate(
 	    taskTrampoline,
 	    task.snapshot.name,
-	    stackDepth,
+	    stackSizeBytes,
 	    &task,
 	    static_cast<UBaseType_t>(priority),
 	    &task.handle);
@@ -82,7 +106,7 @@ BaseType_t createEspIdfTask(FreeRtosTask& task, configSTACK_DEPTH_TYPE stackDept
 		return xTaskCreatePinnedToCore(
 		    taskTrampoline,
 		    task.snapshot.name,
-		    stackDepth,
+		    stackSizeBytes,
 		    &task,
 		    static_cast<UBaseType_t>(priority),
 		    &task.handle,
@@ -92,7 +116,7 @@ BaseType_t createEspIdfTask(FreeRtosTask& task, configSTACK_DEPTH_TYPE stackDept
 	return xTaskCreate(
 	    taskTrampoline,
 	    task.snapshot.name,
-	    stackDepth,
+	    stackSizeBytes,
 	    &task,
 	    static_cast<UBaseType_t>(priority),
 	    &task.handle);
@@ -101,32 +125,56 @@ BaseType_t createEspIdfTask(FreeRtosTask& task, configSTACK_DEPTH_TYPE stackDept
 
 } // namespace
 
+namespace lexxos::kernel::espidf::detail {
+
+TaskRegistryGuard::TaskRegistryGuard() {
+	auto const locked = xSemaphoreTake(g_registryMutex, portMAX_DELAY);
+	configASSERT(locked == pdTRUE);
+	(void) locked;
+}
+
+TaskRegistryGuard::~TaskRegistryGuard() {
+	(void) xSemaphoreGive(g_registryMutex);
+}
+
+} // namespace lexxos::kernel::espidf::detail
+
 namespace lexxos::kernel {
 
 bool createTask(TaskEntry entry, void* userData, TaskOptions options) {
-	if (entry == nullptr) {
+	if (entry == nullptr || options.stackSizeBytes == 0U || !validTaskPriority(options.priority, configMAX_PRIORITIES) || !validTaskCoreAffinity(options.coreAffinity,
+#if CONFIG_FREERTOS_UNICORE
+	        1
+#else
+	        2
+#endif
+	        )) {
 		return false;
 	}
 
-	auto const stackDepth = stackSizeToDepth(options.stackSizeBytes);
+	// В ESP-IDF размер стека и high-water mark выражаются в байтах, независимо от StackType_t.
+	auto const stackSizeBytes = std::max<std::uint32_t>(options.stackSizeBytes, configMINIMAL_STACK_SIZE);
+	reapRetiredTasks();
+	TaskRegistryGuard guard;
 	auto* const taskSlot = allocateTaskSlot();
 	if (taskSlot == nullptr) {
 		return false;
 	}
+
 	auto& task = *taskSlot;
 	auto const coreAffinity = effectiveCoreAffinity(options.coreAffinity);
 	task.entry = entry;
 	task.userData = userData;
 	task.snapshot = TaskSnapshot{
 	    .name = options.name,
-	    .stackSizeBytes = stackDepthToBytes(stackDepth),
+	    .stackSizeBytes = stackSizeBytes,
 	    .priority = options.priority,
 	    .started = false,
 	    .executionClass = options.executionClass,
 	    .coreAffinity = coreAffinity,
 	};
 
-	auto const result = createEspIdfTask(task, stackDepth, options.priority);
+	auto const result = createEspIdfTask(task, stackSizeBytes, options.priority);
 	if (result != pdPASS) {
 		task = FreeRtosTask{};
 		return false;
@@ -154,13 +202,19 @@ void yield() {
 	taskYIELD();
 }
 
+std::size_t reapFinishedTasks() {
+	return reapRetiredTasks();
+}
+
 std::size_t taskCount() {
+	TaskRegistryGuard guard;
 	std::size_t count = 0;
 	for (auto const& task : g_tasks) {
-		if (task.allocated) {
+		if (task.allocated && !task.retiring) {
 			++count;
 		}
 	}
+
 	return count;
 }
 
@@ -169,17 +223,25 @@ void visitTasks(TaskVisitor visitor, void* userData) {
 		return;
 	}
 
-	for (auto const& task : g_tasks) {
-		if (!task.allocated) {
-			continue;
-		}
+	std::array<TaskSnapshot, maxTasks> snapshots{};
+	std::size_t count = 0;
+	{
+		TaskRegistryGuard guard;
+		for (auto const& task : g_tasks) {
+			if (!task.allocated || task.retiring) {
+				continue;
+			}
 
-		auto snapshot = task.snapshot;
-		if (task.handle != nullptr) {
-			snapshot.stackFreeBytes = static_cast<std::uint32_t>(uxTaskGetStackHighWaterMark(task.handle))
-			    * static_cast<std::uint32_t>(sizeof(StackType_t));
+			auto& snapshot = snapshots[count++];
+			snapshot = task.snapshot;
+			if (task.handle != nullptr) {
+				snapshot.stackFreeBytes = static_cast<std::uint32_t>(uxTaskGetStackHighWaterMark(task.handle));
+			}
 		}
-		visitor(snapshot, userData);
+	}
+	// Пользовательский callback может повторно обратиться к реестру.
+	for (std::size_t i = 0; i < count; ++i) {
+		visitor(snapshots[i], userData);
 	}
 }
 

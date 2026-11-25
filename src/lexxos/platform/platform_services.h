@@ -2,9 +2,20 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string_view>
 
 #include <lexxos/platform/platform.h>
+
+namespace lexxos::devices {
+
+class I2cBus;
+class SpiController;
+class AnalogInput;
+class AnalogOutput;
+class PwmOutput;
+
+} // namespace lexxos::devices
 
 namespace lexxos::platform {
 
@@ -13,13 +24,15 @@ struct PlatformLifecycleService {
 };
 
 struct PlatformBoardService {
-	BoardDescriptor const& (*current)(){nullptr};
+	LegacyBoardDescriptor const& (*current)(){nullptr};
 };
 
 struct PlatformConsoleService {
 	void (*write)(std::string_view text){nullptr};
 	bool (*readChar)(char& value){nullptr};
 	std::size_t (*readAvailable)(char* buffer, std::size_t capacity){nullptr};
+	// Optional byte-exact output for consoles whose text writer translates newlines.
+	void (*writeRaw)(std::string_view bytes){nullptr};
 };
 
 struct PlatformClockService {
@@ -62,6 +75,11 @@ struct PlatformServices {
 	PlatformPowerService power{};
 	PlatformFlashRegionService flashRegions{};
 	PlatformExternalMemoryRegionService externalMemory{};
+	std::unique_ptr<devices::I2cBus> (*createI2cBus)(){nullptr};
+	std::unique_ptr<devices::SpiController> (*createSpiController)(){nullptr};
+	std::unique_ptr<devices::AnalogInput> (*createAnalogInput)(AnalogInputConfig const&){nullptr};
+	std::unique_ptr<devices::PwmOutput> (*createPwmOutput)(PwmOutputConfig const&){nullptr};
+	std::unique_ptr<devices::AnalogOutput> (*createAnalogOutput)(AnalogOutputConfig const&){nullptr};
 };
 
 [[nodiscard]] PlatformServices const& services();

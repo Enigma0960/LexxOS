@@ -136,6 +136,7 @@ bool St7735Display::configureBusSpeed(std::uint32_t hz) {
 	if (actual == 0) {
 		return false;
 	}
+
 	_config.spiBaudRate = actual;
 	return true;
 #else
@@ -167,6 +168,7 @@ bool St7735Display::setPowerMode(DisplayPowerMode mode) {
 				_writeCommand(commandSleepOut);
 				_sleepMs(120);
 			}
+
 			_writeCommand(commandDisplayOn);
 			_sleepMs(50);
 			_setBacklight(true);
@@ -178,6 +180,7 @@ bool St7735Display::setPowerMode(DisplayPowerMode mode) {
 				_writeCommand(commandSleepOut);
 				_sleepMs(120);
 			}
+
 			_writeCommand(commandDisplayOff);
 			_powerMode = DisplayPowerMode::Off;
 			return true;
@@ -190,6 +193,7 @@ bool St7735Display::setPowerMode(DisplayPowerMode mode) {
 			_powerMode = DisplayPowerMode::Sleep;
 			return true;
 	}
+
 	return false;
 }
 
@@ -233,6 +237,7 @@ bool St7735Display::blitRgb565(Rect const& rect, std::uint16_t const* pixels, in
 			return false;
 		}
 	}
+
 	return endRgb565Stream();
 }
 
@@ -294,6 +299,7 @@ bool St7735Display::_configurePins() {
 	if (!_configureOutput(_config.cs, true) || !_configureOutput(_config.dc, false) || !_configureOutput(_config.reset, true) || (_config.backlight.isValid() && !_configureOutput(_config.backlight, false))) {
 		return false;
 	}
+
 	if (_config.spiIndex >= 0) {
 #if defined(LEXXOS_PLATFORM_PICO)
 		auto* spi = displaySpiInstance(_config.spiIndex);
@@ -310,6 +316,7 @@ bool St7735Display::_configurePins() {
 		return false;
 #endif
 	}
+
 	return _configureOutput(_config.sck, false) && _configureOutput(_config.mosi, false);
 }
 
@@ -358,6 +365,7 @@ void St7735Display::_writeBytes(std::uint8_t const* data, std::size_t size) {
 			while (spi_is_busy(spi)) {
 				tight_loop_contents();
 			}
+
 			return;
 		}
 
@@ -372,6 +380,7 @@ void St7735Display::_writeBytes(std::uint8_t const* data, std::size_t size) {
 			_writeGpio(_config.mosi, ((value >> bit) & 0x01U) != 0);
 			_writeGpio(_config.sck, true);
 		}
+
 		_writeGpio(_config.sck, false);
 	}
 }
@@ -380,6 +389,7 @@ void St7735Display::_writePixels(std::uint16_t const* pixels, int count) {
 	if (pixels == nullptr || count <= 0) {
 		return;
 	}
+
 	std::array<std::uint8_t, pixelBurstCount * 2> buffer{};
 	int offset = 0;
 	while (offset < count) {
@@ -389,6 +399,7 @@ void St7735Display::_writePixels(std::uint16_t const* pixels, int count) {
 			buffer[static_cast<std::size_t>(index * 2)] = highByte(pixel);
 			buffer[static_cast<std::size_t>(index * 2 + 1)] = lowByte(pixel);
 		}
+
 		_writeBytes(buffer.data(), static_cast<std::size_t>(chunk * 2));
 		offset += chunk;
 	}
@@ -398,11 +409,13 @@ void St7735Display::_writeRepeatedPixel(std::uint16_t rgb565, int count) {
 	if (count <= 0) {
 		return;
 	}
+
 	std::array<std::uint8_t, pixelBurstCount * 2> buffer{};
 	for (int index = 0; index < pixelBurstCount; ++index) {
 		buffer[static_cast<std::size_t>(index * 2)] = highByte(rgb565);
 		buffer[static_cast<std::size_t>(index * 2 + 1)] = lowByte(rgb565);
 	}
+
 	while (count > 0) {
 		auto const chunk = count > pixelBurstCount ? pixelBurstCount : count;
 		_writeBytes(buffer.data(), static_cast<std::size_t>(chunk * 2));

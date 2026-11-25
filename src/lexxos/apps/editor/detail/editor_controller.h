@@ -5,7 +5,9 @@
 #include <lexxos/apps/editor/detail/text_editor_types.h>
 
 namespace lexxos::os {
+
 class AppContext;
+
 } // namespace lexxos::os
 
 namespace lexxos::apps::text_editor_programs::detail {

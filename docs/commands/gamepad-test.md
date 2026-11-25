@@ -1,6 +1,6 @@
 # `gamepad-test`
 
-print current gamepad state.
+Показывает текущее состояние геймпада.
 
 ## Справка shell
 

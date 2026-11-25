@@ -44,6 +44,7 @@ struct OwnedProgramArguments {
 			argv[static_cast<std::size_t>(index)] = target;
 			offset += length + 1;
 		}
+
 		argc = sourceArgc;
 		return true;
 	}

@@ -60,10 +60,10 @@ class CommandDocumentationTests(unittest.TestCase):
             for flavor, expected in [('minimal', 'OFF'), ('standard', 'OFF'), ('full', 'ON')]:
                 script.write_text(f"""set(LEXXOS_BUILD_FLAVOR {flavor} CACHE STRING "")
 set(LEXXOS_FEATURE_GPIO_ANALYZER ON CACHE BOOL "")
-include("{ROOT / 'cmake/Features.cmake'}")
+include("{ROOT / 'config/cmake/Features.cmake'}")
 if (NOT LEXXOS_FEATURE_GPIO_ANALYZER STREQUAL "{expected}")
     message(FATAL_ERROR "Unexpected analyzer feature")
 endif ()
 """)
-                result = subprocess.run(['cmake', '-P', str(script)], capture_output=True, text=True)
+                result = subprocess.run(['cmake', '-P', str(script)], cwd=directory, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

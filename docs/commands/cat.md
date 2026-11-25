@@ -1,6 +1,6 @@
 # `cat`
 
-print readable VFS file or stdin.
+Выводит содержимое файла VFS или стандартного ввода.
 
 ## Справка shell
 

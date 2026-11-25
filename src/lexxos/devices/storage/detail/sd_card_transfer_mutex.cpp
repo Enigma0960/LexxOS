@@ -12,10 +12,12 @@ bool SdCardTransferMutex::lock() {
 	if (!ensureCreated()) {
 		return false;
 	}
+
 	return xSemaphoreTakeRecursive(_mutex, portMAX_DELAY) == pdTRUE;
 #else
 	while (_locked.test_and_set(std::memory_order_acquire)) {
 	}
+
 	return true;
 #endif
 }

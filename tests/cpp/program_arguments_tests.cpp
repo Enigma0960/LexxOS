@@ -1,8 +1,8 @@
-#include <lexxos/program/arguments.h>
-
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
+
+#include <lexxos/program/arguments.h>
 
 namespace {
 

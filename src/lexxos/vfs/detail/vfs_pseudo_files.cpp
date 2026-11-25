@@ -83,6 +83,7 @@ bool listEntries(
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -99,6 +100,7 @@ bool listFiles(
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -108,6 +110,7 @@ void readProcMemInfo(lexxos::vfs::TextWriter writer, void* userData) {
 		writeLine(writer, userData, "MemAvailable: n/a");
 		return;
 	}
+
 	write(writer, userData, "MemFree: ");
 	writeUnsigned(writer, userData, memory.freeHeapBytes);
 	writeLine(writer, userData, " bytes");
@@ -122,6 +125,7 @@ void readProcTasks(lexxos::vfs::TextWriter writer, void* userData) {
 	lexxos::kernel::visitTasks(
 	    [](lexxos::kernel::TaskSnapshot const& task, void* callbackData) {
 		    auto const& target = *static_cast<lexxos::vfs::detail::TextWriterContext const*>(callbackData);
+
 		    write(target.writer, target.userData, task.name);
 		    write(target.writer, target.userData, " ");
 		    writeUnsigned(target.writer, target.userData, task.priority);
@@ -134,6 +138,7 @@ void readProcTasks(lexxos::vfs::TextWriter writer, void* userData) {
 		    write(target.writer, target.userData, " ");
 		    write(target.writer, target.userData, lexxos::kernel::toString(task.executionClass));
 		    write(target.writer, target.userData, " ");
+
 		    if (task.coreAffinity < 0) {
 			    writeLine(target.writer, target.userData, "any");
 		    } else {
@@ -149,6 +154,7 @@ void readProcUptime(
     lexxos::vfs::TextWriter writer,
     void* userData) {
 	auto const& clock = platform.clock;
+
 	writeUnsigned(writer, userData, clock.uptimeMs != nullptr ? clock.uptimeMs() : 0U);
 	writeLine(writer, userData, " ms");
 }
@@ -159,6 +165,7 @@ void readSysBoard(
     void* userData) {
 	auto const& boardService = platform.board;
 	auto const& board = boardService.current != nullptr ? boardService.current() : lexxos::platform::board();
+
 	write(writer, userData, "id: ");
 	writeLine(writer, userData, board.boardId);
 	write(writer, userData, "name: ");
@@ -179,6 +186,7 @@ void readSysStorage(lexxos::vfs::TextWriter writer, void* userData) {
 	} else {
 		writeLine(writer, userData, "not-configured");
 	}
+
 	write(writer, userData, "sd state: ");
 	writeLine(writer, userData, lexxos::devices::toString(lexxos::devices::sd_card::state()));
 	write(writer, userData, "sd type: ");
@@ -201,11 +209,22 @@ void lexxos::vfs::Vfs::initializePseudoFiles(lexxos::platform::PlatformServices 
 }
 
 bool lexxos::vfs::Vfs::isKnownDirectory(std::string_view path) const {
-	return detail::equals(path, "/") || detail::equals(path, "/dev") || detail::equals(path, "/mnt") || detail::equals(path, "/proc") || detail::equals(path, "/sys") || detail::equals(path, "/tmp");
+	return detail::equals(path, "/")
+	    || detail::equals(path, "/dev")
+	    || detail::equals(path, "/mnt")
+	    || detail::equals(path, "/proc")
+	    || detail::equals(path, "/sys")
+	    || detail::equals(path, "/sys/autostart")
+	    || detail::equals(path, "/tmp");
 }
 
 bool lexxos::vfs::Vfs::isKnownStaticFile(std::string_view path) const {
-	return detail::equals(path, "/proc/meminfo") || detail::equals(path, "/proc/tasks") || detail::equals(path, "/proc/uptime") || detail::equals(path, "/sys/board") || detail::equals(path, "/sys/storage") || detail::equals(path, "/dev/null");
+	return detail::equals(path, "/proc/meminfo")
+	    || detail::equals(path, "/proc/tasks")
+	    || detail::equals(path, "/proc/uptime")
+	    || detail::equals(path, "/sys/board")
+	    || detail::equals(path, "/sys/storage")
+	    || detail::equals(path, "/dev/null");
 }
 
 bool lexxos::vfs::Vfs::statPseudoNode(std::string_view path, Stat& output) {
@@ -214,11 +233,13 @@ bool lexxos::vfs::Vfs::statPseudoNode(std::string_view path, Stat& output) {
 		output.ready = true;
 		return true;
 	}
+
 	if (isKnownStaticFile(path)) {
 		output.type = NodeType::RegularFile;
 		output.ready = true;
 		return true;
 	}
+
 	return false;
 }
 
@@ -229,12 +250,16 @@ bool lexxos::vfs::Vfs::listPseudoDirectory(
 	if (detail::equals(path, "/")) {
 		return listEntries(rootDirectories, visitor, userData);
 	}
+
 	if (detail::equals(path, "/proc")) {
 		return listFiles(procFiles, visitor, userData);
 	}
+
 	if (detail::equals(path, "/sys")) {
-		return listFiles(sysFiles, visitor, userData);
+		return listFiles(sysFiles, visitor, userData)
+		    && detail::visitEntry(visitor, userData, "autostart", NodeType::Directory);
 	}
+
 	return false;
 }
 
@@ -245,28 +270,35 @@ lexxos::vfs::ReadStatus lexxos::vfs::Vfs::readPseudoText(
 	if (isKnownDirectory(path)) {
 		return ReadStatus::IsDirectory;
 	}
+
 	if (detail::equals(path, "/dev/null")) {
 		return ReadStatus::Ok;
 	}
+
 	if (detail::equals(path, "/proc/meminfo")) {
 		readProcMemInfo(writer, userData);
 		return ReadStatus::Ok;
 	}
+
 	if (detail::equals(path, "/proc/tasks")) {
 		readProcTasks(writer, userData);
 		return ReadStatus::Ok;
 	}
+
 	if (detail::equals(path, "/proc/uptime")) {
 		readProcUptime(platformServices(), writer, userData);
 		return ReadStatus::Ok;
 	}
+
 	if (detail::equals(path, "/sys/board")) {
 		readSysBoard(platformServices(), writer, userData);
 		return ReadStatus::Ok;
 	}
+
 	if (detail::equals(path, "/sys/storage")) {
 		readSysStorage(writer, userData);
 		return ReadStatus::Ok;
 	}
+
 	return ReadStatus::NotFound;
 }

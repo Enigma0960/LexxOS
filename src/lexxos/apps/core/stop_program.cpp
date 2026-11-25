@@ -5,16 +5,17 @@
 #include <lexxos/program/program_supervisor.h>
 
 namespace lexxos::apps::system_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec stopArguments[] = {
 	    {
-         .name = "id",
-         .valueName = "id",
-         .help = "supervised process id",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = true,
+	     .name = "id",
+	     .valueName = "id",
+	     .help = "supervised process id",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = true,
 	     },
 	};
 

@@ -6,6 +6,7 @@ void LcdConsoleScrollback::reset() {
 	for (auto& row : _rows) {
 		row.fill(blankCharacter);
 	}
+
 	_head = 0;
 	_count = 0;
 	_droppedRows = 0;
@@ -15,6 +16,7 @@ bool LcdConsoleScrollback::storeRow(char const* cells, int columns) {
 	if (cells == nullptr || columns <= 0) {
 		return false;
 	}
+
 	if (columns > maxScrollbackColumns) {
 		columns = maxScrollbackColumns;
 	}
@@ -32,6 +34,7 @@ bool LcdConsoleScrollback::storeRow(char const* cells, int columns) {
 	} else {
 		++_droppedRows;
 	}
+
 	return droppedOldest;
 }
 

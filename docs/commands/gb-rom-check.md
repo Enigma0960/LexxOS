@@ -1,6 +1,6 @@
 # `gb-rom-check`
 
-verify repeated Game Boy ROM reads.
+Проверяет повторные чтения ROM Game Boy.
 
 ## Справка shell
 

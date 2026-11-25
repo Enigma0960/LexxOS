@@ -35,6 +35,7 @@ void writeUnsigned(std::uint32_t value) {
 		buffer[--position] = static_cast<char>('0' + (value % 10U));
 		value /= 10U;
 	} while (value != 0 && position != 0);
+
 	writeText({buffer + position, sizeof(buffer) - position});
 }
 

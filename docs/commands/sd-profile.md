@@ -1,6 +1,6 @@
 # `sd-profile`
 
-apply known SD SPI profile.
+Применяет известный профиль SPI для SD.
 
 ## Справка shell
 

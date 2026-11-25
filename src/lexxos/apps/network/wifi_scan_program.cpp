@@ -5,6 +5,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -14,38 +15,38 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec wifiScanArguments[] = {
 	    {
-         .name = "timeout",
-         .shortName = 't',
-         .valueName = "ms",
-         .help = "maximum time to wait for scan completion",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "10000",
+	     .name = "timeout",
+	     .shortName = 't',
+	     .valueName = "ms",
+	     .help = "maximum time to wait for scan completion",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "10000",
 	     },
 	    {
-         .name = "limit",
-         .shortName = 'n',
-         .valueName = "count",
-         .help = "maximum network results to print",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "24",
+	     .name = "limit",
+	     .shortName = 'n',
+	     .valueName = "count",
+	     .help = "maximum network results to print",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "24",
 	     },
 	    {
-         .name = "raw",
-         .shortName = 'r',
-         .help = "print raw backend scan records",
-         .kind = ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "raw",
+	     .shortName = 'r',
+	     .help = "print raw backend scan records",
+	     .kind = ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "bssid",
-         .shortName = 'b',
-         .help = "print access point BSSID",
-         .kind = ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "bssid",
+	     .shortName = 'b',
+	     .help = "print access point BSSID",
+	     .kind = ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	};
 

@@ -3,6 +3,10 @@
 #include <lexxos/app/runtime.h>
 
 int lexxos::app::run() {
+	return run(nullptr);
+}
+
+int lexxos::app::run(ProgramRegistrar registerPrograms) {
 	static Runtime runtime;
-	return runtime.run();
+	return runtime.run(registerPrograms);
 }

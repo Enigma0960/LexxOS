@@ -7,13 +7,17 @@
 #include <lexxos/app/console_mirror.h>
 
 namespace lexxos::os {
+
 class OperatingSystem;
-}
+
+} // namespace lexxos::os
 
 namespace lexxos::app::picocalc_lcd_console {
 
 struct ConsoleRenderStats {
 	std::uint32_t flushCalls{0};
+	std::uint32_t maxParseMs{0};
+	std::uint32_t maxFlushMs{0};
 	std::uint32_t refreshCalls{0};
 	std::uint32_t beginFrameCalls{0};
 	std::uint32_t beginFrameFailures{0};

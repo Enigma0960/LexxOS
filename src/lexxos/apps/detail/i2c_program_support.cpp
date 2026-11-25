@@ -38,6 +38,7 @@ namespace {
 		if (rowIndex >= devices.i2cBusCount()) {
 			return false;
 		}
+
 		auto const& descriptor = devices.i2cBusAt(rowIndex);
 		auto const status = devices.i2cBusStatusAt(rowIndex);
 		row.set(0, descriptor.name);
@@ -113,6 +114,7 @@ bool parseUnsigned(std::string_view text, std::uint32_t& output) {
 		if (digit >= base) {
 			return false;
 		}
+
 		value = value * base + digit;
 	}
 
@@ -146,6 +148,7 @@ void writeI2cBusList(lexxos::os::AppContext& context, bool errorOutput) {
 				context.writeError(",");
 				context.writeError(lockState.owner.empty() ? "-" : lockState.owner);
 			}
+
 			context.writeErrorLine("]");
 		} else {
 			context.write(descriptor.name);
@@ -161,12 +164,14 @@ void writeI2cBusList(lexxos::os::AppContext& context, bool errorOutput) {
 				context.write(",");
 				context.write(lockState.owner.empty() ? "-" : lockState.owner);
 			}
+
 			context.writeLine("]");
 		}
 	}
 }
 
 std::uint32_t writeI2cAddressTable(lexxos::os::AppContext& context,
+    lexxos::devices::DeviceManager const& devices,
     lexxos::devices::I2cBus& bus,
     std::uint8_t from,
     std::uint8_t to) {
@@ -182,6 +187,19 @@ std::uint32_t writeI2cAddressTable(lexxos::os::AppContext& context,
 				context.write("  ");
 				continue;
 			}
+
+			if (devices.isI2cAddressReserved(bus, address)) {
+				context.write("**");
+				continue;
+			}
+
+			lexxos::devices::I2cBusTransaction transaction{
+			    bus, lexxos::devices::DeviceResourcePriority::Interactive, 50};
+			if (!transaction) {
+				context.write("??");
+				continue;
+			}
+
 			if (bus.probe(address)) {
 				writeHex2(context, address);
 				++found;
@@ -189,8 +207,11 @@ std::uint32_t writeI2cAddressTable(lexxos::os::AppContext& context,
 				context.write("--");
 			}
 		}
+
 		context.writeLine("");
 	}
+
+	// "??" means that an address could not be probed before its queue deadline.
 	return found;
 }
 

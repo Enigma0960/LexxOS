@@ -1,10 +1,9 @@
-#include <lexxos/kernel/scheduler.h>
-
 #include <array>
 #include <chrono>
 #include <thread>
 
 #include <lexxos/kernel/host/host_scheduler_types.h>
+#include <lexxos/kernel/scheduler.h>
 
 namespace {
 
@@ -30,6 +29,7 @@ HostTask* allocateTaskSlot() {
 			return &task;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -71,6 +71,7 @@ bool createTask(TaskEntry entry, void* userData, TaskOptions options) {
 	if (g_schedulerStarted) {
 		launchTaskThread(task, true);
 	}
+
 	return true;
 }
 
@@ -80,6 +81,7 @@ void startScheduler() {
 		if (!task.allocated || task.thread.joinable()) {
 			continue;
 		}
+
 		launchTaskThread(task, false);
 	}
 
@@ -96,6 +98,10 @@ void sleepMs(std::uint32_t milliseconds) {
 
 void yield() {
 	std::this_thread::yield();
+}
+
+std::size_t reapFinishedTasks() {
+	return 0;
 }
 
 std::size_t taskCount() {
@@ -118,6 +124,7 @@ void visitTasks(TaskVisitor visitor, void* userData) {
 		if (!task.allocated) {
 			continue;
 		}
+
 		visitor(task.snapshot, userData);
 	}
 }

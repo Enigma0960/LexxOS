@@ -12,32 +12,33 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec displayPowerArguments[] = {
 	    {
-         .name = "action",
-         .valueName = "on|off|sleep|timeout|name",
-         .help = "power mode, timeout action or display device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "action",
+	     .valueName = "on|off|sleep|timeout|name",
+	     .help = "power mode, timeout action or display device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "value",
-         .valueName = "name|seconds|off",
-         .help = "display device name, timeout seconds or timeout off",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "value",
+	     .valueName = "name|seconds|off",
+	     .help = "display device name, timeout seconds or timeout off",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "extra",
-         .valueName = "off|sleep",
-         .help = "idle timeout display mode",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "extra",
+	     .valueName = "off|sleep",
+	     .help = "idle timeout display mode",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -45,6 +46,7 @@ namespace {
 		if (left.size() != right.size()) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < left.size(); ++index) {
 			auto const l = left[index] >= 'A' && left[index] <= 'Z' ? static_cast<char>(left[index] - 'A' + 'a') : left[index];
 			auto const r = right[index] >= 'A' && right[index] <= 'Z' ? static_cast<char>(right[index] - 'A' + 'a') : right[index];
@@ -52,6 +54,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -60,14 +63,17 @@ namespace {
 			mode = lexxos::devices::DisplayPowerMode::On;
 			return true;
 		}
+
 		if (equalsIgnoreCase(text, "off")) {
 			mode = lexxos::devices::DisplayPowerMode::Off;
 			return true;
 		}
+
 		if (equalsIgnoreCase(text, "sleep")) {
 			mode = lexxos::devices::DisplayPowerMode::Sleep;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -76,10 +82,12 @@ namespace {
 			mode = lexxos::devices::DisplayPowerMode::Off;
 			return true;
 		}
+
 		if (equalsIgnoreCase(text, "sleep")) {
 			mode = lexxos::devices::DisplayPowerMode::Sleep;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -97,6 +105,7 @@ namespace {
 		if (!parseUnsigned32(text, seconds) || seconds > 86400U) {
 			return false;
 		}
+
 		timeoutMs = seconds * 1000U;
 		return true;
 	}
@@ -113,6 +122,7 @@ namespace {
 			writeUnsigned(context, settings.dimTimeoutMs / 1000U);
 			context.write("s");
 		}
+
 		context.write(" dim-backlight=");
 		writeUnsigned(context, settings.dimBacklight);
 		context.write(" timeout=");
@@ -122,6 +132,7 @@ namespace {
 			writeUnsigned(context, settings.timeoutMs / 1000U);
 			context.write("s");
 		}
+
 		context.write(" mode=");
 		context.write(lexxos::devices::toString(settings.mode));
 		context.write(" config=");
@@ -130,6 +141,7 @@ namespace {
 			context.write(" save=");
 			context.write(saved ? "ok" : "failed");
 		}
+
 		context.write(" path=");
 		context.writeLine(lexxos::app::picocalc_display_power::settingsPath());
 	}
@@ -146,6 +158,7 @@ namespace {
 		} else {
 			context.write("unsupported");
 		}
+
 		if (result != nullptr && result->lcdBacklightAttempted) {
 			context.write(" lcd-backlight=");
 			if (result->lcdBacklightOk && result->lcdBacklightValueValid) {
@@ -159,6 +172,7 @@ namespace {
 			context.write(" lcd-backlight=");
 			writeUnsigned(context, display.backlight());
 		}
+
 		if (result != nullptr && result->keyboardBacklightAttempted) {
 			context.write(" keyboard-backlight=");
 			if (result->keyboardBacklightOk && result->keyboardBacklightValueValid) {
@@ -169,6 +183,7 @@ namespace {
 				context.write("failed");
 			}
 		}
+
 		context.writeLine("");
 	}
 
@@ -244,6 +259,7 @@ int DisplayPowerProgram::run(
 			return 2;
 		}
 	}
+
 	if (!extra.empty()) {
 		context.writeErrorLine("display-power: too many arguments");
 		return 2;
@@ -264,6 +280,7 @@ int DisplayPowerProgram::run(
 		context.writeErrorLine("display-power: display power mode is unsupported");
 		return 1;
 	}
+
 	if (!display->isReady()) {
 		context.writeErrorLine("display-power: display device is not ready");
 		return 1;
@@ -283,6 +300,7 @@ int DisplayPowerProgram::run(
 		context.writeErrorLine("display-power: display device is busy");
 		return 1;
 	}
+
 	if (!result.displayOk) {
 		context.writeErrorLine("display-power: request failed");
 		return 1;

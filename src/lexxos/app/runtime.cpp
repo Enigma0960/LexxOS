@@ -7,6 +7,8 @@
 #include <lexxos/apps/programs.h>
 #include <lexxos/board_config.h>
 #include <lexxos/composition/board_device_providers.h>
+#include <lexxos/composition/board_runtime.h>
+#include <lexxos/core/bootstrap.h>
 #include <lexxos/feature.h>
 #include <lexxos/kernel/scheduler.h>
 #include <lexxos/kernel/system.h>
@@ -27,6 +29,10 @@
 
 #if FEATURE_ENABLED(FATFS)
 	#include <lexxos/fs/fat/fat_volume.h>
+#endif
+
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	#include <lexxos/composition/products/picocalc_lyra_device_providers.h>
 #endif
 
 #if FEATURE_ENABLED(SD_CARD)
@@ -129,6 +135,7 @@ void restoreRtcSettingsIfConfigured(lexxos::platform::PlatformServices const& pl
 	if (status == lexxos::apps::rtc_programs::detail::RtcSettingsStatus::NotFound) {
 		return;
 	}
+
 	if (status != lexxos::apps::rtc_programs::detail::RtcSettingsStatus::Ok) {
 		writeConsole(platform, "rtc-config auto-restore: skipped: ");
 		writeConsole(platform, lexxos::apps::rtc_programs::detail::toString(status));
@@ -144,6 +151,7 @@ void restoreRtcSettingsIfConfigured(lexxos::platform::PlatformServices const& pl
 		writeConsoleLine(platform, "rtc-config auto-restore: failed");
 		return;
 	}
+
 	writeConsole(platform, "rtc-config: restored path=");
 	writeConsole(platform, lexxos::apps::rtc_programs::detail::rtcSettingsPath);
 	writeConsole(platform, "\r\n");
@@ -183,16 +191,30 @@ void restoreSdConfigsAfterMount(lexxos::os::OperatingSystem& operatingSystem, st
 
 } // namespace
 
-int lexxos::app::Runtime::run() {
-	initializeSystem();
+int lexxos::app::Runtime::run(ProgramRegistrar registerPrograms) {
+	if (!initializeSystem(registerPrograms)) {
+		return 1;
+	}
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] initializeSystem OK\n");
+#endif
 
 #if FEATURE_ENABLED(DEBUG_DISPLAY)
 	bool const debugDisplayReady = initializeDebugDisplay();
 #endif
 
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] console_mirror initialize begin\n");
+#endif
+
 	console_mirror::initialize(_operatingSystem);
 
-#if FEATURE_ENABLED(SD_CARD)
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] console_mirror initialize OK\n");
+#endif
+
+#if FEATURE_ENABLED(SD_CARD) && !defined(LEXXOS_PLATFORM_RK3506)
 	#if BOARD_FAMILY_ENABLED(JC_ESP32P4_M3_DEV)
 	_sdAutomount.setPostMountHandler(restoreSdConfigsAfterMount);
 	#endif
@@ -205,7 +227,7 @@ int lexxos::app::Runtime::run() {
 	}
 #endif
 
-#if FEATURE_ENABLED(SD_CARD)
+#if FEATURE_ENABLED(SD_CARD) && !defined(LEXXOS_PLATFORM_RK3506)
 	if (_operatingSystem.capabilities().has(lexxos::runtime::Capability::StorageRemovable)
 	    && _operatingSystem.capabilities().has(lexxos::runtime::Capability::StorageBlock)) {
 		_systemEvents.bindSdAutomount(_sdAutomount);
@@ -225,32 +247,89 @@ int lexxos::app::Runtime::run() {
 #endif
 	};
 
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] startRuntimeTasks begin\n");
+#endif
+
+#if defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY)
+	lexxos::platform::writeConsole("LexxOS Runtime: creating shell task\n");
+#endif
+
 	if (!startRuntimeTasks(_taskContext)) {
 		return 1;
 	}
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] startScheduler begin\n");
+#endif
+
+#if defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY)
+	lexxos::platform::writeConsole("LexxOS Runtime: starting FreeRTOS\n");
+#endif
 
 	lexxos::kernel::startScheduler();
 	return 0;
 }
 
-void lexxos::app::Runtime::initializeSystem() {
+bool lexxos::app::Runtime::initializeSystem(ProgramRegistrar registerPrograms) {
+	lexxos::core::initializePlatform(_platformServices);
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] initializeSystem enter\n");
+#endif
+#if defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY)
+	lexxos::platform::writeConsole("LexxOS Runtime: FreeRTOS UART shell mode\n");
+#endif
 	bindRuntimeSchedulerBackend(_platformServices);
-	_platformServices.lifecycle.initialize();
-
-	lexxos::kernel::resetShutdownRequest();
 	_operatingSystem.vfs().initialize(_platformServices);
 
 #if FEATURE_ENABLED(FATFS)
 	lexxos::fs::fat::registerVfsFactory(_operatingSystem.vfs());
 #endif
 
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] OperatingSystem::initialize begin\n");
+#endif
+
 	_operatingSystem.initialize();
-	lexxos::composition::registerBoardDevices(_operatingSystem.devices(), _platformServices);
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] registerBoardDevices begin\n");
+#endif
+
+#if !defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY) || defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	// The existing board composition registers I2C2, the STM32
+	// southbridge keyboard, and the LCD using their shared drivers.
+	if (!lexxos::composition::registerBoardDevices(_operatingSystem.devices(), _platformServices)) {
+		writeConsoleLine(_platformServices, "Board GPIO driver initialization failed");
+		return false;
+	}
+#endif
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] registerBoardDevices OK\n");
+#endif
+
 	_operatingSystem.refreshCapabilities();
 
 	_shell.bindOperatingSystem(_operatingSystem);
 	registerShellProgram(_operatingSystem.programs());
 	lexxos::apps::registerBuiltinPrograms(_operatingSystem.programs());
+
+#if !defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY) || defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	lexxos::composition::registerBoardRuntimePrograms(_operatingSystem);
+#else
+	writeConsoleLine(_platformServices,
+	    "FreeRTOS: built-in programs registered; board drivers deferred");
+#endif
+
+	if (registerPrograms != nullptr) {
+		registerPrograms(_operatingSystem.programs());
+	}
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-boot] programs registered OK\n");
+#endif
+	return true;
 }
 
 #if FEATURE_ENABLED(DEBUG_DISPLAY)

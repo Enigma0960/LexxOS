@@ -1,3 +1,6 @@
 [submodule "third_party/FreeRTOS"]
 	path = third_party/FreeRTOS
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+[submodule "third_party/lwjson"]
+	path = third_party/lwjson
+	url = https://github.com/MaJerle/lwjson.git

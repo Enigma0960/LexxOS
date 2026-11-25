@@ -21,6 +21,7 @@
 #endif
 
 namespace lexxos::apps::utility_programs {
+
 namespace {
 
 	using detail::MountTargets;
@@ -29,6 +30,7 @@ namespace {
 		if (value.empty() || value.size() >= output.size()) {
 			return false;
 		}
+
 		std::memcpy(output.data(), value.data(), value.size());
 		output[value.size()] = '\0';
 		length = value.size();
@@ -40,14 +42,17 @@ namespace {
 		if (mount.type == "virtualfs" || mount.type == "block") {
 			return true;
 		}
+
 		if (targets.count >= targets.targets.size()) {
 			targets.overflow = true;
 			return false;
 		}
+
 		if (!copyString(mount.target, targets.targets[targets.count], targets.lengths[targets.count])) {
 			targets.overflow = true;
 			return false;
 		}
+
 		++targets.count;
 		return true;
 	}
@@ -70,9 +75,11 @@ namespace {
 				context.writeErrorLine(lexxos::vfs::toString(status));
 				return false;
 			}
+
 			context.write("poweroff: unmounted ");
 			context.writeLine(target);
 		}
+
 		return true;
 	}
 
@@ -107,7 +114,7 @@ int PoweroffProgram::run(
     lexxos::os::AppContext& context,
     lexxos::program::ProgramInvocation const&,
     lexxos::program::ParsedArguments const&) {
-	(void) lexxos::lifecycle::defaultEventBus().publish({
+	(void) context.events().publish({
 	    .type = lexxos::lifecycle::EventType::PowerOffRequested,
 	    .timestampMs = lexxos::apps::uptimeMs(context),
 	});
@@ -133,6 +140,7 @@ int PoweroffProgram::run(
 		context.writeErrorLine("poweroff: power-off is not supported by southbridge");
 		return 1;
 	}
+
 	serviceLock.release();
 
 	auto const syncStatus = lexxos::vfs::sync();
@@ -141,6 +149,7 @@ int PoweroffProgram::run(
 		context.writeErrorLine(lexxos::vfs::toString(syncStatus));
 		return 1;
 	}
+
 	context.writeLine("poweroff: sync ok");
 
 	if (!unmountFilesystems(context)) {
@@ -159,7 +168,7 @@ int PoweroffProgram::run(
 	}
 
 	context.writeLine("poweroff: requested");
-	(void) lexxos::lifecycle::defaultEventBus().publish({
+	(void) context.events().publish({
 	    .type = lexxos::lifecycle::EventType::ShutdownRequested,
 	    .timestampMs = lexxos::apps::uptimeMs(context),
 	});
@@ -172,6 +181,7 @@ int PoweroffProgram::run(
 		context.writeErrorLine(lexxos::vfs::toString(syncStatus));
 		return 1;
 	}
+
 	context.writeLine("poweroff: sync ok");
 
 	if (!unmountFilesystems(context)) {
@@ -193,15 +203,17 @@ int PoweroffProgram::run(
 			context.writeErrorLine("poweroff: display device is busy");
 			return 1;
 		}
+
 		if (!result.displayOk) {
 			context.writeErrorLine("poweroff: display power-off failed");
 			return 1;
 		}
+
 		context.writeLine("poweroff: display off");
 	}
 	#endif
 
-	(void) lexxos::lifecycle::defaultEventBus().publish({
+	(void) context.events().publish({
 	    .type = lexxos::lifecycle::EventType::ShutdownRequested,
 	    .timestampMs = lexxos::apps::uptimeMs(context),
 	});

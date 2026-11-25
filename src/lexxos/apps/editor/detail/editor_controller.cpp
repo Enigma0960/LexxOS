@@ -15,6 +15,7 @@
 #include <lexxos/terminal/terminal.h>
 
 namespace lexxos::apps::text_editor_programs::detail {
+
 namespace {
 
 	void setStatus(EditorState& state, std::string_view text) {
@@ -35,9 +36,11 @@ namespace {
 			state.cursorColumn = 0;
 			return;
 		}
+
 		if (state.cursorLine >= buffer.lineCount) {
 			state.cursorLine = buffer.lineCount - 1U;
 		}
+
 		auto const length = buffer.lineLength(state.cursorLine);
 		if (state.cursorColumn > length) {
 			state.cursorColumn = length;
@@ -55,6 +58,7 @@ namespace {
 			++state.cursorColumn;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -64,6 +68,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -74,6 +79,7 @@ namespace {
 			--state.cursorColumn;
 			return;
 		}
+
 		if (state.cursorLine != 0) {
 			--state.cursorLine;
 			state.cursorColumn = buffer.lineLength(state.cursorLine);
@@ -88,6 +94,7 @@ namespace {
 			++state.cursorColumn;
 			return;
 		}
+
 		if (state.cursorLine + 1U < buffer.lineCount) {
 			++state.cursorLine;
 			state.cursorColumn = 0;
@@ -133,6 +140,7 @@ namespace {
 		if (buffer.lineCount == 0) {
 			return;
 		}
+
 		state.cursorLine = std::min(buffer.lineCount - 1U, state.cursorLine + metrics.visibleTextRows);
 		clampCursorToBuffer(buffer, state);
 	}
@@ -143,11 +151,13 @@ namespace {
 			beep(output);
 			return;
 		}
+
 		if (state.cursorColumn != 0) {
 			--state.cursorColumn;
 			(void) buffer.deleteChar(state.cursorLine, state.cursorColumn);
 			return;
 		}
+
 		if (state.cursorLine == 0) {
 			beep(output);
 			return;
@@ -159,6 +169,7 @@ namespace {
 			beep(output);
 			return;
 		}
+
 		--state.cursorLine;
 		state.cursorColumn = previousLength;
 	}
@@ -169,10 +180,12 @@ namespace {
 			beep(output);
 			return;
 		}
+
 		if (state.cursorColumn < buffer.lineLength(state.cursorLine)) {
 			(void) buffer.deleteChar(state.cursorLine, state.cursorColumn);
 			return;
 		}
+
 		if (!buffer.joinWithNextLine(state.cursorLine)) {
 			beep(output);
 		}
@@ -185,6 +198,7 @@ namespace {
 			beep(output);
 			return;
 		}
+
 		++state.cursorLine;
 		state.cursorColumn = 0;
 	}
@@ -203,9 +217,11 @@ namespace {
 		if (!buffer.modified) {
 			return true;
 		}
+
 		if (state.confirmQuit) {
 			return true;
 		}
+
 		state.confirmQuit = true;
 		setStatus(state, "unsaved changes: press ^Q again to discard or ^S to save");
 		return false;
@@ -229,13 +245,14 @@ int EditorController::run(lexxos::os::AppContext& context, std::string_view path
 	while (!lexxos::kernel::isShutdownRequested()) {
 		auto const metrics = currentScreenMetrics();
 		EditorRenderer::render(output, path, buffer, state, metrics);
-		auto const key = lexxos::terminal::readKey();
+		auto const key = lexxos::terminal::readKey(context);
 
 		// Normalize the first queued key before dispatching editor commands.
 		if (ignoreInitialEnter && key.code == lexxos::terminal::KeyCode::Enter) {
 			ignoreInitialEnter = false;
 			continue;
 		}
+
 		ignoreInitialEnter = false;
 
 		// Dispatch navigation, editing, save and exit commands.
@@ -246,14 +263,17 @@ int EditorController::run(lexxos::os::AppContext& context, std::string_view path
 						setStatus(state, "cannot insert tab: line is too long");
 						beep(output);
 					}
+
 					break;
 				}
+
 				if (lexxos::terminal::isPrintableAscii(key)) {
 					if (!insertCharacter(buffer, state, key.character)) {
 						setStatus(state, "cannot insert character: line is too long");
 						beep(output);
 					}
 				}
+
 				break;
 			case lexxos::terminal::KeyCode::Enter:
 				splitCurrentLine(buffer, state, output);
@@ -302,6 +322,7 @@ int EditorController::run(lexxos::os::AppContext& context, std::string_view path
 					EditorRenderer::writeExitLine(output);
 					return 0;
 				}
+
 				break;
 			case lexxos::terminal::KeyCode::Escape:
 				state.confirmQuit = false;

@@ -81,6 +81,7 @@ bool readFileBlock(lexxos::vfs::FileHandle& file, std::uint32_t offset, std::uin
 	if (!file.seek(offset)) {
 		return false;
 	}
+
 	std::size_t bytesRead = 0;
 	auto const status = file.read(buffer, size, bytesRead);
 	return status == lexxos::vfs::ReadStatus::Ok && bytesRead == size;
@@ -92,6 +93,7 @@ bool readFileBlockRetry(lexxos::vfs::FileHandle& file, std::uint32_t offset, std
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -103,6 +105,7 @@ void writeRomProbe(lexxos::os::AppContext& context, std::uint32_t offset, std::u
 		if (index != 0) {
 			context.write(".");
 		}
+
 		writeCode8(context, data[index]);
 	}
 }

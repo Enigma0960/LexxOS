@@ -23,12 +23,12 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec touchArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "required VFS path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "required VFS path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	};
 
@@ -61,7 +61,7 @@ ProgramDescriptor TouchProgram::descriptor() {
 	    .handler = run,
 	    .runtime = {
 	                .launchMode = ProgramLaunchMode::ForegroundTask,
-	                .stackSizeBytes = 4096,
+	                .stackSizeBytes = lexxos::runtime::standardRuntimeProfile.programs.filesystemMutationStackBytes,
 	                .priority = 1,
 	                .memoryClass = ProgramMemoryClass::InternalOnly,
 	                .externalMemoryQuotaBytes = 0,
@@ -96,6 +96,7 @@ int TouchProgram::run(
 		context.writeLine(lexxos::vfs::toString(openStatus));
 		return 1;
 	}
+
 	return 0;
 }
 

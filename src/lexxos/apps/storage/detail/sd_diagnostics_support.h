@@ -3,7 +3,9 @@
 #include <lexxos/devices/sd_card.h>
 
 namespace lexxos::os {
+
 class AppContext;
+
 } // namespace lexxos::os
 
 namespace lexxos::apps::storage_programs::detail {

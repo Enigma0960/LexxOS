@@ -108,12 +108,29 @@ def main() -> int:
         if isinstance(preset, dict):
             findings.extend(check_preset(resolved(preset)))
 
-    board_source = (root / "cmake" / "Boards.cmake").read_text(encoding="utf-8")
+    board_source = (root / "config/cmake" / "Boards.cmake").read_text(encoding="utf-8")
     board_match = re.search(r"set\(_LEXXOS_BOARD_IDS\s+(.*?)\)", board_source, re.DOTALL)
     if board_match is None:
-        raise ValueError("Cannot find board registry in cmake/Boards.cmake")
+        raise ValueError("Cannot find board registry in config/cmake/Boards.cmake")
     builds = {preset["name"]: preset for preset in data.get("buildPresets", [])}
+    bringup_match = re.search(r"set\(_LEXXOS_BRINGUP_BOARDS\s+(.*?)\)", board_source, re.DOTALL)
+    bringup_boards = set(bringup_match.group(1).split()) if bringup_match else set()
     for board in board_match.group(1).split():
+        # Bootstrap проверяется отдельно: minimal/full не должны обещать ещё
+        # не реализованные возможности аппаратной платформы.
+        if board in bringup_boards:
+            candidates = [preset for preset in presets
+                          if string_value(cache_variables(preset).get("LEXXOS_BOARD", "")) == board
+                          and not preset.get("hidden", False)]
+            if not candidates:
+                findings.append(Finding(board, "Missing public bring-up configure preset"))
+            for preset in candidates:
+                variables = resolved(preset)["cacheVariables"]
+                if not variables.get("CMAKE_TOOLCHAIN_FILE"):
+                    findings.append(Finding(preset["name"], "Missing bring-up toolchain"))
+                if not any(build.get("configurePreset") == preset["name"] for build in builds.values()):
+                    findings.append(Finding(preset["name"], "Missing bring-up build preset"))
+            continue
         for flavor in ("minimal", "full"):
             name = f"{flavor}-{board}"
             if name not in by_name:

@@ -20,6 +20,7 @@ namespace {
 				return &arguments.data[index];
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -30,6 +31,7 @@ namespace {
 				return &argument;
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -40,11 +42,14 @@ namespace {
 			if (argument.kind != ProgramArgumentKind::Positional) {
 				continue;
 			}
+
 			if (currentIndex == requestedIndex) {
 				return &argument;
 			}
+
 			++currentIndex;
 		}
+
 		return nullptr;
 	}
 
@@ -55,6 +60,7 @@ namespace {
 			buffer[--index] = static_cast<char>('0' + (value % 10U));
 			value /= 10U;
 		} while (value != 0 && index > 0);
+
 		context.write({buffer + index, sizeof(buffer) - index});
 	}
 
@@ -83,11 +89,13 @@ namespace {
 			writeUnsignedDecimal(context, static_cast<std::uint32_t>(runtime.coreAffinity));
 			context.writeLine("");
 		}
+
 		if (runtime.externalMemoryQuotaBytes != 0) {
 			context.write("  external quota: ");
 			writeUnsignedDecimal(context, runtime.externalMemoryQuotaBytes);
 			context.writeLine(" bytes");
 		}
+
 		if (runtime.internalMemoryQuotaBytes != 0) {
 			context.write("  internal workspace: ");
 			writeUnsignedDecimal(context, runtime.internalMemoryQuotaBytes);
@@ -122,6 +130,7 @@ namespace {
 			if (!parsed.addPositional(name, token)) {
 				return {.status = ArgumentParseStatus::TooManyArguments, .token = token};
 			}
+
 			++positionalIndex;
 			return {};
 		};
@@ -133,6 +142,7 @@ namespace {
 			if (parseOptions && (token == "--help" || token == "-h") && (!descriptor.allowExtraArguments || index == 1)) {
 				return {.status = ArgumentParseStatus::HelpRequested, .token = token};
 			}
+
 			if (parseOptions && token == "--") {
 				parseOptions = false;
 				continue;
@@ -154,8 +164,10 @@ namespace {
 						if (error.status != ArgumentParseStatus::Ok) {
 							return error;
 						}
+
 						continue;
 					}
+
 					return {.status = ArgumentParseStatus::UnknownOption, .token = token, .argument = name};
 				}
 
@@ -163,9 +175,11 @@ namespace {
 					if (equalPosition != std::string_view::npos) {
 						return {.status = ArgumentParseStatus::UnexpectedArgument, .token = token, .argument = name};
 					}
+
 					if (!parsed.setNamed(argument->name, "true", true)) {
 						return {.status = ArgumentParseStatus::TooManyArguments, .token = token, .argument = name};
 					}
+
 					continue;
 				}
 
@@ -173,6 +187,7 @@ namespace {
 					if (index + 1 >= invocation.argc) {
 						return {.status = ArgumentParseStatus::MissingValue, .token = token, .argument = name};
 					}
+
 					value = invocation.argv[++index];
 					if (hasOptionName(value)) {
 						return {.status = ArgumentParseStatus::MissingValue, .token = token, .argument = name};
@@ -182,6 +197,7 @@ namespace {
 				if (!parsed.setNamed(argument->name, value, true)) {
 					return {.status = ArgumentParseStatus::TooManyArguments, .token = token, .argument = name};
 				}
+
 				continue;
 			}
 
@@ -193,8 +209,10 @@ namespace {
 						if (error.status != ArgumentParseStatus::Ok) {
 							return error;
 						}
+
 						continue;
 					}
+
 					return {.status = ArgumentParseStatus::UnknownOption, .token = token, .argument = token.substr(1)};
 				}
 
@@ -202,6 +220,7 @@ namespace {
 					if (!parsed.setNamed(argument->name, "true", true)) {
 						return {.status = ArgumentParseStatus::TooManyArguments, .token = token, .argument = token.substr(1)};
 					}
+
 					continue;
 				}
 
@@ -217,6 +236,7 @@ namespace {
 				if (!parsed.setNamed(argument->name, value, true)) {
 					return {.status = ArgumentParseStatus::TooManyArguments, .token = token, .argument = token.substr(1)};
 				}
+
 				continue;
 			}
 
@@ -231,6 +251,7 @@ namespace {
 			if (!argument.required) {
 				continue;
 			}
+
 			if (argument.kind == ProgramArgumentKind::Positional) {
 				if (parsed.positional(argument.name).empty()) {
 					return {.status = ArgumentParseStatus::MissingRequiredArgument, .argument = argument.name};
@@ -255,6 +276,7 @@ namespace {
 			context.write(value);
 			context.write(", ");
 		}
+
 		context.write("--");
 		context.write(argument.name);
 		if (argument.kind == ProgramArgumentKind::Option) {
@@ -293,6 +315,7 @@ namespace {
 			    .exitCode = result.status == ProgramSupervisorStatus::NotFound ? 127 : 126,
 			};
 		}
+
 		return result.exitResult;
 	}
 
@@ -354,9 +377,11 @@ ProgramLaunchStatus ProgramManager::availability(std::string_view name) const {
 	if (descriptor == nullptr) {
 		return ProgramLaunchStatus::NotFound;
 	}
+
 	if (!descriptor->enabled) {
 		return ProgramLaunchStatus::Disabled;
 	}
+
 	return ProgramLaunchStatus::Available;
 }
 
@@ -432,11 +457,13 @@ ProgramExitResult ProgramManager::execute(lexxos::os::AppContext& context, Progr
 			executionContext.writeError(": ");
 			executionContext.writeError(parseError.token);
 		}
+
 		executionContext.writeErrorLine("");
 		if (!entry->descriptor.usage.empty()) {
 			executionContext.writeError("usage: ");
 			executionContext.writeErrorLine(entry->descriptor.usage);
 		}
+
 		return {.launchStatus = ProgramLaunchStatus::InvalidArguments, .exitCode = 2};
 	}
 

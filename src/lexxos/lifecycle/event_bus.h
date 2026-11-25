@@ -3,12 +3,18 @@
 #include <array>
 #include <cstdint>
 
-#if defined(LEXXOS_PLATFORM_HOST) || defined(LEXXOS_PLATFORM_SIM)
+#if defined(LEXXOS_EDITION_CE)
+	#include <atomic>
+#elif defined(LEXXOS_KERNEL_ESPIDF)
+	#include <freertos/FreeRTOS.h>
+#endif
+
+#if !defined(LEXXOS_EDITION_CE) && (defined(LEXXOS_PLATFORM_HOST) || defined(LEXXOS_PLATFORM_SIM))
 	#include <mutex>
 #endif
 
 #include <lexxos/devices/input_device.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 
 namespace lexxos::lifecycle {
 
@@ -41,6 +47,9 @@ public:
 	void reset(EventCursor& cursor);
 	[[nodiscard]] std::uint32_t sequence();
 	[[nodiscard]] bool publish(Event const& event);
+	// При переполнении сохраняются последние queueCapacity событий; отставший cursor пропускает старые.
+	// CE: ISR возвращает false при занятом буфере, обработчик может повторить публикацию позже.
+	// Standard ISR: только при разрешённом для FreeRTOS API приоритете IRQ, без требования cache-off/IRAM.
 	[[nodiscard]] bool publishFromIsr(Event const& event);
 	[[nodiscard]] bool poll(EventCursor& cursor, Event& event);
 	[[nodiscard]] bool latest(Event& event);
@@ -56,7 +65,11 @@ private:
 	std::array<std::uint32_t, queueCapacity> _sequences{};
 	std::array<Event, queueCapacity> _events{};
 	std::uint32_t _nextSequence{1};
-#if defined(LEXXOS_PLATFORM_HOST) || defined(LEXXOS_PLATFORM_SIM)
+#if defined(LEXXOS_EDITION_CE)
+	std::atomic_flag _guard = ATOMIC_FLAG_INIT;
+#elif defined(LEXXOS_KERNEL_ESPIDF)
+	portMUX_TYPE _mux = portMUX_INITIALIZER_UNLOCKED;
+#elif defined(LEXXOS_PLATFORM_HOST) || defined(LEXXOS_PLATFORM_SIM)
 	std::mutex _lock;
 #endif
 };

@@ -10,6 +10,7 @@
 #include <lexxos/program/program_supervisor.h>
 
 namespace lexxos::apps::system_programs {
+
 namespace {
 
 	constexpr std::uint32_t defaultIntervalMs = 1000;
@@ -18,36 +19,36 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec topArguments[] = {
 	    {
-         .name = "interval",
-         .shortName = 'i',
-         .valueName = "ms",
-         .help = "refresh interval in milliseconds, clamped to 100..60000",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "1000",
+	     .name = "interval",
+	     .shortName = 'i',
+	     .valueName = "ms",
+	     .help = "refresh interval in milliseconds, clamped to 100..60000",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "1000",
 	     },
 	    {
-         .name = "count",
-         .shortName = 'n',
-         .valueName = "samples",
-         .help = "number of refreshes; 0 means run until cancelled",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0",
+	     .name = "count",
+	     .shortName = 'n',
+	     .valueName = "samples",
+	     .help = "number of refreshes; 0 means run until cancelled",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0",
 	     },
 	    {
-         .name = "no-clear",
-         .help = "append snapshots instead of clearing the terminal before every refresh",
-         .kind = lexxos::program::ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "no-clear",
+	     .help = "append snapshots instead of clearing the terminal before every refresh",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "no-jobs",
-         .help = "hide ProgramSupervisor job memory table",
-         .kind = lexxos::program::ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "no-jobs",
+	     .help = "hide ProgramSupervisor job memory table",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	};
 
@@ -137,6 +138,7 @@ namespace {
 			row.set(column, "n/a");
 			return;
 		}
+
 		auto const percent = static_cast<std::uint32_t>((static_cast<std::uint64_t>(value) * 100ULL) / total);
 		row.appendUnsigned(column, percent);
 		row.append(column, "%");
@@ -150,6 +152,7 @@ namespace {
 			    if (task.started) {
 				    ++taskTotals.started;
 			    }
+
 			    taskTotals.stackBytes += task.stackSizeBytes;
 			    taskTotals.stackFreeBytes += task.stackFreeBytes;
 		    },
@@ -165,6 +168,7 @@ namespace {
 			    if (isActiveProcess(process.state)) {
 				    ++jobTotals.active;
 			    }
+
 			    jobTotals.internalReservedBytes += process.internalMemoryReservedBytes;
 			    jobTotals.internalQuotaBytes += process.internalMemoryQuotaBytes;
 			    jobTotals.externalReservedBytes += process.externalMemoryReservedBytes;
@@ -200,6 +204,7 @@ namespace {
 				context.write(" recovered-margin=");
 				writeBytes(context, memory.freeHeapBytes - memory.minimumEverFreeHeapBytes);
 			}
+
 			context.writeLine("");
 		}
 
@@ -235,6 +240,7 @@ namespace {
 		} else {
 			context.write("not-configured");
 		}
+
 		context.write(" reserved=");
 		writeBytes(context, jobs.externalReservedBytes);
 		context.write(" quota=");
@@ -261,6 +267,7 @@ namespace {
 			} else {
 				lookup.row->setUnsigned(3, static_cast<std::uint32_t>(task.coreAffinity));
 			}
+
 			lookup.row->set(4, task.started ? "yes" : "no");
 			appendBytes(*lookup.row, 5, task.stackSizeBytes);
 			appendBytes(*lookup.row, 6, stackUsedBytes);
@@ -268,6 +275,7 @@ namespace {
 			appendPercent(*lookup.row, 8, stackUsedBytes, task.stackSizeBytes);
 			lookup.found = true;
 		}
+
 		++lookup.current;
 	}
 
@@ -306,6 +314,7 @@ namespace {
 			lookup.row->set(11, lexxos::program::toString(process.memoryArenaStatus));
 			lookup.found = true;
 		}
+
 		++lookup.current;
 	}
 
@@ -345,6 +354,7 @@ namespace {
 			context.writeLine("no supervised processes");
 			return;
 		}
+
 		lexxos::apps::PrettyTable table{jobColumns, sizeof(jobColumns) / sizeof(jobColumns[0])};
 		table.setMaxTableWidth(0);
 		table.print(context, jobTableRow, nullptr);
@@ -373,9 +383,11 @@ namespace {
 			context.writeErrorLine("top: invalid interval");
 			return false;
 		}
+
 		if (settings.intervalMs < minimumIntervalMs) {
 			settings.intervalMs = minimumIntervalMs;
 		}
+
 		if (settings.intervalMs > maximumIntervalMs) {
 			settings.intervalMs = maximumIntervalMs;
 		}
@@ -439,6 +451,7 @@ int TopProgram::run(
 				context.writeLine("top: canceled");
 				return 130;
 			}
+
 			auto const chunkMs = remainingMs > 50 ? 50U : remainingMs;
 			sleepMs(context, chunkMs);
 			remainingMs -= chunkMs;

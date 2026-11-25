@@ -1,6 +1,6 @@
 # `reboot`
 
-reboot target device.
+Перезагружает устройство.
 
 ## Справка shell
 

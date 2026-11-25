@@ -1,6 +1,7 @@
 #include <lexxos/gameboy/apu.h>
 
 namespace lexxos::gameboy {
+
 namespace {
 
 	constexpr std::uint32_t lengthTickHz = 256;
@@ -52,9 +53,11 @@ namespace {
 		if (value > 32767) {
 			return 32767;
 		}
+
 		if (value < -32768) {
 			return -32768;
 		}
+
 		return static_cast<std::int16_t>(value);
 	}
 
@@ -62,6 +65,7 @@ namespace {
 		if (!channel.enabled || !channel.dacEnabled || channel.currentVolume == 0 || channel.phaseStep == 0) {
 			return 0;
 		}
+
 		channel.phase += channel.phaseStep;
 		auto const step = static_cast<std::uint8_t>((channel.phase >> 29U) & 0x07U);
 		static constexpr std::uint8_t highCounts[4] = {1, 2, 4, 6};
@@ -74,6 +78,7 @@ namespace {
 		if (!channel.enabled || !channel.dacEnabled || channel.volumeCode == 0 || channel.phaseStep == 0) {
 			return 0;
 		}
+
 		channel.phase += channel.phaseStep;
 		auto const sampleIndex = static_cast<std::uint8_t>((channel.phase >> 27U) & 0x1FU);
 		auto const packed = waveRam[sampleIndex >> 1U];
@@ -103,11 +108,13 @@ namespace {
 		if (!channel.enabled || !channel.dacEnabled || channel.currentVolume == 0 || channel.phaseStep == 0) {
 			return 0;
 		}
+
 		auto const previous = channel.phase;
 		channel.phase += channel.phaseStep;
 		if (channel.phase < previous || channel.phaseStep >= 0x80000000U) {
 			clockNoiseLfsr(channel);
 		}
+
 		auto const amplitude = static_cast<std::int32_t>(channel.currentVolume) * 500;
 		return (channel.lfsr & 0x01U) == 0 ? amplitude : -amplitude;
 	}
@@ -119,6 +126,7 @@ namespace {
 				channel.enabled = false;
 			}
 		}
+
 		if (channel.enabled && channel.envelopePeriod != 0) {
 			++channel.envelopeSamples;
 			auto const periodSamples = samplesForTicks(channel.envelopePeriod, envelopeTickHz);
@@ -151,6 +159,7 @@ namespace {
 				channel.enabled = false;
 			}
 		}
+
 		if (channel.enabled && channel.envelopePeriod != 0) {
 			++channel.envelopeSamples;
 			auto const periodSamples = samplesForTicks(channel.envelopePeriod, envelopeTickHz);
@@ -174,6 +183,7 @@ namespace {
 		if (shift >= 14U) {
 			return 1;
 		}
+
 		auto clock = 524288U / divisor;
 		clock >>= shift;
 		return clock == 0 ? 1U : clock;
@@ -228,23 +238,29 @@ std::uint8_t Apu::readRegister(std::uint16_t address) const {
 	if (address >= waveRamStart && address <= waveRamEnd) {
 		return _waveRam[static_cast<std::size_t>(address - waveRamStart)];
 	}
+
 	if (address < audioRegisterStart || address > controlRegisterEnd) {
 		return 0xFF;
 	}
+
 	if (address == nr52) {
 		auto value = static_cast<std::uint8_t>(_masterEnabled ? 0x80U : 0x00U);
 		if (_square1.enabled) {
 			value |= 0x01U;
 		}
+
 		if (_square2.enabled) {
 			value |= 0x02U;
 		}
+
 		if (_wave.enabled) {
 			value |= 0x04U;
 		}
+
 		if (_noise.enabled) {
 			value |= 0x08U;
 		}
+
 		return static_cast<std::uint8_t>(0x70U | value);
 	}
 
@@ -282,9 +298,11 @@ void Apu::writeRegister(std::uint16_t address, std::uint8_t value) {
 		_waveRam[static_cast<std::size_t>(address - waveRamStart)] = value;
 		return;
 	}
+
 	if (address < audioRegisterStart || address > controlRegisterEnd) {
 		return;
 	}
+
 	if (address == nr52) {
 		if ((value & 0x80U) == 0) {
 			powerOff();
@@ -292,8 +310,10 @@ void Apu::writeRegister(std::uint16_t address, std::uint8_t value) {
 			_masterEnabled = true;
 			setRawRegister(nr52, static_cast<std::uint8_t>(value | 0x80U));
 		}
+
 		return;
 	}
+
 	if (!_masterEnabled) {
 		return;
 	}
@@ -310,6 +330,7 @@ void Apu::writeRegister(std::uint16_t address, std::uint8_t value) {
 			if ((value & 0x80U) != 0) {
 				triggerSquare(_square1, nr11, nr12, nr13, nr14);
 			}
+
 			break;
 		case nr21:
 		case nr22:
@@ -321,6 +342,7 @@ void Apu::writeRegister(std::uint16_t address, std::uint8_t value) {
 			if ((value & 0x80U) != 0) {
 				triggerSquare(_square2, nr21, nr22, nr23, nr24);
 			}
+
 			break;
 		case nr30:
 		case nr31:
@@ -333,6 +355,7 @@ void Apu::writeRegister(std::uint16_t address, std::uint8_t value) {
 			if ((value & 0x80U) != 0) {
 				triggerWave();
 			}
+
 			break;
 		case nr41:
 		case nr42:
@@ -344,6 +367,7 @@ void Apu::writeRegister(std::uint16_t address, std::uint8_t value) {
 			if ((value & 0x80U) != 0) {
 				triggerNoise();
 			}
+
 			break;
 		default:
 			break;
@@ -354,6 +378,7 @@ void Apu::advanceCycles(std::uint32_t cycles) {
 	if (!_pcmOutputEnabled || !_masterEnabled || cycles == 0) {
 		return;
 	}
+
 	_sampleCycleAccumulator += static_cast<std::uint64_t>(cycles) * sampleRateHz;
 	while (_sampleCycleAccumulator >= cpuClockHz) {
 		_sampleCycleAccumulator -= cpuClockHz;
@@ -381,12 +406,14 @@ std::size_t Apu::readAudioFrames(lexxos::devices::AudioPcmFrame* frames, std::si
 	if (frames == nullptr || maxFrames == 0) {
 		return 0;
 	}
+
 	std::size_t count = 0;
 	while (count < maxFrames && _pcmFill != 0) {
 		frames[count++] = _pcmRing[_pcmReadIndex];
 		_pcmReadIndex = (_pcmReadIndex + 1U) % pcmRingCapacity;
 		--_pcmFill;
 	}
+
 	return count;
 }
 
@@ -441,6 +468,7 @@ void Apu::triggerSquare(SquareChannel& channel, std::uint16_t nrx1, std::uint16_
 	if (channel.lengthSamples == 0) {
 		channel.lengthSamples = squareLengthSamples(rawRegister(nrx1));
 	}
+
 	channel.enabled = channel.dacEnabled;
 }
 
@@ -464,6 +492,7 @@ void Apu::triggerWave() {
 	if (_wave.lengthSamples == 0) {
 		_wave.lengthSamples = waveLengthSamples(rawRegister(nr31));
 	}
+
 	_wave.enabled = _wave.dacEnabled;
 }
 
@@ -492,6 +521,7 @@ void Apu::triggerNoise() {
 	if (_noise.lengthSamples == 0) {
 		_noise.lengthSamples = squareLengthSamples(rawRegister(nr41));
 	}
+
 	_noise.enabled = _noise.dacEnabled;
 }
 
@@ -524,6 +554,7 @@ lexxos::devices::AudioPcmFrame Apu::renderSample() {
 		if ((routing & (1U << index)) != 0) {
 			right += channels[index];
 		}
+
 		if ((routing & (1U << (index + 4U))) != 0) {
 			left += channels[index];
 		}
@@ -539,6 +570,7 @@ void Apu::pushFrame(lexxos::devices::AudioPcmFrame frame) {
 		++_droppedAudioFrames;
 		return;
 	}
+
 	_pcmRing[_pcmWriteIndex] = frame;
 	_pcmWriteIndex = (_pcmWriteIndex + 1U) % pcmRingCapacity;
 	++_pcmFill;

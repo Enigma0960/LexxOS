@@ -18,6 +18,7 @@ std::string_view toString(VramViewMode mode) {
 		case VramViewMode::Heat:
 			return "heat";
 	}
+
 	return "unknown";
 }
 
@@ -26,26 +27,32 @@ bool parseVramViewMode(std::string_view value, VramViewMode& mode) {
 		mode = VramViewMode::Tiles;
 		return true;
 	}
+
 	if (value == "map" || value == "bg-map" || value == "tile-map") {
 		mode = VramViewMode::Map;
 		return true;
 	}
+
 	if (value == "map-tiles" || value == "maptiles" || value == "map-pattern" || value == "pattern-map") {
 		mode = VramViewMode::MapTiles;
 		return true;
 	}
+
 	if (value == "bg" || value == "background" || value == "ppu") {
 		mode = VramViewMode::Bg;
 		return true;
 	}
+
 	if (value == "bg-scan" || value == "bgscan" || value == "scan") {
 		mode = VramViewMode::BgScan;
 		return true;
 	}
+
 	if (value == "heat" || value == "heatmap" || value == "raw") {
 		mode = VramViewMode::Heat;
 		return true;
 	}
+
 	return false;
 }
 
@@ -54,26 +61,32 @@ bool parseVramWarmupTarget(std::string_view value, VramWarmupTarget& target) {
 		target = VramWarmupTarget::Auto;
 		return true;
 	}
+
 	if (value == "any" || value == "vram") {
 		target = VramWarmupTarget::Any;
 		return true;
 	}
+
 	if (value == "tile-data" || value == "tiles" || value == "tile") {
 		target = VramWarmupTarget::TileData;
 		return true;
 	}
+
 	if (value == "map" || value == "maps") {
 		target = VramWarmupTarget::Map;
 		return true;
 	}
+
 	if (value == "map0" || value == "9800") {
 		target = VramWarmupTarget::Map0;
 		return true;
 	}
+
 	if (value == "map1" || value == "9c00") {
 		target = VramWarmupTarget::Map1;
 		return true;
 	}
+
 	return false;
 }
 
@@ -82,14 +95,17 @@ bool parseBackgroundMapMode(std::string_view value, lexxos::gameboy::BackgroundM
 		mode = lexxos::gameboy::BackgroundMapMode::Auto;
 		return true;
 	}
+
 	if (value == "9800" || value == "map0") {
 		mode = lexxos::gameboy::BackgroundMapMode::Map9800;
 		return true;
 	}
+
 	if (value == "9c00" || value == "9C00" || value == "map1") {
 		mode = lexxos::gameboy::BackgroundMapMode::Map9C00;
 		return true;
 	}
+
 	return false;
 }
 
@@ -98,14 +114,17 @@ bool parseBackgroundTileDataMode(std::string_view value, lexxos::gameboy::Backgr
 		mode = lexxos::gameboy::BackgroundTileDataMode::Auto;
 		return true;
 	}
+
 	if (value == "8000" || value == "unsigned" || value == "unsigned8000") {
 		mode = lexxos::gameboy::BackgroundTileDataMode::Unsigned8000;
 		return true;
 	}
+
 	if (value == "8800" || value == "signed" || value == "signed8800") {
 		mode = lexxos::gameboy::BackgroundTileDataMode::Signed8800;
 		return true;
 	}
+
 	return false;
 }
 
@@ -118,6 +137,7 @@ std::string_view toString(lexxos::gameboy::BackgroundMapMode mode) {
 		case lexxos::gameboy::BackgroundMapMode::Map9C00:
 			return "9c00";
 	}
+
 	return "unknown";
 }
 
@@ -130,6 +150,7 @@ std::string_view toString(lexxos::gameboy::BackgroundTileDataMode mode) {
 		case lexxos::gameboy::BackgroundTileDataMode::Signed8800:
 			return "8800";
 	}
+
 	return "unknown";
 }
 
@@ -138,18 +159,22 @@ bool parseDisplayBlitMode(std::string_view value, lexxos::gameboy::DisplayBlitMo
 		mode = lexxos::gameboy::DisplayBlitMode::Crop;
 		return true;
 	}
+
 	if (value == "fit") {
 		mode = lexxos::gameboy::DisplayBlitMode::Fit;
 		return true;
 	}
+
 	if (value == "1x" || value == "native" || value == "center") {
 		mode = lexxos::gameboy::DisplayBlitMode::Native;
 		return true;
 	}
+
 	if (value == "none" || value == "off") {
 		mode = lexxos::gameboy::DisplayBlitMode::None;
 		return true;
 	}
+
 	return false;
 }
 
@@ -164,6 +189,7 @@ std::string_view toString(lexxos::gameboy::DisplayBlitMode mode) {
 		case lexxos::gameboy::DisplayBlitMode::None:
 			return "none";
 	}
+
 	return "unknown";
 }
 
@@ -171,15 +197,19 @@ VramWarmupTarget effectiveWarmupTarget(VramViewMode mode, VramWarmupTarget targe
 	if (target != VramWarmupTarget::Auto) {
 		return target;
 	}
+
 	if (mode == VramViewMode::Tiles) {
 		return VramWarmupTarget::TileData;
 	}
+
 	if (mode == VramViewMode::Map || mode == VramViewMode::MapTiles) {
 		return VramWarmupTarget::Map;
 	}
+
 	if (mode == VramViewMode::Bg || mode == VramViewMode::BgScan) {
 		return VramWarmupTarget::TileData;
 	}
+
 	return VramWarmupTarget::Any;
 }
 
@@ -198,6 +228,7 @@ std::string_view toString(VramWarmupTarget target) {
 		case VramWarmupTarget::Map1:
 			return "map1";
 	}
+
 	return "unknown";
 }
 
@@ -213,24 +244,31 @@ std::uint16_t skeletonPixel(int x, int y, std::uint32_t frame, lexxos::devices::
 	if (gamepad.up && x >= 18 && x < 30 && y >= 104 && y < 116) {
 		return skeletonShade3;
 	}
+
 	if (gamepad.down && x >= 18 && x < 30 && y >= 124 && y < 136) {
 		return skeletonShade3;
 	}
+
 	if (gamepad.left && x >= 8 && x < 20 && y >= 114 && y < 126) {
 		return skeletonShade3;
 	}
+
 	if (gamepad.right && x >= 28 && x < 40 && y >= 114 && y < 126) {
 		return skeletonShade3;
 	}
+
 	if (gamepad.b && x >= 108 && x < 124 && y >= 114 && y < 130) {
 		return skeletonShade3;
 	}
+
 	if (gamepad.a && x >= 132 && x < 148 && y >= 106 && y < 122) {
 		return skeletonShade3;
 	}
+
 	if (gamepad.select && x >= 62 && x < 78 && y >= 124 && y < 130) {
 		return skeletonShade3;
 	}
+
 	if (gamepad.start && x >= 84 && x < 100 && y >= 124 && y < 130) {
 		return skeletonShade3;
 	}
@@ -238,6 +276,7 @@ std::uint16_t skeletonPixel(int x, int y, std::uint32_t frame, lexxos::devices::
 	if (((x ^ y ^ static_cast<int>(frame)) & 0x20) != 0) {
 		return skeletonShade0;
 	}
+
 	return skeletonShade1;
 }
 
@@ -252,6 +291,7 @@ bool renderGbSkeletonFrame(lexxos::devices::DisplayDevice& display, std::uint32_
 	if (!display.beginFrame()) {
 		return false;
 	}
+
 	if (!display.clear(skeletonBorderColor)) {
 		return false;
 	}

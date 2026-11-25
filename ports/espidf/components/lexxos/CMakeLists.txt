@@ -8,7 +8,9 @@ set(LEXXOS_PLATFORM "espidf" CACHE STRING "Target platform backend" FORCE)
 # entry point are not always visible there, so select a safe ESP-IDF board before
 # including Boards.cmake. Otherwise Boards.cmake falls back to host_native and
 # rewrites LEXXOS_PLATFORM to host during component discovery.
-if (DEFINED LEXXOS_ESPIDF_BOARD
+if (NOT "$ENV{_LEXX_SDK_BOARD}" STREQUAL "")
+    set(LEXXOS_BOARD "$ENV{_LEXX_SDK_BOARD}" CACHE STRING "Target board profile" FORCE)
+elseif (DEFINED LEXXOS_ESPIDF_BOARD
         AND NOT LEXXOS_ESPIDF_BOARD STREQUAL ""
         AND NOT LEXXOS_ESPIDF_BOARD STREQUAL "host_native")
     set(LEXXOS_BOARD "${LEXXOS_ESPIDF_BOARD}" CACHE STRING "Target board profile" FORCE)
@@ -30,7 +32,16 @@ elseif (NOT DEFINED LEXXOS_BOARD OR LEXXOS_BOARD STREQUAL "" OR LEXXOS_BOARD STR
     endif ()
 endif ()
 
-include("${LEXXOS_ROOT}/cmake/Boards.cmake")
+# The requirements pass runs in script mode with the repository as binary dir.
+# Keep its generated discovery headers in the local workspace too.
+if (NOT "$ENV{_LEXX_SDK_BUILD_DIR}" STREQUAL "")
+    set(LEXXOS_SYSTEM_SDK ON)
+    set(_lexxos_requested_platform espidf)
+    set(_LEXXOS_SDK_GENERATED_INCLUDE_DIR "$ENV{_LEXX_SDK_BUILD_DIR}/generated/include")
+elseif (CMAKE_SCRIPT_MODE_FILE)
+    set(LEXXOS_SCRIPT_GENERATED_INCLUDE_DIR "${LEXXOS_ROOT}/work/generated/espidf/${LEXXOS_BOARD}/include")
+endif ()
+include("${LEXXOS_ROOT}/config/cmake/Boards.cmake")
 
 set(LEXXOS_BUILD_FLAVOR "standard" CACHE STRING "LexxOS feature preset")
 
@@ -43,6 +54,9 @@ elseif (LEXXOS_BOARD STREQUAL "jc_esp32p4_m3_dev")
 elseif (LEXXOS_BOARD STREQUAL "m5stack_cardputer")
     set(LEXXOS_ESPIDF_BOARD_SOURCE "${LEXXOS_SRC_DIR}/lexxos/platform/espidf/board_m5stack_cardputer.cpp")
     set(LEXXOS_ESPIDF_BOARD_DISPLAY_DESCRIPTION "M5Stack Cardputer ST7789V2 240x135 SPI LCD")
+elseif (LEXXOS_BOARD STREQUAL "picocalc_lyra")
+    set(LEXXOS_ESPIDF_BOARD_SOURCE "${LEXXOS_SRC_DIR}/lexxos/platform/rockchip/rk3506/platform_rk3506.cpp")
+    set(LEXXOS_ESPIDF_BOARD_DISPLAY_DESCRIPTION "PicoCalc + Luckfox Lyra ILI9488 320x320 SPI LCD")
 else ()
     set(LEXXOS_ESPIDF_BOARD_SOURCE "${LEXXOS_SRC_DIR}/lexxos/platform/espidf/board_m5stack_basic_v1.cpp")
     set(LEXXOS_ESPIDF_BOARD_DISPLAY_DESCRIPTION "M5Stack Basic 320x240 SPI LCD")
@@ -52,8 +66,8 @@ endif ()
 # options must survive component discovery without board-specific FORCE overrides.
 set(LEXXOS_ESPIDF_USB_HOST_PORT "auto" CACHE STRING "ESP32-P4 USB Host port selection: auto, hs, fs or dual")
 
-include("${LEXXOS_ROOT}/cmake/Features.cmake")
-include("${LEXXOS_ROOT}/cmake/BuildInfo.cmake")
+include("${LEXXOS_ROOT}/config/cmake/Features.cmake")
+include("${LEXXOS_ROOT}/config/cmake/BuildInfo.cmake")
 
 # Common LexxOS source groups are provided by the shared catalog used by
 # the native CMake build and the ESP-IDF component.
@@ -72,7 +86,9 @@ endif ()
 if (LEXXOS_ESPIDF_ENABLE_HOSTED AND NOT LEXXOS_ESPIDF_ENABLE_WIFI_BACKEND)
     message(FATAL_ERROR "LEXXOS_ESPIDF_ENABLE_HOSTED requires LEXXOS_ESPIDF_ENABLE_WIFI_BACKEND")
 endif ()
-include("${LEXXOS_ROOT}/cmake/lexxos_sources.cmake")
+
+include("${LEXXOS_ROOT}/config/cmake/lexxos_sources.cmake")
+include("${LEXXOS_ROOT}/config/cmake/MemoryProfiles.cmake")
 
 set(LEXXOS_ESPIDF_EXTRA_REQUIRES)
 if (LEXXOS_BOARD STREQUAL "jc_esp32p4_m3_dev")
@@ -91,15 +107,20 @@ if (LEXXOS_BOARD STREQUAL "jc_esp32p4_m3_dev")
             "${LEXXOS_SRC_DIR}/lexxos/devices/espidf/mipi_dsi_display_espidf.cpp")
 endif ()
 
+if (NOT LEXXOS_SYSTEM_SDK)
+    set(_lexxos_entrypoint espidf_main.cpp)
+endif ()
+
 idf_component_register(
         SRCS
-        espidf_main.cpp
+        ${_lexxos_entrypoint}
         ${LEXXOS_COMMON_SOURCES}
         ${LEXXOS_ESPIDF_BOARD_SOURCE}
         ${LEXXOS_SRC_DIR}/lexxos/kernel/espidf/scheduler_espidf.cpp
         ${LEXXOS_SRC_DIR}/lexxos/platform/espidf/platform_espidf.cpp
         ${LEXXOS_SRC_DIR}/lexxos/platform/espidf/detail/espidf_console.cpp
         ${LEXXOS_SRC_DIR}/lexxos/platform/espidf/detail/espidf_gpio.cpp
+        ${LEXXOS_SRC_DIR}/lexxos/platform/espidf/detail/espidf_status_led.cpp
         ${LEXXOS_SRC_DIR}/lexxos/devices/espidf/espidf_placeholder_i2c_bus.cpp
         ${LEXXOS_SRC_DIR}/lexxos/devices/espidf/i2c_bus_espidf.cpp
         ${LEXXOS_SRC_DIR}/lexxos/devices/espidf/m5stack_buttons_input_device.cpp
@@ -109,6 +130,7 @@ idf_component_register(
         ${LEXXOS_SRC_DIR}/lexxos/devices/espidf/espidf_spi_bus.cpp
         INCLUDE_DIRS
         ${LEXXOS_SRC_DIR}
+        ${LEXXOS_ROOT}/apps/sdk
         ${LEXXOS_GENERATED_INCLUDE_DIR}
         REQUIRES
         driver
@@ -139,11 +161,16 @@ idf_component_register(
         esp_driver_rmt
 )
 
+include("${LEXXOS_ROOT}/config/cmake/LwJson.cmake")
+lexxos_attach_lwjson(${COMPONENT_LIB})
+
 target_compile_features(${COMPONENT_LIB} PRIVATE cxx_std_20)
+lexxos_attach_sdk_memory_profile(${COMPONENT_LIB})
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
         LEXXOS_PLATFORM_ESPIDF=1
         LEXXOS_KERNEL_ESPIDF=1
+        LEXXOS_UI_NATIVE=1
         LEXXOS_BOARD_NAME=\"${LEXXOS_BOARD}\"
 )
 
@@ -194,8 +221,15 @@ if (LEXXOS_BOARD STREQUAL "jc_esp32p4_m3_dev")
     target_compile_definitions(${COMPONENT_LIB} PRIVATE LEXXOS_DISPLAY_SCRATCH_LINE_PIXELS=1024)
 endif ()
 
+if (LEXXOS_SYSTEM_SDK)
+    target_compile_features(${COMPONENT_LIB} INTERFACE cxx_std_20)
+    target_compile_definitions(${COMPONENT_LIB} INTERFACE
+            LEXXOS_PLATFORM_ESPIDF=1 LEXXOS_KERNEL_ESPIDF=1 LEXXOS_UI_NATIVE=1
+            LEXXOS_BOARD_NAME="${LEXXOS_BOARD}")
+endif ()
+
 # Honor the same explicit FatFs cache budget as native/Pico builds.
-if (NOT LEXXOS_FAT_READ_CACHE_SECTORS STREQUAL "")
+if (NOT "${LEXXOS_FAT_READ_CACHE_SECTORS}" STREQUAL "")
     target_compile_definitions(${COMPONENT_LIB} PRIVATE
             LEXXOS_FAT_READ_CACHE_SECTORS=${LEXXOS_FAT_READ_CACHE_SECTORS})
 endif ()

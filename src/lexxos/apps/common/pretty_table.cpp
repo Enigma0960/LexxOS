@@ -5,18 +5,8 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps {
-namespace {
 
-	void appendUnsignedToRow(PrettyTableRow& row, std::size_t column, std::uint64_t value) {
-		char buffer[32]{};
-		std::size_t position = sizeof(buffer);
-		do {
-			--position;
-			buffer[position] = static_cast<char>('0' + (value % 10U));
-			value /= 10U;
-		} while (value != 0 && position > 0);
-		row.append(column, std::string_view{buffer + position, sizeof(buffer) - position});
-	}
+namespace {
 
 	[[nodiscard]] std::uint16_t textWidth(std::string_view text) {
 		std::uint16_t width = 0;
@@ -24,10 +14,12 @@ namespace {
 			if (character == '\n' || character == '\r') {
 				break;
 			}
+
 			if (width < 0xFFFFU) {
 				++width;
 			}
 		}
+
 		return width;
 	}
 
@@ -48,19 +40,23 @@ namespace {
 			if (character == '\n' || character == '\r') {
 				break;
 			}
+
 			if (written >= width) {
 				clipped = true;
 				break;
 			}
+
 			if (written + 1 == width && textWidth(text) > width && width > 1) {
 				context.write("~");
 				++written;
 				clipped = true;
 				break;
 			}
+
 			context.write(std::string_view{&character, 1});
 			++written;
 		}
+
 		if (!clipped && written < width) {
 			writeSpaces(context, static_cast<std::uint16_t>(width - written));
 		}
@@ -89,98 +85,6 @@ namespace {
 	}
 
 } // namespace
-
-void PrettyTableRow::reset(std::size_t columnCount) {
-	_columnCount = std::min(columnCount, maxColumns);
-	for (std::size_t index = 0; index < maxColumns; ++index) {
-		_cells[index] = {};
-		_scratchSize[index] = 0;
-		_scratch[index][0] = '\0';
-	}
-}
-
-void PrettyTableRow::set(std::size_t column, std::string_view value) {
-	if (column >= _columnCount) {
-		return;
-	}
-	clear(column);
-	append(column, value);
-}
-
-void PrettyTableRow::setUnsigned(std::size_t column, std::uint32_t value) {
-	clear(column);
-	appendUnsigned(column, value);
-}
-
-void PrettyTableRow::setUnsigned64(std::size_t column, std::uint64_t value) {
-	clear(column);
-	appendUnsigned64(column, value);
-}
-
-void PrettyTableRow::setSigned(std::size_t column, int value) {
-	clear(column);
-	appendSigned(column, value);
-}
-
-void PrettyTableRow::clear(std::size_t column) {
-	if (column >= _columnCount) {
-		return;
-	}
-	_scratchSize[column] = 0;
-	_scratch[column][0] = '\0';
-	_cells[column] = std::string_view{_scratch[column].data(), 0};
-}
-
-void PrettyTableRow::append(std::size_t column, std::string_view value) {
-	if (column >= _columnCount) {
-		return;
-	}
-	if (_cells[column].data() != _scratch[column].data()) {
-		clear(column);
-	}
-	for (char const character : value) {
-		appendChar(column, character);
-	}
-	_cells[column] = std::string_view{_scratch[column].data(), _scratchSize[column]};
-}
-
-void PrettyTableRow::appendUnsigned(std::size_t column, std::uint32_t value) {
-	appendUnsigned64(column, value);
-}
-
-void PrettyTableRow::appendUnsigned64(std::size_t column, std::uint64_t value) {
-	appendUnsignedToRow(*this, column, value);
-}
-
-void PrettyTableRow::appendSigned(std::size_t column, int value) {
-	if (value < 0) {
-		appendChar(column, '-');
-		appendUnsigned64(column, static_cast<std::uint64_t>(-(value + 1)) + 1U);
-		return;
-	}
-	appendUnsigned64(column, static_cast<std::uint32_t>(value));
-}
-
-std::string_view PrettyTableRow::cell(std::size_t column) const {
-	return column < _columnCount ? _cells[column] : std::string_view{};
-}
-
-void PrettyTableRow::appendChar(std::size_t column, char value) {
-	if (column >= _columnCount) {
-		return;
-	}
-	if (_scratchSize[column] + 1 >= scratchBytesPerCell) {
-		if (scratchBytesPerCell > 1) {
-			_scratch[column][scratchBytesPerCell - 2] = '~';
-			_scratchSize[column] = scratchBytesPerCell - 1;
-			_scratch[column][_scratchSize[column]] = '\0';
-		}
-		return;
-	}
-	_scratch[column][_scratchSize[column]] = value;
-	++_scratchSize[column];
-	_scratch[column][_scratchSize[column]] = '\0';
-}
 
 PrettyTable::PrettyTable(PrettyTableColumn const* columns, std::size_t columnCount)
     : _columns(columns)
@@ -220,6 +124,7 @@ void PrettyTable::print(lexxos::os::AppContext& context, RowProvider provider, v
 	if (_style.border && _style.horizontalRules != PrettyTableRules::None) {
 		printRule(context, widths);
 	}
+
 	if (_style.header) {
 		printHeaderRow(context, widths);
 		if (_style.border && (_style.horizontalRules == PrettyTableRules::Header || _style.horizontalRules == PrettyTableRules::All)) {
@@ -232,11 +137,13 @@ void PrettyTable::print(lexxos::os::AppContext& context, RowProvider provider, v
 		if (!provider(rowIndex, row, userData)) {
 			break;
 		}
+
 		printRow(context, row, widths);
 		if (_style.border && _style.horizontalRules == PrettyTableRules::All) {
 			printRule(context, widths);
 		}
 	}
+
 	if (_style.border && (_style.horizontalRules == PrettyTableRules::Frame || _style.horizontalRules == PrettyTableRules::Header)) {
 		printRule(context, widths);
 	}
@@ -247,12 +154,14 @@ std::uint16_t PrettyTable::tableWidth(std::array<std::uint16_t, maxColumns> cons
 	if (_style.border) {
 		width = 1;
 	}
+
 	for (std::size_t column = 0; column < _columnCount; ++column) {
 		width = static_cast<std::uint16_t>(width + widths[column] + _style.leftPadding + _style.rightPadding);
 		if (_style.border || column + 1 < _columnCount) {
 			++width;
 		}
 	}
+
 	return width;
 }
 
@@ -271,6 +180,7 @@ void PrettyTable::computeWidths(
 		if (!provider(rowIndex, row, userData)) {
 			break;
 		}
+
 		for (std::size_t column = 0; column < _columnCount; ++column) {
 			widths[column] = std::max(widths[column], textWidth(row.cell(column)));
 		}
@@ -280,9 +190,11 @@ void PrettyTable::computeWidths(
 		if (_columns[column].maxWidth > 0 && widths[column] > _columns[column].maxWidth) {
 			widths[column] = _columns[column].maxWidth;
 		}
+
 		if (widths[column] < _columns[column].minWidth) {
 			widths[column] = _columns[column].minWidth;
 		}
+
 		if (widths[column] == 0) {
 			widths[column] = 1;
 		}
@@ -304,9 +216,11 @@ void PrettyTable::fitWidths(std::array<std::uint16_t, maxColumns>& widths) const
 				widestColumn = column;
 			}
 		}
+
 		if (widestColumn >= _columnCount) {
 			break;
 		}
+
 		--widths[widestColumn];
 	}
 }
@@ -317,6 +231,7 @@ void PrettyTable::printRule(lexxos::os::AppContext& context, std::array<std::uin
 		writeRepeated(context, '-', static_cast<std::uint16_t>(widths[column] + _style.leftPadding + _style.rightPadding));
 		context.write("+");
 	}
+
 	context.writeLine("");
 }
 
@@ -326,6 +241,7 @@ void PrettyTable::printHeaderRow(
 	if (_style.border) {
 		context.write("|");
 	}
+
 	for (std::size_t column = 0; column < _columnCount; ++column) {
 		writeSpaces(context, _style.leftPadding);
 		writeJustified(context, _columns[column].name, widths[column], _columns[column].align);
@@ -336,6 +252,7 @@ void PrettyTable::printHeaderRow(
 			context.write(" ");
 		}
 	}
+
 	context.writeLine("");
 }
 
@@ -346,6 +263,7 @@ void PrettyTable::printRow(
 	if (_style.border) {
 		context.write("|");
 	}
+
 	for (std::size_t column = 0; column < _columnCount; ++column) {
 		writeSpaces(context, _style.leftPadding);
 		writeJustified(context, row.cell(column), widths[column], _columns[column].align);
@@ -356,6 +274,7 @@ void PrettyTable::printRow(
 			context.write(" ");
 		}
 	}
+
 	context.writeLine("");
 }
 

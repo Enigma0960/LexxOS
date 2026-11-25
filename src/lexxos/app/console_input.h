@@ -5,10 +5,21 @@
 #include <string_view>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
-}
+
+} // namespace lexxos::platform
+
+namespace lexxos::app {
+
+class ConsoleInputService;
+
+} // namespace lexxos::app
 
 namespace lexxos::app::console_input {
+
+// Совместимость для ещё не переведённых composition; новый код получает сервис явно.
+ConsoleInputService& defaultService();
 
 enum class Mode : std::uint8_t {
 	Shell,

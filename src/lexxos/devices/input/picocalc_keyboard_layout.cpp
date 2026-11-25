@@ -1,6 +1,7 @@
 #include <lexxos/devices/input/picocalc_keyboard_layout.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint8_t keyBackspace = 0x08;
@@ -93,9 +94,11 @@ namespace {
 		if (code >= 'a' && code <= 'z') {
 			return letters[code - 'a'];
 		}
+
 		if (code >= 'A' && code <= 'Z') {
 			return letters[code - 'A'];
 		}
+
 		return KeyCode::Unknown;
 	}
 
@@ -246,8 +249,8 @@ namespace {
 
 		switch (code) {
 			case keyBackspace:
-			case keyTab:
-			case keyEnterLf:
+			case keyTab      :
+			case keyEnterLf  :
 			case keyEnterCr:
 				return code;
 			default:
@@ -299,15 +302,16 @@ bool picoCalcKeyboardIsRepeatable(PicoCalcKeyboardMapping mapping, std::uint8_t 
 	if ((scanCode >= keyF1 && scanCode <= keyF9) || scanCode == keyF10 || scanCode == keyF10Legacy) {
 		return false;
 	}
+
 	if (scanCode == keyEsc) {
 		return false;
 	}
 
 	switch (mapping.key) {
-		case KeyCode::Left:
-		case KeyCode::Right:
-		case KeyCode::Up:
-		case KeyCode::Down:
+		case KeyCode::Left     :
+		case KeyCode::Right    :
+		case KeyCode::Up       :
+		case KeyCode::Down     :
 		case KeyCode::Backspace:
 		case KeyCode::Space:
 			return true;

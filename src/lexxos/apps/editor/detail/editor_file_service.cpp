@@ -8,6 +8,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::text_editor_programs::detail {
+
 namespace {
 
 	constexpr std::size_t readBufferSize = 96;
@@ -25,6 +26,7 @@ namespace {
 			context.writeLine(": file has too many lines for the editor buffer");
 			return false;
 		}
+
 		return buffer.appendLine({line, length});
 	}
 
@@ -42,6 +44,7 @@ bool EditorFileService::load(lexxos::os::AppContext& context, std::string_view p
 		createdNewFile = true;
 		return true;
 	}
+
 	if (openStatus != lexxos::vfs::OpenStatus::Ok) {
 		context.write("edit: ");
 		context.write(path);
@@ -66,6 +69,7 @@ bool EditorFileService::load(lexxos::os::AppContext& context, std::string_view p
 			context.writeLine(lexxos::vfs::toString(readStatus));
 			return false;
 		}
+
 		if (bytesRead == 0) {
 			break;
 		}
@@ -75,27 +79,32 @@ bool EditorFileService::load(lexxos::os::AppContext& context, std::string_view p
 			if (character == '\r') {
 				continue;
 			}
+
 			if (character == '\n') {
 				if (!finishLoadedLine(context, buffer, path, pendingLine.data(), pendingLength)) {
 					return false;
 				}
+
 				pendingLength = 0;
 				pendingLine[0] = '\0';
 				hasPendingLine = false;
 				continue;
 			}
+
 			if (!isEditorLineCharacter(character)) {
 				context.write("edit: ");
 				context.write(path);
 				context.writeLine(": file is not plain ASCII text");
 				return false;
 			}
+
 			if (pendingLength + 1U >= pendingLine.size()) {
 				context.write("edit: ");
 				context.write(path);
 				context.writeLine(": line is too long for the editor buffer");
 				return false;
 			}
+
 			pendingLine[pendingLength++] = character;
 			pendingLine[pendingLength] = '\0';
 			hasPendingLine = true;
@@ -129,6 +138,7 @@ bool EditorFileService::save(lexxos::os::AppContext& context, std::string_view p
 		if (status == lexxos::vfs::WriteStatus::Ok) {
 			status = file.write("\n");
 		}
+
 		if (status != lexxos::vfs::WriteStatus::Ok) {
 			context.write("edit: ");
 			context.write(path);

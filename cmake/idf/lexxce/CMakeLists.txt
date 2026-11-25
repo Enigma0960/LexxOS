@@ -1,0 +1,5 @@
+set(_lexx_ce_execution "$ENV{_LEXX_CE_EXECUTION}")
+idf_component_register(REQUIRES lexxos_ce lexxos_ce_espidf lexxos_ce_${_lexx_ce_execution})
+if (_lexx_ce_execution STREQUAL "freertos")
+    target_compile_definitions(${COMPONENT_LIB} INTERFACE LEXXOS_CE_EXECUTION_FREERTOS=1)
+endif ()

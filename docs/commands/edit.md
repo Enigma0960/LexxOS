@@ -1,6 +1,6 @@
 # `edit`
 
-edit a VFS text file.
+Редактирует текстовый файл VFS.
 
 ## PicoCalc LCD
 

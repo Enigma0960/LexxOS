@@ -9,7 +9,7 @@ if (DEFINED LEXXOS_TEST_PROJECT_VER)
     set(PROJECT_VER "${LEXXOS_TEST_PROJECT_VER}")
 endif ()
 
-include("${LEXXOS_TEST_ROOT}/cmake/BuildInfo.cmake")
+include("${LEXXOS_TEST_ROOT}/config/cmake/BuildInfo.cmake")
 file(READ "${LEXXOS_BUILD_INFO_FILE}" generated)
 
 set(expected "inline constexpr char version[] = \"${LEXXOS_TEST_EXPECTED_VERSION}\";")

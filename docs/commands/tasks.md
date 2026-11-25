@@ -1,6 +1,6 @@
 # `tasks`
 
-show registered kernel tasks.
+Показывает задачи ядра.
 
 ## Справка shell
 

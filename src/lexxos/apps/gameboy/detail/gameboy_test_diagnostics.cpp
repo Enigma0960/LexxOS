@@ -1,7 +1,7 @@
+#include <cstring>
+
 #include <lexxos/apps/gameboy/detail/gameboy_program_arguments.h>
 #include <lexxos/apps/gameboy/detail/gameboy_program_support.h>
-
-#include <cstring>
 
 namespace lexxos::apps::gameboy_programs {
 
@@ -15,10 +15,12 @@ bool serialOutputContains(lexxos::gameboy::Bus const& bus, char const* needle) {
 		while (needle[matched] != '\0' && offset + matched < bus.serialOutputSize() && bus.serialOutputByte(offset + matched) == static_cast<std::uint8_t>(needle[matched])) {
 			++matched;
 		}
+
 		if (needle[matched] == '\0') {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -43,6 +45,7 @@ void writeSerialOutput(lexxos::os::AppContext& context, lexxos::gameboy::Bus con
 			writeCode8(context, value);
 		}
 	}
+
 	context.writeLine("");
 }
 
@@ -50,18 +53,23 @@ std::string_view gbTestResultName(GbTestRunSummary const& summary) {
 	if (!summary.opened) {
 		return "open-error";
 	}
+
 	if (!summary.mapperSupported) {
 		return "unsupported-mapper";
 	}
+
 	if (summary.passed) {
 		return "passed";
 	}
+
 	if (summary.failed) {
 		return "failed";
 	}
+
 	if (!isContinuableEmulationStatus(summary.total.status)) {
 		return "stopped";
 	}
+
 	return "incomplete";
 }
 
@@ -69,15 +77,19 @@ int gbTestExitCode(GbTestRunSummary const& summary) {
 	if (!summary.opened) {
 		return 1;
 	}
+
 	if (!summary.mapperSupported) {
 		return 2;
 	}
+
 	if (summary.failed || summary.total.status == lexxos::gameboy::CpuStepStatus::BusReadError) {
 		return 1;
 	}
+
 	if (summary.total.status == lexxos::gameboy::CpuStepStatus::UnsupportedOpcode) {
 		return 2;
 	}
+
 	return summary.passed ? 0 : 2;
 }
 
@@ -123,12 +135,14 @@ bool runGbTestRom(
 	if (!openCartridge(context, programName, path, cartridge)) {
 		return false;
 	}
+
 	summary.opened = true;
 	if (!cartridge.mapperSupported()) {
 		context.write(programName);
 		context.writeLine(": cartridge mapper is not supported yet");
 		return false;
 	}
+
 	summary.mapperSupported = true;
 
 	auto& bus = workspace->bus;
@@ -203,6 +217,7 @@ bool joinPath(std::string_view directory, std::string_view filename, std::array<
 	if (needsSeparator) {
 		output[position++] = '/';
 	}
+
 	std::memcpy(output.data() + position, filename.data(), filename.size());
 	position += filename.size();
 	output[position] = '\0';

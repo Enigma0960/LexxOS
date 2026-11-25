@@ -1,9 +1,9 @@
-#include <commands/command_selection.h>
-
 #include <lexxos/apps/picocalc/detail/picocalc_southbridge_program_support.h>
 
 #include <cstdint>
 #include <string_view>
+
+#include <commands/command_selection.h>
 
 #include <lexxos/apps/detail/i2c_program_support.h>
 #include <lexxos/devices/bus/i2c_bus.h>
@@ -13,6 +13,7 @@
 #include <lexxos/devices/picocalc/picocalc_southbridge_runtime.h>
 
 namespace lexxos::apps::i2c_programs::picocalc_southbridge_detail {
+
 namespace {
 
 	char hexDigit(std::uint8_t value) {
@@ -178,6 +179,7 @@ namespace {
 			writeReadFailure(context, "keyboard-state");
 			return false;
 		}
+
 		context.write("keyboard-state: ");
 		writeKeyboardStateReport(context, state);
 		return true;
@@ -312,6 +314,7 @@ bool parseCommandOptions(
 		context.writeErrorLine("picocalc-sb: invalid --address value, expected 7-bit I2C address");
 		return false;
 	}
+
 	options.address = static_cast<std::uint8_t>(addressValue);
 
 	if (!parseCountArgument(context, arguments, "poll", 0, 64, options.pollCount)) {
@@ -322,6 +325,7 @@ bool parseCommandOptions(
 	if (!parseCountArgument(context, arguments, "delay", 50, 5000, pollDelayMs)) {
 		return false;
 	}
+
 	(void) pollDelayMs;
 
 	options.directRequested = arguments.has("direct-i2c");
@@ -377,6 +381,7 @@ int runServiceBacked(
 		context.writeLine("keyboard-fifo: direct polling skipped; FIFO is owned by picocalc-keyboard input driver");
 		context.writeLine("keyboard-fifo: use keyboard-live/input-test for non-destructive keyboard diagnostics");
 	}
+
 	return 0;
 }
 
@@ -477,15 +482,19 @@ int runDirectI2c(
 	if (readAndWriteKeyboardState(context, southbridge)) {
 		++successfulReads;
 	}
+
 	if (readAndWriteBattery(context, southbridge)) {
 		++successfulReads;
 	}
+
 	if (readAndWriteBacklight(context, southbridge, false, "lcd-backlight")) {
 		++successfulReads;
 	}
+
 	if (readAndWriteBacklight(context, southbridge, true, "keyboard-backlight")) {
 		++successfulReads;
 	}
+
 	if (readAndWritePowerSupport(context, southbridge)) {
 		++successfulReads;
 	}

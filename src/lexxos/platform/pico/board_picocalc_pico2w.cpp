@@ -1,5 +1,5 @@
-#include <lexxos/platform/board.h>
 #include <lexxos/board_config.h>
+#include <lexxos/platform/board.h>
 
 namespace lexxos::platform {
 
@@ -37,8 +37,8 @@ namespace lexxos::platform {
 	#define LEXXOS_PICOCALC_AUDIO_BEEP_DURATION_MS 120
 #endif
 
-BoardDescriptor const& activeBoardDescriptor() {
-	static BoardDescriptor const descriptor{
+LegacyBoardDescriptor const& activeBoardDescriptor() {
+	static LegacyBoardDescriptor const descriptor{
 #if BOARD_ENABLED(PICOCALC_PICO2)
 	    .boardId = "picocalc_pico2",
 	    .boardName = "ClockworkPi PicoCalc with Raspberry Pi Pico 2",

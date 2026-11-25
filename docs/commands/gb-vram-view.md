@@ -1,6 +1,6 @@
 # `gb-vram-view`
 
-show Game Boy VRAM tile data.
+Показывает данные тайлов VRAM Game Boy.
 
 ## Справка shell
 

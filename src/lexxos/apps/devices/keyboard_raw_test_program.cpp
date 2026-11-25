@@ -10,36 +10,37 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec keyboardRawArguments[] = {
 	    {
-         .name = "seconds",
-         .shortName = 's',
-         .valueName = "seconds",
-         .help = "test duration in seconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "30",
+	     .name = "seconds",
+	     .shortName = 's',
+	     .valueName = "seconds",
+	     .help = "test duration in seconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "30",
 	     },
 	    {
-         .name = "interval",
-         .shortName = 'i',
-         .valueName = "milliseconds",
-         .help = "poll interval in milliseconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "25",
+	     .name = "interval",
+	     .shortName = 'i',
+	     .valueName = "milliseconds",
+	     .help = "poll interval in milliseconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "25",
 	     },
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "input device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "input device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -69,6 +70,7 @@ int KeyboardRawTestProgram::run(
 		context.writeErrorLine("keyboard-raw: input device is not registered");
 		return 1;
 	}
+
 	if (!input->isReady()) {
 		context.writeErrorLine("keyboard-raw: input device is not ready");
 		return 1;
@@ -86,6 +88,7 @@ int KeyboardRawTestProgram::run(
 		context.writeErrorLine("keyboard-raw: invalid seconds value");
 		return 1;
 	}
+
 	if (!detail::parseUnsigned(arguments.valueOr("interval", "25"), intervalMs) || intervalMs == 0 || intervalMs > 1000) {
 		context.writeErrorLine("keyboard-raw: invalid interval value");
 		return 1;
@@ -132,6 +135,7 @@ int KeyboardRawTestProgram::run(
 			writeUnsigned(context, (nowMs - startedMs) / 1000U);
 			context.writeLine("s");
 		}
+
 		lexxos::kernel::sleepMs(intervalMs);
 	}
 
@@ -142,6 +146,7 @@ int KeyboardRawTestProgram::run(
 	if (totalChanges == 0) {
 		context.writeLine("keyboard-raw: no raw matrix activity detected");
 	}
+
 	return 0;
 }
 

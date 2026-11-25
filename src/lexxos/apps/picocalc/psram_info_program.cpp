@@ -63,12 +63,14 @@ int PsramInfoProgram::run(lexxos::os::AppContext& context,
 		} else {
 			context.write("none");
 		}
+
 		context.write(" sm=");
 		if (runtime.stateMachine >= 0) {
 			writeUnsigned(context, static_cast<std::uint32_t>(runtime.stateMachine));
 		} else {
 			context.write("none");
 		}
+
 		context.write(" transfers=");
 		writeUnsigned(context, runtime.transferCount);
 		context.write(" pio-transfers=");
@@ -97,12 +99,14 @@ int PsramInfoProgram::run(lexxos::os::AppContext& context,
 		context.write(" ");
 		writeHexByte(context, byte);
 	}
+
 	context.writeLine("");
 
 	if (detail::idLooksIdle(id, 0x00) || detail::idLooksIdle(id, 0xFF)) {
 		context.writeLine("psram-info: no PSRAM response detected");
 		return 1;
 	}
+
 	return 0;
 #else
 	context.writeLine("psram-info: SPI probe is unavailable on this platform");

@@ -1,6 +1,6 @@
 # `sd-spi-mode`
 
-show or set SD SPI clock mode.
+Показывает или задаёт режим тактирования SPI карты SD.
 
 ## Справка shell
 

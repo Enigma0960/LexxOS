@@ -12,12 +12,15 @@ void Icon::_fillRange(std::uint16_t* pixels, int width, int x0, int x1, std::uin
 	if (pixels == nullptr || width <= 0) {
 		return;
 	}
+
 	if (x0 < 0) {
 		x0 = 0;
 	}
+
 	if (x1 >= width) {
 		x1 = width - 1;
 	}
+
 	for (int x = x0; x <= x1; ++x) {
 		pixels[x] = color;
 	}

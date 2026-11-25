@@ -81,6 +81,7 @@ int SdSpeedScanProgram::run(
 		} else {
 			context.writeLine("sd-speed-scan: high-speed FAT writes are guarded; pass fast-write=on to test target write speed");
 		}
+
 		if (!detail::cleanupSpeedFilesInReferenceMode(context, config.files)) {
 			return 1;
 		}
@@ -105,6 +106,7 @@ int SdSpeedScanProgram::run(
 				if (!storageLock) {
 					return 1;
 				}
+
 				rawOk = detail::runSpeedRawProbe(
 				    context,
 				    *device,
@@ -135,6 +137,7 @@ int SdSpeedScanProgram::run(
 				if (writeElapsedMs != 0) {
 					detail::writeSdSpeedFatProbeReport(context, "write", fatBytes, writeElapsedMs);
 				}
+
 				if (readElapsedMs != 0) {
 					detail::writeSdSpeedFatProbeReport(context, "read/verify", fatBytes, readElapsedMs);
 				}
@@ -160,6 +163,7 @@ int SdSpeedScanProgram::run(
 		if (testedMinimum || baudRate <= config.stepHz) {
 			break;
 		}
+
 		baudRate -= config.stepHz;
 	}
 

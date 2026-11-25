@@ -7,6 +7,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::rtc_programs::detail {
+
 namespace {
 
 	constexpr std::string_view rtcSettingsDirectory = "/mnt/sd/.lexx";
@@ -18,10 +19,12 @@ namespace {
 		if (text == nullptr) {
 			return 0;
 		}
+
 		std::size_t length = 0;
 		while (length < capacity && text[length] != '\0') {
 			++length;
 		}
+
 		return length;
 	}
 
@@ -35,17 +38,21 @@ namespace {
 		if (text.size() >= output.size()) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < text.size(); ++index) {
 			char const character = text[index];
 			if (character == '\r' || character == '\n') {
 				return false;
 			}
+
 			output[index] = character;
 		}
+
 		output[text.size()] = '\0';
 		for (std::size_t index = text.size() + 1U; index < output.size(); ++index) {
 			output[index] = '\0';
 		}
+
 		return true;
 	}
 
@@ -53,17 +60,21 @@ namespace {
 		if (text.empty()) {
 			return false;
 		}
+
 		std::uint32_t value = 0;
 		for (char const character : text) {
 			if (character < '0' || character > '9') {
 				return false;
 			}
+
 			std::uint32_t const digit = static_cast<std::uint32_t>(character - '0');
 			if (value > (0xFFFFFFFFU - digit) / 10U) {
 				return false;
 			}
+
 			value = value * 10U + digit;
 		}
+
 		output = value;
 		return true;
 	}
@@ -77,10 +88,12 @@ namespace {
 			output = true;
 			return true;
 		}
+
 		if (text == "0" || text == "false" || text == "no" || text == "off") {
 			output = false;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -107,6 +120,7 @@ namespace {
 			text[--index] = static_cast<char>('0' + (value % 10U));
 			value /= 10U;
 		} while (value != 0 && index > 0);
+
 		return appendText(file, {text + index, sizeof(text) - 1U - index});
 	}
 
@@ -144,6 +158,7 @@ namespace {
 		if (lexxos::vfs::stat(rtcSettingsDirectory, stat)) {
 			return stat.type == lexxos::vfs::NodeType::Directory;
 		}
+
 		auto const status = lexxos::vfs::createDirectory(rtcSettingsDirectory);
 		return status == lexxos::vfs::WriteStatus::Ok;
 	}
@@ -158,52 +173,66 @@ namespace {
 		if (separator == std::string_view::npos) {
 			return RtcSettingsStatus::Invalid;
 		}
+
 		auto const key = line.substr(0, separator);
 		auto const value = line.substr(separator + 1U);
 
 		if (key == "enabled") {
 			return parseBoolean(value, output.enabled) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "prefer-default") {
 			return parseBoolean(value, output.preferAsDefault) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "auto-sync") {
 			return parseBoolean(value, output.autoNetworkSync) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "server") {
 			return setRtcSettingsServer(output, value) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "timeout-ms") {
 			return parseUnsigned(value, output.timeoutMs) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "interval-ms") {
 			return parseUnsigned(value, output.intervalMs) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "retry-ms") {
 			return parseUnsigned(value, output.retryMs) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "startup-delay-ms") {
 			return parseUnsigned(value, output.startupDelayMs) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "tz") {
 			return parseRtcTimezoneOffset(value, output.timezoneOffsetSeconds) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "source") {
 			return setRtcSettingsSource(output, value) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "bus") {
 			return setRtcSettingsBus(output, value) ? RtcSettingsStatus::Ok : RtcSettingsStatus::Invalid;
 		}
+
 		if (key == "address") {
 			if (value.empty() || value == "-") {
 				output.addressSet = false;
 				output.address = 0;
 				return RtcSettingsStatus::Ok;
 			}
+
 			std::uint8_t address = 0;
 			if (!parseRtcI2cAddress(value, address)) {
 				return RtcSettingsStatus::Invalid;
 			}
+
 			output.addressSet = true;
 			output.address = address;
 			return RtcSettingsStatus::Ok;
@@ -226,26 +255,32 @@ namespace {
 				resetRtcSettingsDefaults(output, defaults);
 				return RtcSettingsStatus::IoError;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
+
 			if (++totalRead > rtcSettingsMaxFileBytes) {
 				resetRtcSettingsDefaults(output, defaults);
 				return RtcSettingsStatus::Invalid;
 			}
+
 			if (character == '\n') {
 				auto const status = applyConfigLine(output, {line.data(), lineLength});
 				if (status != RtcSettingsStatus::Ok) {
 					resetRtcSettingsDefaults(output, defaults);
 					return status;
 				}
+
 				lineLength = 0;
 				continue;
 			}
+
 			if (lineLength + 1U >= line.size()) {
 				resetRtcSettingsDefaults(output, defaults);
 				return RtcSettingsStatus::Invalid;
 			}
+
 			line[lineLength++] = character;
 		}
 
@@ -274,6 +309,7 @@ std::string_view toString(RtcSettingsStatus status) {
 		case RtcSettingsStatus::IoError:
 			return "io-error";
 	}
+
 	return "unknown";
 }
 
@@ -293,11 +329,13 @@ bool setRtcSettingsServer(RtcSettings& settings, std::string_view server) {
 	if (server.empty()) {
 		return false;
 	}
+
 	for (char const character : server) {
 		if (character <= 0x20 || character == '\x7F') {
 			return false;
 		}
 	}
+
 	return copyString(server, settings.server);
 }
 
@@ -315,11 +353,13 @@ bool setRtcSettingsSource(RtcSettings& settings, std::string_view source) {
 	if (!isSupportedRtcSource(source)) {
 		return false;
 	}
+
 	if (source == "soft") {
 		source = "software";
 	} else if (source == "bm8563") {
 		source = "pcf8563";
 	}
+
 	return copyString(source, settings.source);
 }
 
@@ -327,11 +367,13 @@ bool setRtcSettingsBus(RtcSettings& settings, std::string_view bus) {
 	if (bus.empty()) {
 		return false;
 	}
+
 	for (char const character : bus) {
 		if (character <= 0x20 || character == '\x7F') {
 			return false;
 		}
 	}
+
 	return copyString(bus, settings.bus);
 }
 
@@ -358,6 +400,7 @@ bool parseRtcTimezoneOffset(std::string_view text, std::int32_t& output) {
 		if (separator == 0U || separator > 2U || value.size() != separator + 3U) {
 			return false;
 		}
+
 		if (!parseSmallUnsigned(value.substr(0U, separator), hours)
 		    || !parseSmallUnsigned(value.substr(separator + 1U), minutes)) {
 			return false;
@@ -415,6 +458,7 @@ bool parseRtcI2cAddress(std::string_view text, std::uint8_t& output) {
 		if (text.size() == 2U) {
 			return false;
 		}
+
 		for (std::size_t index = 2; index < text.size(); ++index) {
 			char const character = text[index];
 			std::uint32_t digit = 0;
@@ -427,6 +471,7 @@ bool parseRtcI2cAddress(std::string_view text, std::uint8_t& output) {
 			} else {
 				return false;
 			}
+
 			value = value * 16U + digit;
 		}
 	} else if (!parseUnsigned(text, value)) {
@@ -436,6 +481,7 @@ bool parseRtcI2cAddress(std::string_view text, std::uint8_t& output) {
 	if (value > 0x7FU) {
 		return false;
 	}
+
 	output = static_cast<std::uint8_t>(value);
 	return true;
 }
@@ -462,18 +508,22 @@ bool validateRtcSettings(RtcSettings const& settings, std::string_view& error) {
 		error = "server is empty";
 		return false;
 	}
+
 	if (settings.timeoutMs == 0 || settings.timeoutMs > rtcSettingsMaxTimeoutMs) {
 		error = "timeout is invalid";
 		return false;
 	}
+
 	if (!isSupportedRtcSource(rtcSettingsSource(settings))) {
 		error = "source is invalid";
 		return false;
 	}
+
 	if (rtcSettingsBus(settings).empty()) {
 		error = "bus is empty";
 		return false;
 	}
+
 	return true;
 }
 
@@ -484,6 +534,7 @@ RtcSettingsStatus loadRtcSettings(RtcSettings& output, lexxos::platform::Softwar
 		resetRtcSettingsDefaults(output, defaults);
 		return RtcSettingsStatus::NotFound;
 	}
+
 	if (openStatus != lexxos::vfs::OpenStatus::Ok) {
 		resetRtcSettingsDefaults(output, defaults);
 		return RtcSettingsStatus::IoError;
@@ -497,6 +548,7 @@ RtcSettingsStatus saveRtcSettings(RtcSettings const& settings) {
 	if (!validateRtcSettings(settings, error)) {
 		return RtcSettingsStatus::Invalid;
 	}
+
 	if (!ensureSettingsDirectory()) {
 		return RtcSettingsStatus::IoError;
 	}
@@ -528,10 +580,12 @@ RtcSettingsStatus saveRtcSettings(RtcSettings const& settings) {
 	} else if (ok) {
 		ok = appendText(file, "-");
 	}
+
 	ok = ok && appendText(file, "\n");
 	if (!ok) {
 		return RtcSettingsStatus::IoError;
 	}
+
 	return RtcSettingsStatus::Ok;
 }
 

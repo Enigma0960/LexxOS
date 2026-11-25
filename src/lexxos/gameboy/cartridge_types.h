@@ -75,6 +75,6 @@ namespace detail {
 		bool valid{false};
 	};
 
-} // namespace detail
+} // namespace lexxos::gameboy::detail
 
 } // namespace lexxos::gameboy

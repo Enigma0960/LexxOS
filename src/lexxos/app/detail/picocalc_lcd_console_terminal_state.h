@@ -33,6 +33,8 @@ class LcdConsoleTerminalState final {
 public:
 	void setRenderHooks(LcdConsoleTerminalRenderHooks hooks);
 
+	void setWrapToVisibleColumns(bool enabled);
+
 	void reset(LcdConsoleLayout const& layout);
 
 	void clear();
@@ -94,6 +96,8 @@ private:
 
 	void _setBackgroundPalette(std::uint8_t paletteIndex);
 
+	[[nodiscard]] int _lineColumns() const;
+
 	void _putPrintable(char value);
 
 	void _newLine();
@@ -120,7 +124,7 @@ private:
 
 	void _setCursorColumn(int column);
 
-	void _scrollUp();
+	void _advanceOutputLine();
 
 	void _markDirtyRow(int row);
 
@@ -154,6 +158,7 @@ private:
 	int _cursorX{0};
 	int _cursorY{0};
 	bool _wrapPending{false};
+	bool _wrapToVisibleColumns{false};
 	int _savedCursorX{0};
 	int _savedCursorY{0};
 	LcdConsoleCsiState _csi{};

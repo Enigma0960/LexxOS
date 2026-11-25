@@ -8,6 +8,7 @@ std::uint8_t ansiPalette(int offset, bool bright) {
 	} else if (offset > 7) {
 		offset = 7;
 	}
+
 	return static_cast<std::uint8_t>(offset + (bright ? lexxos::app::picocalc_lcd_console::detail::paletteBrightBlack : 0));
 }
 
@@ -17,6 +18,10 @@ namespace lexxos::app::picocalc_lcd_console::detail {
 
 void LcdConsoleTerminalState::setRenderHooks(LcdConsoleTerminalRenderHooks hooks) {
 	_hooks = hooks;
+}
+
+void LcdConsoleTerminalState::setWrapToVisibleColumns(bool enabled) {
+	_wrapToVisibleColumns = enabled;
 }
 
 void LcdConsoleTerminalState::reset(LcdConsoleLayout const& layout) {
@@ -68,6 +73,7 @@ void LcdConsoleTerminalState::writeCharacterWithoutCursor(char value) {
 		} else {
 			_escapeState = LcdConsoleEscapeState::None;
 		}
+
 		return;
 	}
 
@@ -80,6 +86,7 @@ void LcdConsoleTerminalState::writeCharacterWithoutCursor(char value) {
 			_csi.finishParameter();
 			_handleCsi(value);
 		}
+
 		_escapeState = LcdConsoleEscapeState::None;
 		return;
 	}
@@ -336,19 +343,36 @@ void LcdConsoleTerminalState::_setBackgroundPalette(std::uint8_t paletteIndex) {
 	_currentAttribute = static_cast<std::uint8_t>((_currentAttribute & 0x0FU) | ((paletteIndex & 0x0FU) << 4U));
 }
 
+int LcdConsoleTerminalState::_lineColumns() const {
+	return _wrapToVisibleColumns ? _layout.visibleColumns() : _layout.columns();
+}
+
 void LcdConsoleTerminalState::_putPrintable(char value) {
 	if (_wrapPending) {
+		if (!_wrapToVisibleColumns) {
+			return;
+		}
+
+		// Wrap only when a *new printable* arrives. An explicit CR/LF at
+		// the right edge must still advance by exactly one physical row.
+		_newLine();
+	}
+
+	auto const lineWidth = _lineColumns();
+	if (lineWidth <= 0) {
 		return;
 	}
 
 	_screen.cell(_cursorX, _cursorY) = value;
 	_screen.attribute(_cursorX, _cursorY) = _currentAttribute;
 	_markCellDirty(_cursorX, _cursorY);
-	if (_cursorX + 1 < _layout.columns()) {
+
+	if (_cursorX + 1 < lineWidth) {
 		++_cursorX;
 	} else {
 		_wrapPending = true;
 	}
+
 	_followCursorColumn();
 }
 
@@ -363,7 +387,7 @@ void LcdConsoleTerminalState::_newLine() {
 	}
 
 	_cursorY = _layout.rows() - 1;
-	_scrollUp();
+	_advanceOutputLine();
 	_followCursorColumn();
 }
 
@@ -373,9 +397,10 @@ void LcdConsoleTerminalState::_backspace() {
 		_followCursorColumn();
 		return;
 	}
+
 	if (_cursorY > 0) {
 		--_cursorY;
-		_cursorX = _layout.columns() - 1;
+		_cursorX = _lineColumns() - 1;
 		_followCursorColumn();
 	}
 }
@@ -397,6 +422,7 @@ void LcdConsoleTerminalState::_eraseLine(int mode) {
 			_screen.attribute(x, _cursorY) = defaultCellAttribute;
 		}
 	}
+
 	_markDirtyRow(_cursorY);
 }
 
@@ -414,8 +440,10 @@ void LcdConsoleTerminalState::_eraseDisplay(int mode) {
 				_screen.cell(x, y) = blankCharacter;
 				_screen.attribute(x, y) = defaultCellAttribute;
 			}
+
 			_markDirtyRow(y);
 		}
+
 		return;
 	}
 
@@ -425,6 +453,7 @@ void LcdConsoleTerminalState::_eraseDisplay(int mode) {
 			_screen.cell(x, y) = blankCharacter;
 			_screen.attribute(x, y) = defaultCellAttribute;
 		}
+
 		_markDirtyRow(y);
 	}
 }
@@ -443,22 +472,24 @@ void LcdConsoleTerminalState::_moveCursorLeft(int count) {
 			--_cursorX;
 		} else if (_cursorY > 0) {
 			--_cursorY;
-			_cursorX = _layout.columns() - 1;
+			_cursorX = _lineColumns() - 1;
 		}
 	}
+
 	_followCursorColumn();
 }
 
 void LcdConsoleTerminalState::_moveCursorRight(int count) {
 	_wrapPending = false;
 	while (count-- > 0) {
-		if (_cursorX + 1 < _layout.columns()) {
+		if (_cursorX + 1 < _lineColumns()) {
 			++_cursorX;
 		} else if (_cursorY + 1 < _layout.rows()) {
 			_cursorX = 0;
 			++_cursorY;
 		}
 	}
+
 	_followCursorColumn();
 }
 
@@ -474,6 +505,7 @@ void LcdConsoleTerminalState::_moveCursorDown(int count) {
 	if (_cursorY >= _layout.rows()) {
 		_cursorY = _layout.rows() - 1;
 	}
+
 	_followCursorColumn();
 }
 
@@ -488,10 +520,12 @@ void LcdConsoleTerminalState::_setCursorRow(int row) {
 	if (row <= 0) {
 		row = 1;
 	}
+
 	_cursorY = row - 1;
 	if (_cursorY >= _layout.rows()) {
 		_cursorY = _layout.rows() - 1;
 	}
+
 	_followCursorColumn();
 }
 
@@ -500,14 +534,16 @@ void LcdConsoleTerminalState::_setCursorColumn(int column) {
 	if (column <= 0) {
 		column = 1;
 	}
+
 	_cursorX = column - 1;
-	if (_cursorX >= _layout.columns()) {
-		_cursorX = _layout.columns() - 1;
+	if (_cursorX >= _lineColumns()) {
+		_cursorX = _lineColumns() - 1;
 	}
+
 	_followCursorColumn();
 }
 
-void LcdConsoleTerminalState::_scrollUp() {
+void LcdConsoleTerminalState::_advanceOutputLine() {
 	bool const canHardwareScroll = _viewport.isFollowingTail() && _hardwareScrollEnabled();
 	bool const canShiftDirtyRows = _hooks.shiftDirtyRowsAfterHardwareScroll != nullptr;
 
@@ -522,17 +558,7 @@ void LcdConsoleTerminalState::_scrollUp() {
 		_viewport.shiftAfterDroppedOldest();
 	}
 
-	for (int y = 1; y < _layout.rows(); ++y) {
-		for (int x = 0; x < _layout.columns(); ++x) {
-			_screen.cell(x, y - 1) = _screen.cell(x, y);
-			_screen.attribute(x, y - 1) = _screen.attribute(x, y);
-		}
-	}
-
-	for (int x = 0; x < _layout.columns(); ++x) {
-		_screen.cell(x, _layout.rows() - 1) = blankCharacter;
-		_screen.attribute(x, _layout.rows() - 1) = defaultCellAttribute;
-	}
+	_screen.advanceLine(_layout.columns(), _layout.rows());
 
 	if (canHardwareScroll && _advanceHardwareScroll(cellHeight)) {
 		if (canShiftDirtyRows) {
@@ -543,6 +569,7 @@ void LcdConsoleTerminalState::_scrollUp() {
 			_clearDirtyRows();
 			_screen.clearDirtyCellsInRow(_layout.rows() - 1, _layout.columns(), _layout.rows());
 		}
+
 		_markDirtyRow(_layout.rows() - 1);
 		return;
 	}
@@ -598,6 +625,7 @@ void LcdConsoleTerminalState::_followCursorColumn() {
 	if (!_viewport.isFollowingTail()) {
 		return;
 	}
+
 	if (_viewport.followCursorColumn(_cursorX, _layout.visibleColumns(), _layout.maxViewLeftColumn())) {
 		_invalidateView();
 	}

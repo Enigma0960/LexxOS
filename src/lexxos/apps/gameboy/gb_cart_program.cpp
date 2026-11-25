@@ -87,6 +87,7 @@ int GbCartProgram::run(
 		context.writeErrorLine(lexxos::vfs::toString(status));
 		return 1;
 	}
+
 	writeReadByte(context, "bank0[0100]", value);
 
 	status = cartridge.read8(0x4000, value);
@@ -95,6 +96,7 @@ int GbCartProgram::run(
 		context.writeErrorLine(lexxos::vfs::toString(status));
 		return 1;
 	}
+
 	context.write("selected bank: ");
 	writeUnsigned(context, cartridge.selectedRomBank());
 	context.writeLine("");
@@ -103,6 +105,7 @@ int GbCartProgram::run(
 	if (requestedBank >= romBanks && romBanks != 0) {
 		requestedBank %= romBanks;
 	}
+
 	if (requestedBank == 0 && romBanks > 1) {
 		requestedBank = 1;
 	}
@@ -123,6 +126,7 @@ int GbCartProgram::run(
 		context.writeErrorLine(lexxos::vfs::toString(status));
 		return 1;
 	}
+
 	context.write("after switch bank: ");
 	writeUnsigned(context, cartridge.selectedRomBank());
 	context.writeLine("");

@@ -8,8 +8,10 @@
 #include <lexxos/platform/board.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
-}
+
+} // namespace lexxos::platform
 
 namespace lexxos::devices::rtc::software {
 
@@ -17,6 +19,7 @@ enum class SetSource : std::uint8_t {
 	None,
 	Manual,
 	Network,
+	Host,
 };
 
 struct Status {
@@ -43,9 +46,9 @@ struct Status {
 	bool lastNetworkAttemptOk{false};
 };
 
-[[nodiscard]] bool configured(lexxos::platform::BoardDescriptor const& board);
+[[nodiscard]] bool configured(lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] bool configured(lexxos::platform::PlatformServices const& platform);
-[[nodiscard]] bool preferredAsDefault(lexxos::platform::BoardDescriptor const& board);
+[[nodiscard]] bool preferredAsDefault(lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] bool preferredAsDefault(lexxos::platform::PlatformServices const& platform);
 [[nodiscard]] lexxos::platform::SoftwareRtcConfig config(lexxos::platform::PlatformServices const& platform);
 [[nodiscard]] bool applyRuntimeConfigOverride(

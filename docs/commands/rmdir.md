@@ -1,6 +1,6 @@
 # `rmdir`
 
-remove an empty writable VFS directory.
+Удаляет пустой каталог из доступной для записи VFS.
 
 ## Справка shell
 

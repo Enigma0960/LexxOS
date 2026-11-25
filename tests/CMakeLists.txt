@@ -25,6 +25,15 @@ add_test(NAME lexxos_build_info_espidf_version
 if (LEXXOS_ENABLE_STATIC_CHECKS)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+    add_test(NAME lexxos_style_checker_tests
+            COMMAND ${Python3_EXECUTABLE} -m unittest discover
+            -s ${PROJECT_SOURCE_DIR}/tests/python -p test_style_checks.py)
+
+    add_test(NAME lexxos_runtime_boundaries_check
+            COMMAND ${Python3_EXECUTABLE}
+            ${PROJECT_SOURCE_DIR}/tools/check_runtime_boundaries.py
+            ${PROJECT_SOURCE_DIR})
+
     add_test(NAME lexxos_cpp_layout_check
             COMMAND ${Python3_EXECUTABLE}
             ${PROJECT_SOURCE_DIR}/tools/check_cpp_layout.py
@@ -53,9 +62,25 @@ if (UNIX AND LEXXOS_COMMANDS_SYSTEM)
     set_tests_properties(lexxos_host_stdin PROPERTIES TIMEOUT 15)
 endif ()
 
+# Exercise external ESP-IDF package configuration without installing ESP-IDF.
+if (UNIX)
+    add_test(NAME lexxos_external_espidf_packages
+            COMMAND ${CMAKE_COMMAND}
+            "-DLEXXOS_TEST_ROOT=${PROJECT_SOURCE_DIR}"
+            "-DLEXXOS_TEST_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/external-espidf"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/external_espidf_packages_test.cmake")
+endif ()
+
 # Packer metadata tests need only the host Python interpreter (no RISC-V toolchain).
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if (Python3_Interpreter_FOUND)
+    add_test(NAME lexxos_rk3506_uboot_build_tests
+            COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/test_rk3506_uboot_build.py)
+    add_test(NAME lexxos_rk3506_flash_tests
+            COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/test_flash_rk3506_macos.py)
+    add_test(NAME lexxos_rk3506_debug_reload_tests
+            COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/test_rk3506_debug_reload.py)
+
     add_test(NAME lexxos_command_catalog_tests
             COMMAND ${Python3_EXECUTABLE} -m unittest discover -s ${PROJECT_SOURCE_DIR}/tests/python -p test_command_catalog.py)
     add_test(NAME lexxos_command_docs_tests

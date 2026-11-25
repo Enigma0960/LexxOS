@@ -1,6 +1,6 @@
 # `sd-multiblock`
 
-show or set SD CMD18 multi-block read usage.
+Показывает или включает многоблочное чтение SD через CMD18.
 
 ## Справка shell
 

@@ -1,8 +1,7 @@
-#include <lexxos/composition/detail/platform_device_providers.h>
-
 #include <iterator>
 #include <string_view>
 
+#include <lexxos/composition/detail/platform_device_providers.h>
 #include <lexxos/devices/bus/i2c_bus.h>
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/feature.h>
@@ -32,7 +31,7 @@ using lexxos::devices::KeyboardGamepadAdapter;
 namespace {
 } // namespace
 
-void registerSimulatorDevices(DeviceManager& devices) {
+static void registerSimulatorDevices(DeviceManager& devices, platform::PlatformServices const&, platform::LegacyBoardDescriptor const&) {
 	(void) devices;
 #if defined(LEXXOS_PLATFORM_SIM) && FEATURE_ENABLED(DISPLAY)
 	auto& simDisplay = lexxos::emulator::simDisplayDevice();
@@ -45,6 +44,11 @@ void registerSimulatorDevices(DeviceManager& devices) {
 	devices.registerInputDevice(simInput.name(), "simulated keyboard input", simInput);
 	devices.registerGamepadDevice(simGamepad.name(), "simulated keyboard gamepad adapter", simGamepad);
 #endif
+}
+
+std::span<BoardDeviceProvider const> selectedBoardDeviceProviders() {
+	static constexpr BoardDeviceProvider providers[]{registerLegacyBoardDevices, registerSimulatorDevices};
+	return providers;
 }
 
 } // namespace lexxos::composition::detail

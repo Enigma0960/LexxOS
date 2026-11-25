@@ -29,6 +29,7 @@ namespace {
 			if (frameCount == 0) {
 				break;
 			}
+
 			if (!audio.playPcmBuffer(lexxos::devices::AudioPcmBufferRequest{
 			        .channel = lexxos::devices::AudioChannel::Stereo,
 			        .frames = frames.data(),
@@ -40,6 +41,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -52,10 +54,11 @@ namespace {
 	}
 
 	void updateExitComboInputState(
+	    lexxos::app::ProgramInputService& input,
 	    lexxos::app::program_input::EventCursor& cursor,
 	    ExitComboInputState& state) {
 		lexxos::devices::InputEvent event{};
-		while (lexxos::app::program_input::pollEvent(cursor, event)) {
+		while (input.pollEvent(cursor, event)) {
 			if (event.type != lexxos::devices::InputEventType::KeyDown
 			    && event.type != lexxos::devices::InputEventType::KeyUp) {
 				continue;
@@ -65,6 +68,7 @@ namespace {
 			if (isExitComboStartKey(event.key)) {
 				state.start = pressed;
 			}
+
 			if (isExitComboSelectKey(event.key)) {
 				state.select = pressed;
 			}
@@ -128,10 +132,12 @@ int runGameBoyEmulator(
 		context.writeErrorLine("gbemu: display device is not registered");
 		return 1;
 	}
+
 	if (!display->isReady()) {
 		context.writeErrorLine("gbemu: display device is not ready");
 		return 1;
 	}
+
 	if (display->nativeFormat() != lexxos::devices::PixelFormat::Rgb565) {
 		context.writeErrorLine("gbemu: only rgb565 displays are supported by the skeleton renderer");
 		return 1;
@@ -142,6 +148,7 @@ int runGameBoyEmulator(
 		context.writeErrorLine("gbemu: gamepad device is not registered");
 		return 1;
 	}
+
 	if (!gamepad->isReady()) {
 		context.writeErrorLine("gbemu: gamepad device is not ready");
 		return 1;
@@ -163,6 +170,7 @@ int runGameBoyEmulator(
 	} else {
 		context.writeLine(arguments.has("no-audio") ? "gbemu: audio disabled by --no-audio" : "gbemu: audio disabled by target default");
 	}
+
 	detail::GameBoyPcmOutputGuard audioOutputGuard{audio};
 	if (audio != nullptr) {
 		audio->resetPcmOutputStats();
@@ -180,14 +188,17 @@ int runGameBoyEmulator(
 			if (lexxos::kernel::isShutdownRequested()) {
 				return false;
 			}
+
 			sleepMs(context, 10);
 		}
+
 		return !lexxos::kernel::isShutdownRequested();
 	};
 	auto ensureInteractiveLocks = [&]() -> bool {
 		if (!waitForInteractiveFocus()) {
 			return false;
 		}
+
 		if (!displayLock) {
 			displayLock = context.devices().lockDisplayDevice(
 			    display->name(),
@@ -197,6 +208,7 @@ int runGameBoyEmulator(
 				return false;
 			}
 		}
+
 		if (!gamepadLock) {
 			gamepadLock = context.devices().lockGamepadDevice(
 			    gamepad->name(),
@@ -207,6 +219,7 @@ int runGameBoyEmulator(
 				return false;
 			}
 		}
+
 		return true;
 	};
 	auto waitForInteractiveLocks = [&]() -> bool {
@@ -214,18 +227,22 @@ int runGameBoyEmulator(
 			if (ensureInteractiveLocks()) {
 				return true;
 			}
+
 			if (context.processId() != 0 && !context.hasProgramFocus()) {
 				continue;
 			}
+
 			if (context.pollCancellationRequest()) {
 				return false;
 			}
+
 			sleepMs(context, 5);
 		}
+
 		return false;
 	};
 
-	auto const settingsResult = detail::loadOrCreateGbEmuSettings();
+	auto const settingsResult = detail::loadOrCreateGbEmuSettings(context.vfs());
 	writeSettingsWarning(context, settingsResult);
 	auto const& settings = settingsResult.settings;
 
@@ -236,6 +253,7 @@ int runGameBoyEmulator(
 			return 2;
 		}
 	}
+
 	if (frames != 0 && frames > maxGbEmuFrames) {
 		frames = maxGbEmuFrames;
 	}
@@ -247,6 +265,7 @@ int runGameBoyEmulator(
 			return 2;
 		}
 	}
+
 	if (stepsPerFrame > maxGbEmuStepsPerFrame) {
 		stepsPerFrame = maxGbEmuStepsPerFrame;
 	}
@@ -258,6 +277,7 @@ int runGameBoyEmulator(
 			return 2;
 		}
 	}
+
 	if (cyclesPerFrame > maxGbCyclesPerFrame) {
 		cyclesPerFrame = maxGbCyclesPerFrame;
 	}
@@ -305,11 +325,13 @@ int runGameBoyEmulator(
 		context.writeErrorLine("gbemu: invalid bg-map, expected auto, 9800 or 9c00");
 		return 2;
 	}
+
 	lexxos::gameboy::BackgroundTileDataMode bgTileMode = lexxos::gameboy::BackgroundTileDataMode::Auto;
 	if (!parseBackgroundTileDataMode(arguments.valueOr("bg-tiles", "auto"), bgTileMode)) {
 		context.writeErrorLine("gbemu: invalid bg-tiles, expected auto, 8000 or 8800");
 		return 2;
 	}
+
 	std::uint32_t minTileData = settings.minTileData;
 	if (arguments.has("min-tile-data")) {
 		if (!parseUnsigned(arguments.valueOr("min-tile-data", "256"), minTileData)) {
@@ -317,6 +339,7 @@ int runGameBoyEmulator(
 			return 2;
 		}
 	}
+
 	std::uint32_t maxWarmupCycles = settings.maxWarmupCycles;
 	if (arguments.has("max-cycles")) {
 		if (!parseUnsigned(arguments.valueOr("max-cycles", "8988672"), maxWarmupCycles)) {
@@ -410,6 +433,7 @@ int runGameBoyEmulator(
 		context.writeErrorLine("gbemu: use either --rom-flash/--rom-flash-reuse or --rom-psram/--rom-psram-reuse, not both");
 		return 2;
 	}
+
 	auto const fastHalt = settings.fastHalt && !arguments.has("no-fast-halt");
 	auto const syncRealtime = arguments.has("sync-realtime") || settings.syncRealtime || (presetFromCli && playablePreset);
 	if (syncRealtime && cyclesPerFrame == 0) {
@@ -426,6 +450,7 @@ int runGameBoyEmulator(
 			context.writeErrorLine("gbemu: invalid break-pc address");
 			return 2;
 		}
+
 		breakPc = static_cast<std::uint16_t>(breakPcValue);
 		breakPcPtr = &breakPc;
 	}
@@ -439,6 +464,7 @@ int runGameBoyEmulator(
 			context.writeErrorLine("gbemu: invalid break-pc-from address");
 			return 2;
 		}
+
 		breakPcFrom = static_cast<std::uint16_t>(breakPcFromValue);
 		breakPcFromPtr = &breakPcFrom;
 	}
@@ -477,6 +503,7 @@ int runGameBoyEmulator(
 			return 2;
 		}
 	}
+
 	if (frames != 0 && profileEvery > frames) {
 		profileEvery = frames;
 	}
@@ -490,6 +517,7 @@ int runGameBoyEmulator(
 	if (!openCartridge(context, "gbemu", path.data(), cartridge)) {
 		return 1;
 	}
+
 	CartridgeLifetimeGuard cartridgeGuard{cartridge};
 
 	if (!cartridge.mapperSupported()) {
@@ -512,12 +540,14 @@ int runGameBoyEmulator(
 				context.writeLine("");
 			}
 		}
+
 		if (!psramLoad.ok) {
 			context.writeLine("gbemu: copying ROM to PicoCalc PSRAM staging area...");
 			auto const psramStartMs = uptimeMs(context);
 			psramLoad = cartridge.loadRomToPlatformPsram();
 			psramMs = elapsedMs(psramStartMs, uptimeMs(context));
 		}
+
 		if (!psramLoad.ok) {
 			if (psramLoad.platformUnavailable) {
 				context.writeErrorLine("gbemu: ROM PSRAM staging is not available on this platform/build");
@@ -544,8 +574,10 @@ int runGameBoyEmulator(
 			} else {
 				context.writeErrorLine("gbemu: failed to read ROM during PSRAM staging");
 			}
+
 			return 1;
 		}
+
 		if (!romPsramReuse || psramMs != 0) {
 			context.write("gbemu: ROM PSRAM staging bytes=");
 			writeUnsigned(context, psramLoad.bytesLoaded);
@@ -574,12 +606,14 @@ int runGameBoyEmulator(
 				context.writeLine("");
 			}
 		}
+
 		if (!flashLoad.ok) {
 			context.writeLine("gbemu: copying ROM to mapped flash staging area...");
 			auto const flashStartMs = uptimeMs(context);
 			flashLoad = cartridge.loadRomToPlatformFlash();
 			flashMs = elapsedMs(flashStartMs, uptimeMs(context));
 		}
+
 		if (!flashLoad.ok) {
 			if (flashLoad.platformUnavailable) {
 				context.writeErrorLine("gbemu: ROM flash staging is not available on this platform/build");
@@ -596,8 +630,10 @@ int runGameBoyEmulator(
 			} else {
 				context.writeErrorLine("gbemu: failed to read ROM during flash staging");
 			}
+
 			return 1;
 		}
+
 		if (!romFlashReuse || flashMs != 0) {
 			context.write("gbemu: ROM flash staging bytes=");
 			writeUnsigned(context, flashLoad.bytesLoaded);
@@ -642,6 +678,7 @@ int runGameBoyEmulator(
 	} else {
 		writeUnsigned(context, frames);
 	}
+
 	context.write(" steps/frame=");
 	writeUnsigned(context, stepsPerFrame);
 	context.write(" cycles/frame=");
@@ -650,6 +687,7 @@ int runGameBoyEmulator(
 	} else {
 		writeUnsigned(context, cyclesPerFrame);
 	}
+
 	context.write(" until-vram=");
 	context.write(untilVram ? "1" : "0");
 	context.write(" until-visible=");
@@ -679,6 +717,7 @@ int runGameBoyEmulator(
 	if (playablePreset) {
 		context.write(" preset=playable");
 	}
+
 	context.write(" playable-fast=");
 	context.write(playableFast ? "1" : "0");
 	context.write(" max-speed=");
@@ -693,6 +732,7 @@ int runGameBoyEmulator(
 	} else {
 		context.write("file-cache");
 	}
+
 	context.write(" no-ppu=");
 	context.write(noPpu ? "1" : "0");
 	context.write(" fast-timing=");
@@ -707,6 +747,7 @@ int runGameBoyEmulator(
 		context.write(" profile-every=");
 		writeUnsigned(context, profileEvery);
 	}
+
 	context.write(" fast-halt=");
 	context.write(fastHalt ? "1" : "0");
 	context.write(" rom-cache=");
@@ -720,25 +761,29 @@ int runGameBoyEmulator(
 		context.write(" break-pc=");
 		writeHex16(context, breakPc);
 	}
+
 	if (breakPcFromPtr != nullptr) {
 		context.write(" break-pc-from=");
 		writeHex16(context, breakPcFrom);
 	}
+
 	if (watchBlank) {
 		context.write(" watch-blank-after=");
 		writeUnsigned(context, watchBlankAfter);
 		context.write(" watch-blank-streak=");
 		writeUnsigned(context, watchBlankStreakTarget);
 	}
+
 	if (breakBgpZero) {
 		context.write(" break-bgp-zero-after=");
 		writeUnsigned(context, breakBgpZeroAfter);
 	}
+
 	context.writeLine("");
 
 	lexxos::devices::GamepadState lastState{};
 	lexxos::app::program_input::EventCursor exitComboInputCursor{};
-	lexxos::app::program_input::reset(exitComboInputCursor);
+	context.programInput().reset(exitComboInputCursor);
 	ExitComboInputState exitComboInput{};
 	lexxos::gameboy::DisplayRenderInfo renderInfo = lexxos::gameboy::Ppu::layoutForDisplay(*display, displayMode);
 	lexxos::gameboy::CpuStepStatus lastStatus = lexxos::gameboy::CpuStepStatus::Ok;
@@ -766,6 +811,7 @@ int runGameBoyEmulator(
 			context.writeLine(context.cancellationRequested() ? "gbemu: canceled" : "gbemu: stopped");
 			return context.cancellationRequested() ? 130 : 1;
 		}
+
 		lexxos::app::console_mirror::flush();
 		lexxos::app::console_mirror::setMode(lexxos::app::ConsoleMirrorMode::Graphics);
 		if (!display->clear(gbDisplayBackgroundColor)) {
@@ -793,6 +839,7 @@ int runGameBoyEmulator(
 			warmupTarget = VramWarmupTarget::Any;
 			warmup = runUntilVramWrite(cpu, bus, maxWarmupCycles, debugTrace ? &emuTrace : nullptr, &cartridge, breakPcPtr, fastHalt);
 		}
+
 		auto const warmupEndMs = uptimeMs(context);
 		auto const warmupWallMs = elapsedMs(warmupStartMs, warmupEndMs);
 
@@ -813,6 +860,7 @@ int runGameBoyEmulator(
 			warmupProfile.cacheFillMs = cartridge.cacheFillMs() - previousCacheFillMs;
 			writeGbEmuProfileLine(context, "warmup", 0, warmupProfile, cyclesPerFrame);
 		}
+
 		previousCacheFills = cartridge.cacheFillCount();
 		previousCacheRetries = cartridge.cacheRetryCount();
 		previousCacheFailures = cartridge.cacheFailureCount();
@@ -827,6 +875,7 @@ int runGameBoyEmulator(
 		} else {
 			context.write(untilVisible ? "until-visible" : "until-vram");
 		}
+
 		context.write(" target=");
 		context.write(toString(warmupTarget));
 		context.write(" target-nonzero=");
@@ -886,6 +935,7 @@ int runGameBoyEmulator(
 				lexxos::app::console_mirror::setMode(lexxos::app::ConsoleMirrorMode::Text);
 				context.writeLine("gbemu: canceled");
 			}
+
 			break;
 		}
 
@@ -902,7 +952,7 @@ int runGameBoyEmulator(
 		if ((frame % inputEvery) == 0) {
 			auto const inputStartMs = profile ? uptimeMs(context) : 0U;
 			lastState = gamepad->state();
-			updateExitComboInputState(exitComboInputCursor, exitComboInput);
+			updateExitComboInputState(context.programInput(), exitComboInputCursor, exitComboInput);
 			bus.setJoypadState(toJoypadState(lastState));
 			if (exitComboPressed(lastState, exitComboInput)) {
 				auto const nowMs = uptimeMs(context);
@@ -910,12 +960,14 @@ int runGameBoyEmulator(
 					exitComboActive = true;
 					exitComboStartMs = nowMs;
 				}
+
 				if (settings.exitHoldMs == 0 || elapsedMs(exitComboStartMs, nowMs) >= settings.exitHoldMs) {
 					exitComboRequested = true;
 				}
 			} else {
 				exitComboActive = false;
 			}
+
 			if (profile) {
 				frameInputMs = elapsedMs(inputStartMs, uptimeMs(context));
 				totalInputMs += frameInputMs;
@@ -949,9 +1001,11 @@ int runGameBoyEmulator(
 		if (trace) {
 			writeGbEmuTraceLine(context, frame, frameSteps, frameCycles, cpu, bus, cartridge);
 		}
+
 		if (verboseRunSteps) {
 			writeRunStopStep(context, "gbemu: ", frameRun);
 		}
+
 		if (frameRun.breakpointHit) {
 			emuBreakpointHit = true;
 			context.write("gbemu: breakpoint pc=");
@@ -1017,6 +1071,7 @@ int runGameBoyEmulator(
 					return 1;
 				}
 			}
+
 			++renderedFrames;
 
 			if (watchBlank) {
@@ -1052,6 +1107,7 @@ int runGameBoyEmulator(
 				if (sleepDurationMs > maxGbSyncSleepChunkMs) {
 					sleepDurationMs = maxGbSyncSleepChunkMs;
 				}
+
 				sleepMs(context, sleepDurationMs);
 				actualElapsedMs = elapsedMs(syncStartMs, uptimeMs(context));
 			}
@@ -1147,6 +1203,7 @@ int runGameBoyEmulator(
 		if (!audio->drainPcmOutput(1500)) {
 			context.writeLine("gbemu: audio drain timed out; forced stop");
 		}
+
 		lexxos::devices::AudioPcmOutputStats audioStats{};
 		if (profile && audio->pcmOutputStats(audioStats)) {
 			context.write("gbemu: audio frames queued/written=");
@@ -1170,6 +1227,7 @@ int runGameBoyEmulator(
 	} else {
 		context.write("gbemu: timing cpu-ms=");
 	}
+
 	writeUnsigned(context, totalCpuMs);
 	context.write(" ppu-ms=");
 	writeUnsigned(context, totalPpuMs);
@@ -1179,6 +1237,7 @@ int runGameBoyEmulator(
 		context.write(" other-ms=");
 		writeUnsigned(context, profileOtherMs(profileTotal));
 	}
+
 	context.writeLine("");
 	context.write("gbemu: cpu steps=");
 	writeUnsigned(context, totalSteps);
@@ -1192,6 +1251,7 @@ int runGameBoyEmulator(
 	if (trace || faultTrace) {
 		writeRunTrace(context, "gbemu: ", emuTrace);
 	}
+
 	writeGbEmuFinalSummary(context, bus, cpu, cartridge);
 	if (noPpu) {
 		context.writeLine("gbemu: ppu-analysis skipped");
@@ -1204,9 +1264,11 @@ int runGameBoyEmulator(
 	if (canceled) {
 		return 130;
 	}
+
 	if (lastStatus == lexxos::gameboy::CpuStepStatus::BusReadError) {
 		return 1;
 	}
+
 	if (lastStatus == lexxos::gameboy::CpuStepStatus::UnsupportedOpcode) {
 		return 2;
 	}

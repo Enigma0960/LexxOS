@@ -3,14 +3,19 @@
 #include <cstdint>
 #include <string_view>
 
+#include <lexxos/devices/bus/i2c_bus.h>
+
 namespace lexxos::platform {
+
 struct PlatformConsoleService;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices::input_detail {
 
 struct PicoCalcKeyboardDiagnosticContext {
 	bool ready{false};
+	I2cFailureSnapshot i2cFailure{};
 	std::uint8_t lastKeyboardStatus{0};
 	std::uint8_t lastKeyboardCount{0};
 	std::uint32_t lastRawEvent{0};

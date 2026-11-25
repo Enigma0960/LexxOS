@@ -4,11 +4,16 @@
 #include <string_view>
 
 namespace lexxos::devices {
+
 class I2cBus;
+class DeviceManager;
+
 } // namespace lexxos::devices
 
 namespace lexxos::os {
+
 class AppContext;
+
 } // namespace lexxos::os
 
 namespace lexxos::apps::i2c_programs::detail {
@@ -18,6 +23,7 @@ void writeHex8(lexxos::os::AppContext& context, std::uint8_t value);
 void writeUnsigned(lexxos::os::AppContext& context, std::uint32_t value);
 void writeI2cBusList(lexxos::os::AppContext& context, bool errorOutput = false);
 std::uint32_t writeI2cAddressTable(lexxos::os::AppContext& context,
+    lexxos::devices::DeviceManager const& devices,
     lexxos::devices::I2cBus& bus,
     std::uint8_t from,
     std::uint8_t to);

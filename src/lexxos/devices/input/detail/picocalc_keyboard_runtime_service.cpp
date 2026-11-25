@@ -74,6 +74,7 @@ bool PicoCalcKeyboardRuntimeService::requestSouthbridgeReset(std::uint8_t delayS
 	if (!_controller._bus.isReady()) {
 		return false;
 	}
+
 	bool const ok = _controller._southbridgeService.requestReset(delaySeconds, nowMs);
 	if (ok) {
 		_controller._ready = false;
@@ -83,6 +84,7 @@ bool PicoCalcKeyboardRuntimeService::requestSouthbridgeReset(std::uint8_t delayS
 		_controller._diagnostics.recordSouthbridgeResetSuccess();
 		_controller._resetRuntimeState();
 	}
+
 	return ok;
 }
 

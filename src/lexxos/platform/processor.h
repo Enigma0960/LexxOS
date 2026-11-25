@@ -9,6 +9,7 @@ enum class ProcessorFamily {
 	Rp2350,
 	Esp32,
 	Stm32f4,
+	Rk3506,
 };
 
 char const* toString(ProcessorFamily family);

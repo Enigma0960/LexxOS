@@ -9,6 +9,7 @@
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::gameboy {
+
 namespace {
 
 	constexpr std::uint8_t romReadAttempts = 4;
@@ -21,6 +22,7 @@ namespace {
 		if (source.size() + 1 > target.size()) {
 			return false;
 		}
+
 		std::memcpy(target.data(), source.data(), source.size());
 		target[source.size()] = '\0';
 		size = source.size();
@@ -33,6 +35,7 @@ namespace {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -56,6 +59,7 @@ namespace {
 			result.platformUnavailable = true;
 			return false;
 		}
+
 		if (!file.seek(0)) {
 			result.seekFailed = true;
 			return false;
@@ -72,14 +76,17 @@ namespace {
 			if (result.readStatus != lexxos::vfs::ReadStatus::Ok) {
 				return false;
 			}
+
 			if (bytesRead != remaining) {
 				result.shortRead = true;
 				return false;
 			}
+
 			if (!externalMemory.read(gameBoyRomPsramRegionName, verified, actual.data(), bytesRead)) {
 				result.readFailed = true;
 				return false;
 			}
+
 			if (std::memcmp(expected.data(), actual.data(), bytesRead) != 0) {
 				for (std::size_t offset = 0; offset < bytesRead; ++offset) {
 					if (expected[offset] != actual[offset]) {
@@ -91,8 +98,10 @@ namespace {
 					}
 				}
 			}
+
 			verified += static_cast<std::uint32_t>(bytesRead);
 		}
+
 		return true;
 	}
 
@@ -131,6 +140,7 @@ CartridgeMapper mapperFromCartridgeType(std::uint8_t type) {
 		case 0x1E:
 			return CartridgeMapper::Mbc5;
 	}
+
 	return CartridgeMapper::Unsupported;
 }
 
@@ -147,6 +157,7 @@ std::string_view mapperName(CartridgeMapper mapper) {
 		case CartridgeMapper::Unsupported:
 			return "unsupported";
 	}
+
 	return "unsupported";
 }
 
@@ -179,6 +190,7 @@ bool Cartridge::ensureCacheSlots() {
 		if (slot.data != nullptr) {
 			continue;
 		}
+
 		slot.data = static_cast<std::uint8_t*>(std::malloc(cacheSize));
 		if (slot.data == nullptr) {
 			releaseCacheSlots();
@@ -241,8 +253,10 @@ CartridgeOpenResult Cartridge::open(std::string_view path) {
 				break;
 			}
 		}
+
 		sleepMs(romReadRetryDelayMs);
 	}
+
 	if (result.readStatus != lexxos::vfs::ReadStatus::Ok || bytesRead != _headerRaw.size()) {
 		_file.close();
 		return result;
@@ -287,6 +301,7 @@ CartridgeFlashLoadResult Cartridge::loadRomToPlatformFlash() {
 		result.programFailed = true;
 		return result;
 	}
+
 	auto const roundedSize = ((_fileSize + region.eraseSize - 1U) / region.eraseSize) * region.eraseSize;
 	if (_fileSize == 0 || roundedSize > region.capacity || roundedSize > UINT32_MAX) {
 		result.tooLarge = true;
@@ -314,6 +329,7 @@ CartridgeFlashLoadResult Cartridge::loadRomToPlatformFlash() {
 		if (result.readStatus != lexxos::vfs::ReadStatus::Ok) {
 			return result;
 		}
+
 		if (bytesRead != remaining) {
 			result.shortRead = true;
 			return result;
@@ -324,6 +340,7 @@ CartridgeFlashLoadResult Cartridge::loadRomToPlatformFlash() {
 			result.programFailed = true;
 			return result;
 		}
+
 		loaded += static_cast<std::uint32_t>(region.eraseSize);
 	}
 
@@ -363,10 +380,12 @@ CartridgeFlashLoadResult Cartridge::reusePlatformFlashRomIfMatching() {
 		result.noMatchingImage = true;
 		return result;
 	}
+
 	if (romSizeBytes(flashHeader.romSizeCode) != static_cast<std::uint32_t>(_fileSize)) {
 		result.noMatchingImage = true;
 		return result;
 	}
+
 	if (std::memcmp(flash, _headerRaw.data(), _headerRaw.size()) != 0) {
 		result.noMatchingImage = true;
 		return result;
@@ -425,14 +444,17 @@ CartridgePsramLoadResult Cartridge::loadRomToPlatformPsram() {
 		if (result.readStatus != lexxos::vfs::ReadStatus::Ok) {
 			return result;
 		}
+
 		if (bytesRead != remaining) {
 			result.shortRead = true;
 			return result;
 		}
+
 		if (!externalMemory.write(gameBoyRomPsramRegionName, loaded, buffer.data(), bytesRead)) {
 			result.writeFailed = true;
 			return result;
 		}
+
 		loaded += static_cast<std::uint32_t>(bytesRead);
 	}
 
@@ -486,10 +508,12 @@ CartridgePsramLoadResult Cartridge::reusePlatformPsramRomIfMatching() {
 		result.noMatchingImage = true;
 		return result;
 	}
+
 	if (romSizeBytes(parsedHeader.romSizeCode) != static_cast<std::uint32_t>(_fileSize)) {
 		result.noMatchingImage = true;
 		return result;
 	}
+
 	if (std::memcmp(psramHeader.data(), _headerRaw.data(), _headerRaw.size()) != 0) {
 		result.noMatchingImage = true;
 		return result;
@@ -603,10 +627,12 @@ void Cartridge::refreshSelectedRomBankCache() {
 		if (bank == 0) {
 			bank = 1;
 		}
+
 		bank |= static_cast<std::uint32_t>(_mbc1BankHigh2 & 0x03U) << 5U;
 	} else {
 		bank = expectedRomBanks() > 1 ? 1 : 0;
 	}
+
 	_selectedRomBank = static_cast<std::uint16_t>(normalizedSwitchableRomBank(bank));
 	_selectedRomOffsetBase = static_cast<std::uint32_t>(_selectedRomBank) * romBankSize;
 }
@@ -682,9 +708,11 @@ lexxos::vfs::ReadStatus Cartridge::read8(std::uint16_t address, std::uint8_t& va
 	if (!_open) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
+
 	if (address < 0x8000U) {
 		return readRomOffset(mapRomAddress(address), value);
 	}
+
 	return lexxos::vfs::ReadStatus::InvalidPath;
 }
 
@@ -700,9 +728,11 @@ lexxos::vfs::ReadStatus Cartridge::readExternalRam(std::uint16_t address, std::u
 	if (!_open) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
+
 	if (address < 0xA000U || address > 0xBFFFU) {
 		return lexxos::vfs::ReadStatus::InvalidPath;
 	}
+
 	if (!_features.externalRam || !_ramEnabled || activeExternalRamSize() == 0) {
 		return lexxos::vfs::ReadStatus::Ok;
 	}
@@ -722,13 +752,16 @@ std::uint8_t Cartridge::readExternalRamFast(std::uint16_t address) {
 	if (!_open || address < 0xA000U || address > 0xBFFFU) {
 		return 0xFF;
 	}
+
 	if (!_features.externalRam || !_ramEnabled || activeExternalRamSize() == 0) {
 		return 0xFF;
 	}
+
 	++_externalRamReadCount;
 	if (_mapper == CartridgeMapper::Mbc2) {
 		return static_cast<std::uint8_t>(0xF0U | (_externalRam[mappedExternalRamOffset(address)] & 0x0FU));
 	}
+
 	return _externalRam[mappedExternalRamOffset(address)];
 }
 
@@ -736,6 +769,7 @@ void Cartridge::writeExternalRam(std::uint16_t address, std::uint8_t value) {
 	if (!_open || address < 0xA000U || address > 0xBFFFU) {
 		return;
 	}
+
 	if (!_features.externalRam || !_ramEnabled || activeExternalRamSize() == 0) {
 		return;
 	}
@@ -759,8 +793,10 @@ void Cartridge::write8(std::uint16_t address, std::uint8_t value) {
 				if (_mbc2RomBank == 0) {
 					_mbc2RomBank = 1;
 				}
+
 				refreshSelectedRomBankCache();
 			}
+
 			return;
 		}
 	}
@@ -770,27 +806,33 @@ void Cartridge::write8(std::uint16_t address, std::uint8_t value) {
 			_ramEnabled = (value & 0x0FU) == 0x0AU;
 			return;
 		}
+
 		if (address < 0x4000U) {
 			_mbc1RomBankLow5 = static_cast<std::uint8_t>(value & 0x1FU);
 			if (_mbc1RomBankLow5 == 0) {
 				_mbc1RomBankLow5 = 1;
 			}
+
 			refreshSelectedRomBankCache();
 			return;
 		}
+
 		if (address < 0x6000U) {
 			_mbc1BankHigh2 = static_cast<std::uint8_t>(value & 0x03U);
 			if (_mbc1Mode != 0) {
 				_ramBank = static_cast<std::uint8_t>(_mbc1BankHigh2 % std::max<std::uint32_t>(1, expectedRamBanks()));
 			}
+
 			refreshSelectedRomBankCache();
 			return;
 		}
+
 		if (address < 0x8000U) {
 			_mbc1Mode = static_cast<std::uint8_t>(value & 0x01U);
 			if (_mbc1Mode == 0) {
 				_ramBank = 0;
 			}
+
 			return;
 		}
 	}
@@ -800,16 +842,19 @@ void Cartridge::write8(std::uint16_t address, std::uint8_t value) {
 			_ramEnabled = (value & 0x0FU) == 0x0AU;
 			return;
 		}
+
 		if (address < 0x3000U) {
 			_mbc5RomBank = static_cast<std::uint16_t>((_mbc5RomBank & 0x100U) | value);
 			refreshSelectedRomBankCache();
 			return;
 		}
+
 		if (address < 0x4000U) {
 			_mbc5RomBank = static_cast<std::uint16_t>((_mbc5RomBank & 0x0FFU) | ((value & 0x01U) << 8U));
 			refreshSelectedRomBankCache();
 			return;
 		}
+
 		if (address < 0x6000U) {
 			_ramBank = static_cast<std::uint8_t>(value & 0x0FU);
 			return;
@@ -843,6 +888,7 @@ lexxos::vfs::ReadStatus Cartridge::readRomOffset(std::uint32_t offset, std::uint
 	if (!ensureCacheSlots()) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
+
 	auto* const slotsBegin = cacheSlotsBegin();
 	auto* const slotsEnd = cacheSlotsEnd();
 	if (slotsBegin == nullptr || slotsEnd == nullptr) {
@@ -884,16 +930,19 @@ lexxos::vfs::ReadStatus Cartridge::readRomOffset(std::uint32_t offset, std::uint
 			break;
 		}
 	}
+
 	if (target == nullptr) {
 		for (auto* slot = slotsBegin; slot != slotsEnd; ++slot) {
 			if (slot == _hotCacheSlot || slot == _previousHotCacheSlot) {
 				continue;
 			}
+
 			if (target == nullptr || slot->age < target->age) {
 				target = slot;
 			}
 		}
 	}
+
 	if (target == nullptr) {
 		for (auto* slot = slotsBegin; slot != slotsEnd; ++slot) {
 			if (target == nullptr || slot->age < target->age) {
@@ -901,6 +950,7 @@ lexxos::vfs::ReadStatus Cartridge::readRomOffset(std::uint32_t offset, std::uint
 			}
 		}
 	}
+
 	if (target == nullptr) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
@@ -913,6 +963,7 @@ lexxos::vfs::ReadStatus Cartridge::readRomOffset(std::uint32_t offset, std::uint
 	if (index >= target->bytes) {
 		return lexxos::vfs::ReadStatus::NotFound;
 	}
+
 	_previousHotCacheSlot = _hotCacheSlot;
 	_hotCacheSlot = target;
 	value = target->data[index];
@@ -931,6 +982,7 @@ std::uint8_t Cartridge::readRomOffsetFast(std::uint32_t offset) {
 	if (!ensureCacheSlots()) {
 		return 0xFF;
 	}
+
 	auto* const slotsBegin = cacheSlotsBegin();
 	auto* const slotsEnd = cacheSlotsEnd();
 	if (slotsBegin == nullptr || slotsEnd == nullptr) {
@@ -974,6 +1026,7 @@ lexxos::vfs::ReadStatus Cartridge::fillCacheSlot(CacheSlot& slot, std::uint32_t 
 	if (slot.data == nullptr) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
+
 	auto* const cacheData = slot.data;
 	auto const cacheCapacity = cacheSize;
 #else
@@ -1002,6 +1055,7 @@ lexxos::vfs::ReadStatus Cartridge::fillCacheSlot(CacheSlot& slot, std::uint32_t 
 		} else {
 			lastStatus = _file.read(cacheData, bytesToRead, bytesRead);
 		}
+
 		if (lastStatus == lexxos::vfs::ReadStatus::Ok && bytesRead >= minimumBytes) {
 			_cacheReadBytes += static_cast<std::uint64_t>(bytesRead);
 			_cacheFillMs += uptimeMs() - fillStartMs;
@@ -1012,6 +1066,7 @@ lexxos::vfs::ReadStatus Cartridge::fillCacheSlot(CacheSlot& slot, std::uint32_t 
 			++_cacheFillCount;
 			return lexxos::vfs::ReadStatus::Ok;
 		}
+
 		if (lastStatus == lexxos::vfs::ReadStatus::Ok) {
 			lastStatus = lexxos::vfs::ReadStatus::NotFound;
 		}
@@ -1038,10 +1093,12 @@ std::uint32_t Cartridge::normalizedSwitchableRomBank(std::uint32_t bank) const {
 	if (banks == 0) {
 		return bank;
 	}
+
 	bank %= banks;
 	if (bank == 0 && banks > 1) {
 		bank = 1;
 	}
+
 	return bank;
 }
 
@@ -1085,6 +1142,7 @@ std::size_t Cartridge::mappedExternalRamOffset(std::uint16_t address) const {
 	if (activeSize < ramBankSize) {
 		offset = static_cast<std::size_t>(address - 0xA000U);
 	}
+
 	return offset % activeSize;
 }
 
@@ -1102,6 +1160,7 @@ void Cartridge::invalidateCache() {
 #endif
 		}
 	}
+
 	_hotCacheSlot = nullptr;
 	_previousHotCacheSlot = nullptr;
 	_cacheAge = 0;

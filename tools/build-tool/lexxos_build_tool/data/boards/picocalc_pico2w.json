@@ -1,0 +1,21 @@
+{
+  "id": "picocalc_pico2w",
+  "name": "ClockworkPi PicoCalc / Pico 2 W (factory keyboard)",
+  "platform": "pico",
+  "preset": "manual",
+  "buildDir": "build/configurator/picocalc-pico2w-factory",
+  "userPresetName": "user-pico-picocalc_pico2w_factory",
+  "cmakeDefaults": {
+    "PICO_BOARD": "pico2_w",
+    "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "factory"
+  },
+  "featureDefaults": {
+    "LEXXOS_PICO_USE_FREERTOS": "ON",
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "OFF",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_FEATURE_PSRAM": "ON",
+    "LEXXOS_ENABLE_GAMEBOY": "OFF"
+  }
+}

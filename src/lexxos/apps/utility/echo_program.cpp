@@ -23,8 +23,10 @@ int EchoProgram::run(lexxos::os::AppContext& context, lexxos::program::ProgramIn
 		if (index > 1) {
 			context.write(" ");
 		}
+
 		context.write(invocation.argv[index]);
 	}
+
 	context.writeLine("");
 	return 0;
 }

@@ -44,7 +44,7 @@ constexpr std::uint32_t wifiAutoconnectCredentialsRetryDelayMs = 500;
 constexpr std::uint8_t wifiAutoconnectCredentialsAttempts = 12;
 constexpr std::uint32_t wifiAutoconnectTaskStackSizeBytes = 4096;
 
-lexxos::platform::BoardDescriptor const& activeBoard(lexxos::os::OperatingSystem const& operatingSystem) {
+lexxos::platform::LegacyBoardDescriptor const& activeBoard(lexxos::os::OperatingSystem const& operatingSystem) {
 	auto const& platform = operatingSystem.platform();
 	auto const& board = platform.board;
 	return board.current != nullptr ? board.current() : lexxos::platform::board();
@@ -78,10 +78,12 @@ lexxos::apps::network_programs::detail::WifiCredentialsStatus loadWifiCredential
 		if (lastStatus != WifiCredentialsStatus::NotFound && lastStatus != WifiCredentialsStatus::IoError) {
 			return lastStatus;
 		}
+
 		if (attempt + 1U < wifiAutoconnectCredentialsAttempts) {
 			lexxos::kernel::sleepMs(wifiAutoconnectCredentialsRetryDelayMs);
 		}
 	}
+
 	return lastStatus;
 }
 
@@ -105,6 +107,7 @@ bool lexxos::app::triggerWifiAutoconnect(
 	if (!board.wireless.autoConnect) {
 		return false;
 	}
+
 	if (!operatingSystem.capabilities().has(lexxos::runtime::Capability::WirelessWifi)
 	    || !operatingSystem.capabilities().has(lexxos::runtime::Capability::StorageBlock)) {
 		return false;
@@ -122,6 +125,7 @@ bool lexxos::app::triggerWifiAutoconnect(
 	    || status == lexxos::apps::network_programs::detail::WifiCredentialsStatus::Disabled) {
 		return false;
 	}
+
 	if (status != lexxos::apps::network_programs::detail::WifiCredentialsStatus::Ok) {
 		writeConsole(platform, "wifi-autoconnect: skipped: ");
 		writeConsole(platform, lexxos::apps::network_programs::detail::toString(status));
@@ -172,6 +176,7 @@ bool lexxos::app::triggerWifiAutoconnect(
 		writeConsole(platform, "\r\n");
 		return false;
 	}
+
 	return true;
 #else
 	(void) operatingSystem;

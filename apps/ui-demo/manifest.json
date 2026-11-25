@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.apps.ui-demo",
+  "name": "LexxUI System UI Demo",
+  "version": "0.1.0",
+  "description": "Unified tabbed gallery: scroll list, dropdown, checkbox and radio groups",
+  "author": "LexxOS Contributors",
+  "license": "Apache-2.0",
+  "input": {"mode": "events"},
+  "capabilities": ["console", "keyboard", "graphics"],
+  "memory": {"guest_bytes": 65536, "stack_bytes": 8192}
+}

@@ -1,0 +1,17 @@
+{
+  "id": "host_native",
+  "name": "Host native",
+  "platform": "host",
+  "notes": "Native desktop build profile.",
+  "preset": "debug-host",
+  "buildDir": "build/configurator/host",
+  "userPresetName": "user-host-native",
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_DEBUG_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_FEATURE_DS3231_RTC": "ON"
+  }
+}

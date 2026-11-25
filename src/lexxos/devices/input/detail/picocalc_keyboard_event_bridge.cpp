@@ -50,6 +50,7 @@ void PicoCalcKeyboardEventBridge::updateRepeatEvents(std::uint32_t now) {
 		if (!result.rawEventAccepted) {
 			return;
 		}
+
 		_acceptInputResult(result);
 	}
 }
@@ -60,6 +61,7 @@ void PicoCalcKeyboardEventBridge::releaseStaleScanCodes(std::uint32_t now) {
 		if (!result.rawEventAccepted) {
 			return;
 		}
+
 		_lastRawEvent = result.rawEvent;
 		if (result.hasEvent && !_events.full()) {
 			_events.push(result.event);
@@ -71,6 +73,7 @@ void PicoCalcKeyboardEventBridge::_acceptInputResult(PicoCalcKeyboardInputResult
 	if (result.rawEventAccepted) {
 		_lastRawEvent = result.rawEvent;
 	}
+
 	if (result.hasEvent) {
 		_events.push(result.event);
 	}

@@ -6,6 +6,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::system_programs {
+
 namespace {
 
 	constexpr lexxos::apps::PrettyTableColumn taskColumns[] = {
@@ -39,8 +40,10 @@ namespace {
 			} else {
 				lookup.row->setUnsigned(6, static_cast<std::uint32_t>(task.coreAffinity));
 			}
+
 			lookup.found = true;
 		}
+
 		++lookup.current;
 	}
 

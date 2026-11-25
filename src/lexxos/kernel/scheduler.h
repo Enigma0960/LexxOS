@@ -5,8 +5,10 @@
 #include <string_view>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
-}
+
+} // namespace lexxos::platform
 
 namespace lexxos::kernel {
 
@@ -30,6 +32,7 @@ enum class TaskExecutionClass : std::uint8_t {
 		case TaskExecutionClass::Background:
 			return "background";
 	}
+
 	return "system";
 }
 
@@ -72,11 +75,17 @@ void bindSchedulerBackend(lexxos::platform::PlatformServices const& platform);
 [[nodiscard]] SchedulerBackend const& schedulerBackend();
 
 bool createTask(TaskEntry entry, void* userData, TaskOptions options);
-void startScheduler();
-void sleepMs(std::uint32_t milliseconds);
-void yield();
-std::size_t taskCount();
 void visitTasks(TaskVisitor visitor, void* userData);
+std::size_t taskCount();
+
+void sleepMs(std::uint32_t milliseconds);
+
+void startScheduler();
+void yield();
+
+// Task-context maintenance: reclaim tasks that have completely stopped.
+// Returns the number of reclaimed tasks; other backends may return zero.
+std::size_t reapFinishedTasks();
 MemorySnapshot memorySnapshot();
 
 } // namespace lexxos::kernel

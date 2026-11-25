@@ -6,11 +6,15 @@
 #include <lexxos/program/program.h>
 
 namespace lexxos::os {
+
 class AppContext;
+
 } // namespace lexxos::os
 
 namespace lexxos::program {
+
 class ParsedArguments;
+
 } // namespace lexxos::program
 
 namespace lexxos::apps::storage_programs::detail {

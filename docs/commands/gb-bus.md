@@ -1,6 +1,6 @@
 # `gb-bus`
 
-test Game Boy memory bus.
+Проверяет шину памяти Game Boy.
 
 ## Справка shell
 

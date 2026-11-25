@@ -41,20 +41,20 @@ namespace {
 
 	constexpr ProgramArgumentSpec sdStressArguments[] = {
 	    {
-         .name = "passes",
-         .valueName = "passes",
-         .help = "optional pass count, default: 3, max: 20",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "passes",
+	     .valueName = "passes",
+	     .help = "optional pass count, default: 3, max: 20",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	    {
-         .name = "files",
-         .valueName = "files",
-         .help = "optional file count per pass, default: 4, max: 8",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "files",
+	     .valueName = "files",
+	     .help = "optional file count per pass, default: 4, max: 8",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	};
 
@@ -177,6 +177,7 @@ int SdStressProgram::run(
 				context.writeLine(lexxos::vfs::toString(openStatus));
 				return 1;
 			}
+
 			auto const writeStatus = output.write(std::string_view{writeBuffer->data(), writeBuffer->size()});
 			output.close();
 			if (writeStatus != lexxos::vfs::WriteStatus::Ok) {
@@ -192,6 +193,7 @@ int SdStressProgram::run(
 				context.writeLine(lexxos::vfs::toString(openStatus));
 				return 1;
 			}
+
 			std::size_t bytesRead = 0;
 			auto const readStatus = input.read(readBuffer->data(), readBuffer->size(), bytesRead);
 			input.close();
@@ -202,8 +204,10 @@ int SdStressProgram::run(
 				} else {
 					context.writeLine(lexxos::vfs::toString(readStatus));
 				}
+
 				return 1;
 			}
+
 			if (std::memcmp(writeBuffer->data(), readBuffer->data(), readBuffer->size()) != 0) {
 				context.write("sd-stress: verify failed: ");
 				context.writeLine(path->data());
@@ -216,6 +220,7 @@ int SdStressProgram::run(
 				context.writeLine(lexxos::vfs::toString(removeStatus));
 				return 1;
 			}
+
 			++createdFiles;
 		}
 

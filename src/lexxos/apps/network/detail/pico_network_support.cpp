@@ -29,6 +29,7 @@
 #endif
 
 namespace lexxos::apps::network_programs::pico_detail {
+
 namespace {
 
 	constexpr std::uint32_t wifiDefaultTimeoutMs = 10000;
@@ -56,6 +57,7 @@ namespace {
 			writeUnsigned(context, static_cast<std::uint32_t>(-value));
 			return;
 		}
+
 		writeUnsigned(context, static_cast<std::uint32_t>(value));
 	}
 
@@ -63,9 +65,11 @@ namespace {
 		if (output == nullptr || capacity == 0 || text.size() >= capacity) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < text.size(); ++index) {
 			output[index] = text[index];
 		}
+
 		output[text.size()] = '\0';
 		return true;
 	}
@@ -81,20 +85,25 @@ namespace {
 		if (authMode == 0) {
 			return "open";
 		}
+
 		bool const hasWpa = (authMode & wpaBit) != 0;
 		bool const hasWpa2 = (authMode & wpa2Bit) != 0;
 		if (hasWpa && hasWpa2) {
 			return "wpa/wpa2";
 		}
+
 		if (hasWpa2) {
 			return "wpa2";
 		}
+
 		if (hasWpa) {
 			return "wpa";
 		}
+
 		if ((authMode & privacyBit) != 0) {
 			return "wep";
 		}
+
 		return "secure";
 	}
 
@@ -107,6 +116,7 @@ namespace {
 			if (index > 0) {
 				context.write(":");
 			}
+
 			writeHexByte(context, bssid[index]);
 		}
 	}
@@ -115,9 +125,11 @@ namespace {
 		if (rssi >= -60) {
 			return 3;
 		}
+
 		if (rssi >= -75) {
 			return 2;
 		}
+
 		return 1;
 	}
 
@@ -150,10 +162,12 @@ namespace {
 					if (!sameBssid(record.bssid, result->bssid)) {
 						record.multipleBssid = true;
 					}
+
 					if (result->rssi > record.rssi) {
 						std::memcpy(record.bssid.data(), result->bssid, record.bssid.size());
 						record.rssi = result->rssi;
 					}
+
 					++record.seen;
 					++state->merged;
 					return 0;
@@ -171,6 +185,7 @@ namespace {
 		for (std::uint8_t index = 0; index < ssidLength; ++index) {
 			record.ssid[index] = static_cast<char>(result->ssid[index]);
 		}
+
 		record.ssid[ssidLength] = '\0';
 		std::memcpy(record.bssid.data(), result->bssid, record.bssid.size());
 		record.channel = result->channel;
@@ -183,6 +198,7 @@ namespace {
 		if (g_cyw43Initialized) {
 			return true;
 		}
+
 		g_cyw43InitResult = cyw43_arch_init();
 		if (g_cyw43InitResult != 0) {
 			context.writeError(programName);
@@ -191,6 +207,7 @@ namespace {
 			context.writeErrorLine("");
 			return false;
 		}
+
 		g_cyw43Initialized = true;
 		return true;
 	}
@@ -207,18 +224,22 @@ namespace {
 			output = WifiAuthAttempt{"wpa2", CYW43_AUTH_WPA2_AES_PSK};
 			return true;
 		}
+
 		if (text == "open") {
 			output = WifiAuthAttempt{"open", CYW43_AUTH_OPEN};
 			return true;
 		}
+
 		if (text == "wpa") {
 			output = WifiAuthAttempt{"wpa", CYW43_AUTH_WPA_TKIP_PSK};
 			return true;
 		}
+
 		if (text == "mixed" || text == "wpa2-mixed" || text == "wpa/wpa2") {
 			output = WifiAuthAttempt{"mixed", CYW43_AUTH_WPA2_MIXED_PSK};
 			return true;
 		}
+
 		return false;
 	}
 
@@ -233,6 +254,7 @@ namespace {
 		if (result == wifiConnectTimeoutResult) {
 			context.writeError(" (timeout)");
 		}
+
 		context.writeErrorLine("");
 	}
 
@@ -323,7 +345,7 @@ namespace {
 
 	bool wifiLinkStatusIsTerminalFailure(int status) {
 		switch (status) {
-			case CYW43_LINK_FAIL:
+			case CYW43_LINK_FAIL :
 			case CYW43_LINK_NONET:
 			case CYW43_LINK_BADAUTH:
 				return true;
@@ -357,10 +379,12 @@ namespace {
 			context.write("-");
 			return;
 		}
+
 		for (std::uint8_t index = 0; index < snapshot.macLength; ++index) {
 			if (index > 0) {
 				context.write(":");
 			}
+
 			writeHexByte(context, snapshot.mac[index]);
 		}
 	}
@@ -390,14 +414,17 @@ namespace {
 		for (std::uint8_t index = 0; index < snapshot.macLength; ++index) {
 			snapshot.mac[index] = staNetif->hwaddr[index];
 		}
+
 		auto const* dns0 = dns_getserver(0);
 		auto const* dns1 = dns_getserver(1);
 		if (dns0 != nullptr) {
 			ip_addr_set(&snapshot.dns0, dns0);
 		}
+
 		if (dns1 != nullptr) {
 			ip_addr_set(&snapshot.dns1, dns1);
 		}
+
 		cyw43_arch_lwip_end();
 	}
 
@@ -421,6 +448,7 @@ namespace {
 			restartResult = dhcp_start(staNetif);
 			restarted = restartResult == ERR_OK;
 		}
+
 		cyw43_arch_lwip_end();
 
 		if (!restarted) {
@@ -429,6 +457,7 @@ namespace {
 			context.writeErrorLine("");
 			return false;
 		}
+
 		context.writeLine("wifi-connect: DHCP restart");
 		return true;
 	}
@@ -455,6 +484,7 @@ namespace {
 			address = state.address;
 			return true;
 		}
+
 		if (result != ERR_INPROGRESS) {
 			context.writeError(programName);
 			context.writeError(": DNS start failed: ");
@@ -462,11 +492,13 @@ namespace {
 			context.writeErrorLine("");
 			return false;
 		}
+
 		if (!waitForDns(context, state, startMs, timeoutMs)) {
 			context.writeError(programName);
 			context.writeErrorLine(": DNS timeout or failure");
 			return false;
 		}
+
 		address = state.address;
 		return true;
 	}
@@ -489,11 +521,13 @@ namespace {
 		if (buffer == nullptr || pbuf_copy_partial(buffer, &firstByte, sizeof(firstByte), 0) != sizeof(firstByte)) {
 			return false;
 		}
+
 		std::uint8_t const version = static_cast<std::uint8_t>(firstByte >> 4U);
 		std::uint8_t const headerWords = static_cast<std::uint8_t>(firstByte & 0x0FU);
 		if (version != 4U || headerWords < 5U) {
 			return false;
 		}
+
 		output = static_cast<std::uint16_t>(headerWords * 4U);
 		return true;
 	}
@@ -513,6 +547,7 @@ namespace {
 			if (!ipv4HeaderLength(buffer, ipHeaderBytes)) {
 				return 0;
 			}
+
 			icmpOffset = ipHeaderBytes;
 			matched = copyPingEchoHeader(buffer, icmpOffset, header) && pingEchoHeaderMatches(*state, header);
 			if (!matched) {
@@ -555,6 +590,7 @@ namespace {
 				for (std::size_t index = 0; index < pingPayloadBytes; ++index) {
 					payload[index] = static_cast<std::uint8_t>('a' + (index % 26U));
 				}
+
 				echo->chksum = inet_chksum(echo, packet->len);
 				result = raw_sendto(state.pcb, packet, &state.address);
 				pbuf_free(packet);
@@ -563,21 +599,25 @@ namespace {
 				}
 			}
 		}
+
 		if (errorMessage != nullptr && state.pcb != nullptr) {
 			raw_remove(state.pcb);
 			state.pcb = nullptr;
 		}
+
 		cyw43_arch_lwip_end();
 
 		if (errorMessage == nullptr) {
 			return true;
 		}
+
 		context.writeError("ping: ");
 		context.writeError(errorMessage);
 		if (result != ERR_OK) {
 			context.writeError(": ");
 			writeSigned(context, result);
 		}
+
 		context.writeErrorLine("");
 		return false;
 	}
@@ -586,6 +626,7 @@ namespace {
 		if (state.pcb == nullptr) {
 			return;
 		}
+
 		cyw43_arch_lwip_begin();
 		raw_remove(state.pcb);
 		state.pcb = nullptr;
@@ -605,6 +646,7 @@ namespace {
 			cyw43_arch_poll();
 			sleepMs(context, 20);
 		}
+
 		return state.success ? PingWaitResult::Reply : PingWaitResult::Timeout;
 	}
 
@@ -614,8 +656,10 @@ namespace {
 			if (context.pollCancellationRequest()) {
 				return false;
 			}
+
 			sleepMs(context, 50);
 		}
+
 		return true;
 	}
 
@@ -687,10 +731,12 @@ namespace {
 		if (state == nullptr) {
 			return;
 		}
+
 		if (address != nullptr) {
 			ip_addr_set(&state->address, address);
 			state->success = true;
 		}
+
 		state->done = true;
 	}
 
@@ -700,16 +746,20 @@ namespace {
 			if (buffer != nullptr) {
 				pbuf_free(buffer);
 			}
+
 			return;
 		}
+
 		if (buffer != nullptr) {
 			state->responseLength = buffer->tot_len;
 			if (buffer->tot_len >= ntpPacketSize) {
 				pbuf_copy_partial(buffer, state->response.data(), ntpPacketSize, 0);
 				state->success = true;
 			}
+
 			pbuf_free(buffer);
 		}
+
 		state->done = true;
 	}
 
@@ -718,8 +768,10 @@ namespace {
 			if (timeoutMs > 0 && elapsedMs(startMs, uptimeMs(context)) >= timeoutMs) {
 				return false;
 			}
+
 			sleepMs(context, ntpPollIntervalMs);
 		}
+
 		return state.success;
 	}
 
@@ -728,8 +780,10 @@ namespace {
 			if (timeoutMs > 0 && elapsedMs(startMs, uptimeMs(context)) >= timeoutMs) {
 				return false;
 			}
+
 			sleepMs(context, ntpPollIntervalMs);
 		}
+
 		return state.success;
 	}
 
@@ -757,6 +811,7 @@ namespace {
 			context.writeErrorLine("rtc-sync: failed to allocate UDP PCB");
 			return false;
 		}
+
 		udp_recv(pcb, ntpReceiveCallback, &state);
 		state.pcb = pcb;
 
@@ -768,6 +823,7 @@ namespace {
 			context.writeErrorLine("rtc-sync: failed to allocate NTP packet");
 			return false;
 		}
+
 		std::memcpy(packet->payload, request.data(), request.size());
 		err_t const result = udp_sendto(pcb, packet, &address, ntpPort);
 		pbuf_free(packet);
@@ -780,6 +836,7 @@ namespace {
 			context.writeErrorLine("");
 			return false;
 		}
+
 		cyw43_arch_lwip_end();
 		return true;
 	}
@@ -788,6 +845,7 @@ namespace {
 		if (state.pcb == nullptr) {
 			return;
 		}
+
 		cyw43_arch_lwip_begin();
 		udp_remove(state.pcb);
 		state.pcb = nullptr;
@@ -828,10 +886,12 @@ namespace {
 		if (!state.success || state.responseLength < ntpPacketSize) {
 			return false;
 		}
+
 		std::uint32_t const ntpSeconds = readBe32(state.response, 40U);
 		if (ntpSeconds < ntpUnixEpochDelta) {
 			return false;
 		}
+
 		unixSeconds = ntpSeconds - ntpUnixEpochDelta;
 		unixSecondsToUtc(unixSeconds, output);
 		return lexxos::devices::rtc::isValidDate(output);
@@ -860,10 +920,12 @@ namespace {
 			context.write(" merged=");
 			writeUnsigned(context, state.merged);
 		}
+
 		if (state.dropped > 0) {
 			context.write(" dropped=");
 			writeUnsigned(context, state.dropped);
 		}
+
 		context.writeLine("");
 
 		for (std::uint32_t index = 0; index < state.count; ++index) {
@@ -875,6 +937,7 @@ namespace {
 			} else {
 				context.write(record.ssid);
 			}
+
 			if (state.showBssid) {
 				context.write(" bssid=");
 				writeBssid(context, record.bssid);
@@ -882,6 +945,7 @@ namespace {
 					context.write(" bssid-multi=yes");
 				}
 			}
+
 			context.write(" ch=");
 			writeUnsigned(context, record.channel);
 			context.write(" rssi=");
@@ -892,6 +956,7 @@ namespace {
 				context.write(" seen=");
 				writeUnsigned(context, record.seen);
 			}
+
 			context.writeLine("");
 		}
 	}
@@ -922,6 +987,7 @@ WifiRuntimeStatus readWifiRuntimeStatusOnPico() {
 			output.signalLevel = 1;
 		}
 	}
+
 	cyw43_arch_lwip_end();
 #else
 	output.supported = false;
@@ -932,7 +998,7 @@ WifiRuntimeStatus readWifiRuntimeStatusOnPico() {
 int runWifiConnectOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!board.wireless.wifi) {
 		context.writeLine("wifi-connect: Wi-Fi is not declared by this board profile");
 		return 1;
@@ -966,6 +1032,7 @@ int runWifiConnectOnPico(
 			context.writeErrorLine("wifi-connect: invalid --auth, expected auto, open, wpa, wpa2 or mixed");
 			return 2;
 		}
+
 		authAttempts[0] = fixedAuth;
 		authAttemptCount = 1;
 	}
@@ -986,10 +1053,12 @@ int runWifiConnectOnPico(
 		context.writeErrorLine("wifi-connect: SSID is too long");
 		return 2;
 	}
+
 	if (!copyStringToBuffer(passwordText, password, sizeof(password))) {
 		context.writeErrorLine("wifi-connect: password is too long");
 		return 2;
 	}
+
 	if (!ensureCyw43Initialized(context, "wifi-connect")) {
 		return 1;
 	}
@@ -1003,6 +1072,7 @@ int runWifiConnectOnPico(
 	} else {
 		context.write(authAttempts[0].name);
 	}
+
 	context.writeLine("...");
 	context.writeLine("...");
 	for (std::size_t index = 0; index < authAttemptCount; ++index) {
@@ -1012,6 +1082,7 @@ int runWifiConnectOnPico(
 			context.write(attempt.name);
 			context.writeLine("");
 		}
+
 		char const* passwordArgument = attempt.mode == CYW43_AUTH_OPEN ? nullptr : password;
 		int result = 0;
 		if (connectWifiWithStatusTrace(context, ssid, passwordArgument, attempt, timeoutMs, result)) {
@@ -1020,12 +1091,15 @@ int runWifiConnectOnPico(
 			context.writeLine("");
 			return 0;
 		}
+
 		writeWifiConnectFailure(context, attempt.name, result);
 		if (authAttemptCount == 1) {
 			return 1;
 		}
+
 		sleepMs(context, 250);
 	}
+
 	context.writeErrorLine("wifi-connect: all authentication attempts failed");
 	return 1;
 #else
@@ -1046,18 +1120,22 @@ bool queryNetworkTimeOnPico(
 		context.writeErrorLine("rtc-sync: empty NTP server name");
 		return false;
 	}
+
 	if (timeoutMs == 0 || timeoutMs > wifiMaxTimeoutMs) {
 		context.writeErrorLine("rtc-sync: invalid timeout");
 		return false;
 	}
+
 	char serverName[ntpMaxServerNameLength + 1]{};
 	if (!copyStringToBuffer(server, serverName, sizeof(serverName))) {
 		context.writeErrorLine("rtc-sync: NTP server name is too long");
 		return false;
 	}
+
 	if (!ensureCyw43Initialized(context, "rtc-sync")) {
 		return false;
 	}
+
 	ensureWifiStaModeEnabled();
 	if (!wifiLinkIsUp()) {
 		context.writeErrorLine("rtc-sync: Wi-Fi link is down; run wifi-connect first");
@@ -1078,16 +1156,19 @@ bool queryNetworkTimeOnPico(
 	if (!startNtpRequest(context, address, ntpState)) {
 		return false;
 	}
+
 	bool const received = waitForNtp(context, ntpState, startMs, timeoutMs);
 	closeNtpRequest(ntpState);
 	if (!received) {
 		context.writeErrorLine("rtc-sync: NTP timeout or invalid response");
 		return false;
 	}
+
 	if (!decodeNtpTime(ntpState, output, unixSeconds)) {
 		context.writeErrorLine("rtc-sync: failed to decode NTP response");
 		return false;
 	}
+
 	return true;
 #else
 	(void) context;
@@ -1103,7 +1184,7 @@ bool queryNetworkTimeOnPico(
 int runWifiStatusOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	(void) arguments;
 	if (!board.wireless.wifi) {
 		context.writeLine("wifi-status: Wi-Fi is not declared by this board profile");
@@ -1114,6 +1195,7 @@ int runWifiStatusOnPico(
 	if (!ensureCyw43Initialized(context, "wifi-status")) {
 		return 1;
 	}
+
 	ensureWifiStaModeEnabled();
 
 	WifiStatusSnapshot snapshot{};
@@ -1167,7 +1249,7 @@ int runWifiStatusOnPico(
 int runPingOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!board.wireless.wifi) {
 		context.writeLine("ping: Wi-Fi is not declared by this board profile");
 		return 1;
@@ -1179,11 +1261,13 @@ int runPingOnPico(
 		context.writeErrorLine("ping: missing target host or IP");
 		return 2;
 	}
+
 	std::uint32_t timeoutMs = pingDefaultTimeoutMs;
 	if (!parseOptionalUnsignedArgument(arguments, "timeout", timeoutMs) || timeoutMs == 0 || timeoutMs > pingMaxTimeoutMs) {
 		context.writeErrorLine("ping: invalid --timeout");
 		return 2;
 	}
+
 	std::uint32_t count = pingDefaultCount;
 	if (!parseOptionalUnsignedArgument(arguments, "count", count) || count == 0 || count > pingMaxCount) {
 		context.writeErrorLine("ping: invalid --count");
@@ -1199,6 +1283,7 @@ int runPingOnPico(
 	if (!ensureCyw43Initialized(context, "ping")) {
 		return 1;
 	}
+
 	ensureWifiStaModeEnabled();
 	int const linkStatus = readWifiLinkStatus();
 	if (linkStatus != CYW43_LINK_UP) {
@@ -1242,6 +1327,7 @@ int runPingOnPico(
 			closePingRequest(state);
 			return received > 0 ? 0 : 1;
 		}
+
 		++transmitted;
 		auto const waitResult = waitForPing(context, state, sentMs, timeoutMs);
 		closePingRequest(state);
@@ -1266,6 +1352,7 @@ int runPingOnPico(
 			writeUnsigned(context, state.sequence);
 			context.writeLine("");
 		}
+
 		if (index + 1U < count) {
 			if (!sleepPingInterval(context, 1000)) {
 				cancelled = true;
@@ -1289,7 +1376,7 @@ int runPingOnPico(
 int runWifiScanOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!board.wireless.wifi) {
 		context.writeLine("wifi-scan: Wi-Fi is not declared by this board profile");
 		return 1;
@@ -1304,6 +1391,7 @@ int runWifiScanOnPico(
 		context.writeErrorLine("wifi-scan: invalid --timeout");
 		return 2;
 	}
+
 	if (!parseOptionalUnsignedArgument(arguments, "limit", limit) || limit == 0 || limit > wifiMaxResults) {
 		context.writeErrorLine("wifi-scan: invalid --limit");
 		return 2;
@@ -1340,6 +1428,7 @@ int runWifiScanOnPico(
 			context.writeLine("wifi-scan: wait a moment before starting another scan");
 			return 1;
 		}
+
 		cyw43_arch_poll();
 		sleepMs(context, 100);
 	}

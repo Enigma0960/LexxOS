@@ -32,6 +32,7 @@ std::uint32_t ProgramInputQueue::oldestAvailableSequence() const {
 	if (newest == 0U) {
 		return _nextSequence;
 	}
+
 	auto const capacity = lexxos::app::program_input::queueCapacity;
 	return newest >= capacity ? newest - capacity + 1U : 1U;
 }
@@ -40,9 +41,11 @@ void ProgramInputQueue::resetAfterSequenceWrap() {
 	for (auto& sequence : _sequences) {
 		sequence = 0;
 	}
+
 	for (auto& event : _events) {
 		event = {};
 	}
+
 	_nextSequence = 1U;
 }
 
@@ -86,6 +89,7 @@ bool ProgramInputQueue::pollEvent(EventCursor& cursor, lexxos::devices::InputEve
 		if (cursor.nextSequence == 0U || cursor.nextSequence < oldest) {
 			cursor.nextSequence = oldest;
 		}
+
 		if (cursor.nextSequence > newest) {
 			cursor.nextSequence = _nextSequence;
 		} else {

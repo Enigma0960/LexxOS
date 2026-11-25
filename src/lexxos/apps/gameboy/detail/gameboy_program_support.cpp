@@ -1,5 +1,6 @@
-#include <lexxos/apps/gameboy/detail/gameboy_program_arguments.h>
 #include <lexxos/apps/gameboy/detail/gameboy_program_support.h>
+
+#include <lexxos/apps/gameboy/detail/gameboy_program_arguments.h>
 
 namespace lexxos::apps::gameboy_programs {
 
@@ -12,7 +13,7 @@ namespace {
 
 	constexpr NamedRgb565Palette namedRgb565Palettes[] = {
 	    {      "default", lexxos::gameboy::defaultRgb565Palette},
-	    {	     "gray", lexxos::gameboy::defaultRgb565Palette},
+	    {         "gray", lexxos::gameboy::defaultRgb565Palette},
 	    {    "grayscale", lexxos::gameboy::defaultRgb565Palette},
 	    {    "dmg_green",  {{{0x9DE1, 0x8D61, 0x3306, 0x09C1}}}},
 	    {  "pocket_gray",  {{{0xFFDF, 0xCE59, 0x738E, 0x18C3}}}},
@@ -58,10 +59,12 @@ bool parseUnsigned(std::string_view value, std::uint32_t& output) {
 		if (character < '0' || character > '9') {
 			return false;
 		}
+
 		auto const digit = static_cast<std::uint32_t>(character - '0');
 		if (result > (0xFFFFFFFFU - digit) / 10U) {
 			return false;
 		}
+
 		result = result * 10U + digit;
 	}
 
@@ -80,6 +83,7 @@ bool parseNumber(std::string_view value, std::uint32_t& output) {
 		base = 16;
 		offset = 2;
 	}
+
 	if (offset == value.size()) {
 		return false;
 	}
@@ -101,9 +105,11 @@ bool parseNumber(std::string_view value, std::uint32_t& output) {
 		if (digit >= static_cast<std::uint32_t>(base)) {
 			return false;
 		}
+
 		if (result > (0xFFFFFFFFU - digit) / static_cast<std::uint32_t>(base)) {
 			return false;
 		}
+
 		result = result * static_cast<std::uint32_t>(base) + digit;
 	}
 
@@ -118,6 +124,7 @@ bool parseRgb565Palette(std::string_view value, lexxos::gameboy::Rgb565Palette& 
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -161,6 +168,7 @@ void writeBusReadByte(lexxos::os::AppContext& context, lexxos::gameboy::Bus& bus
 		context.writeLine(lexxos::vfs::toString(status));
 		return;
 	}
+
 	writeCode8(context, value);
 	context.writeLine("");
 }
@@ -184,14 +192,17 @@ bool openCartridge(
 		context.writeLine(lexxos::vfs::toString(result.openStatus));
 		return false;
 	}
+
 	if (result.tooSmall) {
 		context.writeLine("file is too small for a Game Boy cartridge header");
 		return false;
 	}
+
 	if (result.readStatus != lexxos::vfs::ReadStatus::Ok) {
 		context.writeLine(lexxos::vfs::toString(result.readStatus));
 		return false;
 	}
+
 	if (result.invalidHeader) {
 		context.writeLine("cartridge header validation failed");
 		return false;

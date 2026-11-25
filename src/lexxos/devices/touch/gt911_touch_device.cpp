@@ -9,6 +9,7 @@
 #include <lexxos/platform/platform.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint16_t gt911ProductIdRegister = 0x8140;
@@ -26,12 +27,15 @@ namespace {
 			low = high;
 			high = temporary;
 		}
+
 		if (value < low) {
 			return low;
 		}
+
 		if (value > high) {
 			return high;
 		}
+
 		return value;
 	}
 
@@ -44,11 +48,13 @@ namespace {
 		if (displayExtent <= 1 || rawMin == rawMax) {
 			return 0;
 		}
+
 		if (rawMin > rawMax) {
 			auto const temporary = rawMin;
 			rawMin = rawMax;
 			rawMax = temporary;
 		}
+
 		auto const clamped = clampInt(value, rawMin, rawMax);
 		auto const range = static_cast<std::int64_t>(rawMax - rawMin);
 		auto const scaled = (static_cast<std::int64_t>(clamped - rawMin) * (displayExtent - 1) + range / 2) / range;
@@ -56,6 +62,7 @@ namespace {
 		if (invert) {
 			mapped = displayExtent - 1 - mapped;
 		}
+
 		return clampInt(mapped, 0, displayExtent - 1);
 	}
 
@@ -89,6 +96,7 @@ bool Gt911TouchDevice::initialize() {
 		if (address == _config.address) {
 			continue;
 		}
+
 		if (_tryAddress(address)) {
 			_ready = true;
 			return true;
@@ -117,6 +125,7 @@ PointingDeviceState Gt911TouchDevice::state() const {
 		result.y = touch.contacts[0].y;
 		result.buttons = PointingButtonLeft;
 	}
+
 	return result;
 }
 
@@ -137,17 +146,20 @@ bool Gt911TouchDevice::applyTouchCalibration(TouchCalibration const& calibration
 	if (!calibration.valid || calibration.rawMinX == calibration.rawMaxX || calibration.rawMinY == calibration.rawMaxY || calibration.displayWidth <= 1 || calibration.displayHeight <= 1) {
 		return false;
 	}
+
 	auto normalized = calibration;
 	if (normalized.rawMinX > normalized.rawMaxX) {
 		auto const temporary = normalized.rawMinX;
 		normalized.rawMinX = normalized.rawMaxX;
 		normalized.rawMaxX = temporary;
 	}
+
 	if (normalized.rawMinY > normalized.rawMaxY) {
 		auto const temporary = normalized.rawMinY;
 		normalized.rawMinY = normalized.rawMaxY;
 		normalized.rawMaxY = temporary;
 	}
+
 	_touch.calibration = normalized;
 	return true;
 }
@@ -168,6 +180,7 @@ bool Gt911TouchDevice::_tryAddress(std::uint8_t address) {
 	if (!_readRegister(address, gt911ProductIdRegister, product.data(), product.size())) {
 		return false;
 	}
+
 	std::memcpy(_productId, product.data(), product.size());
 	_productId[4] = '\0';
 	_address = address;
@@ -182,6 +195,7 @@ bool Gt911TouchDevice::_readRegister(
 	if (address == 0 || data == nullptr || size == 0) {
 		return false;
 	}
+
 	std::uint8_t pointer[] = {
 	    static_cast<std::uint8_t>(reg >> 8U),
 	    static_cast<std::uint8_t>(reg & 0xFFU),
@@ -190,6 +204,7 @@ bool Gt911TouchDevice::_readRegister(
 	if (!transaction) {
 		return false;
 	}
+
 	return _bus.write(address, pointer, sizeof(pointer)) && _bus.read(address, data, size);
 }
 
@@ -201,6 +216,7 @@ bool Gt911TouchDevice::_writeRegister(std::uint16_t reg, std::uint8_t const* dat
 	if (_address == 0 || data == nullptr || size == 0 || size + 2U > 18U) {
 		return false;
 	}
+
 	std::array<std::uint8_t, 18> buffer{};
 	buffer[0] = static_cast<std::uint8_t>(reg >> 8U);
 	buffer[1] = static_cast<std::uint8_t>(reg & 0xFFU);
@@ -219,6 +235,7 @@ void Gt911TouchDevice::_poll() const {
 		_touch.connected = false;
 		return;
 	}
+
 	_touch.connected = true;
 	_touch.maxContacts = gt911MaxContacts;
 
@@ -241,6 +258,7 @@ void Gt911TouchDevice::_poll() const {
 	for (auto& contact : _touch.contacts) {
 		contact = {};
 	}
+
 	_touch.contactCount = contactCount;
 	for (std::uint8_t index = 0; index < contactCount; ++index) {
 		auto const* point = data.data() + static_cast<std::size_t>(index) * gt911ContactBytes;

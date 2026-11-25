@@ -24,34 +24,34 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec psramTestArguments[] = {
 	    {
-         .name = "address",
-         .shortName = 'a',
-         .valueName = "addr",
-         .help = "24-bit start address, decimal or 0xhex",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0",
+	     .name = "address",
+	     .shortName = 'a',
+	     .valueName = "addr",
+	     .help = "24-bit start address, decimal or 0xhex",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0",
 	     },
 	    {
-         .name = "length",
-         .shortName = 'l',
-         .valueName = "bytes",
-         .help = "bytes to test, maximum 4096",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "256",
+	     .name = "length",
+	     .shortName = 'l',
+	     .valueName = "bytes",
+	     .help = "bytes to test, maximum 4096",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "256",
 	     },
 	    {
-         .name = "passes",
-         .shortName = 'p',
-         .valueName = "count",
-         .help = "number of write/read/verify passes, maximum 1000",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "1",
+	     .name = "passes",
+	     .shortName = 'p',
+	     .valueName = "count",
+	     .help = "number of write/read/verify passes, maximum 1000",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "1",
 	     },
 	};
 
@@ -123,6 +123,7 @@ int PsramTestProgram::run(lexxos::os::AppContext& context,
 		context.writeErrorLine("psram-test: invalid --address");
 		return 2;
 	}
+
 	if (!detail::parseOptionalUnsignedFlexible(arguments, "length", length)
 	    || length == 0
 	    || length > detail::psramMaxTestLength
@@ -147,6 +148,7 @@ int PsramTestProgram::run(lexxos::os::AppContext& context,
 	if (!allocateWorkspace(context, original, expected, actual)) {
 		return 1;
 	}
+
 	bool restoreRequired = false;
 
 	context.write("psram-test: address=");
@@ -166,14 +168,17 @@ int PsramTestProgram::run(lexxos::os::AppContext& context,
 		if (!restoreRequired) {
 			return true;
 		}
+
 		if (!detail::writePsramMemory(board.psram, address, original->data(), byteLength)) {
 			context.writeLine("psram-test: restore write failed");
 			return false;
 		}
+
 		if (!detail::readPsramMemory(board.psram, address, actual->data(), byteLength)) {
 			context.writeLine("psram-test: restore read failed");
 			return false;
 		}
+
 		std::size_t mismatchOffset = 0;
 		if (!detail::verifyPsramBuffer(*original, *actual, byteLength, mismatchOffset)) {
 			context.write("psram-test: restore mismatch offset=");
@@ -185,6 +190,7 @@ int PsramTestProgram::run(lexxos::os::AppContext& context,
 			context.writeLine("");
 			return false;
 		}
+
 		restoreRequired = false;
 		return true;
 	};
@@ -196,10 +202,12 @@ int PsramTestProgram::run(lexxos::os::AppContext& context,
 			context.writeLine("psram-test: pattern write failed");
 			return false;
 		}
+
 		if (!detail::readPsramMemory(board.psram, address, actual->data(), byteLength)) {
 			context.writeLine("psram-test: pattern read failed");
 			return false;
 		}
+
 		std::size_t mismatchOffset = 0;
 		if (!detail::verifyPsramBuffer(*expected, *actual, byteLength, mismatchOffset)) {
 			context.write("psram-test: mismatch seed=");
@@ -215,6 +223,7 @@ int PsramTestProgram::run(lexxos::os::AppContext& context,
 			context.writeLine("");
 			return false;
 		}
+
 		return true;
 	};
 

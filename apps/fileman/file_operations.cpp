@@ -1,7 +1,9 @@
 #include "file_operations.h"
+
 #include <lexx/lexx.h>
 
 namespace fileman {
+
 namespace {
 
 	constexpr int kMaxPath = 128;
@@ -16,6 +18,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return *a == *b;
 	}
 
@@ -33,21 +36,27 @@ namespace {
 			out[i] = directory[i];
 			++i;
 		}
+
 		if (directory[i]) {
 			return false;
 		}
+
 		if (i != 1 || directory[0] != '/') {
 			if (i == kMaxPath - 1) {
 				return false;
 			}
+
 			out[i++] = '/';
 		}
+
 		for (int j = 0; name[j]; ++j) {
 			if (i >= kMaxPath - 1) {
 				return false;
 			}
+
 			out[i++] = name[j];
 		}
+
 		out[i] = 0;
 		return true;
 	}
@@ -63,6 +72,7 @@ namespace {
 				}
 			}
 		}
+
 		return mountRoot || equal(path, "/") || equal(path, "/dev") || equal(path, "/mnt") || equal(path, "/proc") || equal(path, "/sys") || equal(path, "/tmp") || containedIn(path, "/dev") || containedIn(path, "/proc") || containedIn(path, "/sys");
 	}
 
@@ -74,12 +84,14 @@ namespace {
 		if (input < 0) {
 			return FileOpResult::IoError;
 		}
+
 		// open_write_new checks target existence before any truncating VFS operation.
 		int output = lexx::open_write_new(destination);
 		if (output < 0) {
 			(void) lexx::close(static_cast<lexx::uint32_t>(input));
 			return FileOpResult::IoError;
 		}
+
 		bool success = true;
 		for (;;) {
 			auto const count = lexx::read(static_cast<lexx::uint32_t>(input), g_transferBuffer, sizeof(g_transferBuffer));
@@ -87,24 +99,30 @@ namespace {
 				success = false;
 				break;
 			}
+
 			if (count == 0) {
 				break;
 			}
+
 			if (lexx::write_file(static_cast<lexx::uint32_t>(output), g_transferBuffer, count) != static_cast<int>(count)) {
 				success = false;
 				break;
 			}
+
 			lexx::yield();
 		}
+
 		if (lexx::close(static_cast<lexx::uint32_t>(output)) != 0) {
 			success = false;
 		}
+
 		(void) lexx::close(static_cast<lexx::uint32_t>(input));
 		if (!success) {
 			// Only the newly-created destination may be removed on failure.
 			(void) lexx::remove_file(destination);
 			return FileOpResult::IoError;
 		}
+
 		return FileOpResult::Ok;
 	}
 
@@ -112,26 +130,33 @@ namespace {
 		if (depth > kMaxDepth) {
 			return FileOpResult::DepthLimit;
 		}
+
 		if (equal(source, destination)) {
 			return FileOpResult::Invalid;
 		}
+
 		lexx::FileStat stat{};
 		if (lexx::stat(source, stat) < 0) {
 			return FileOpResult::Missing;
 		}
+
 		lexx::FileStat target{};
 		if (lexx::stat(destination, target) == 0) {
 			return FileOpResult::Exists;
 		}
+
 		if (stat.type == lexx::node_regular_file) {
 			return copyFile(source, destination);
 		}
+
 		if (stat.type != lexx::node_directory || protectedPath(source) || containedIn(destination, source)) {
 			return FileOpResult::Invalid;
 		}
+
 		if (lexx::mkdir(destination) != 0) {
 			return FileOpResult::IoError;
 		}
+
 		lexx::uint32_t offset = 0;
 		while (offset < kEntryLimit) {
 			// Re-enumerate on every iteration. Recursive calls share g_entries.
@@ -139,28 +164,35 @@ namespace {
 			if (count < 0) {
 				return FileOpResult::IoError;
 			}
+
 			if (count == 0) {
 				return FileOpResult::Ok;
 			}
+
 			char name[lexx::directory_name_size]{};
 			for (unsigned j = 0; j < sizeof(name); ++j) {
 				name[j] = g_entries[0].name[j];
 			}
+
 			++offset;
 			if (equal(name, ".") || equal(name, "..")) {
 				continue;
 			}
+
 			char from[kMaxPath]{};
 			char to[kMaxPath]{};
 			if (!join(from, source, name) || !join(to, destination, name)) {
 				return FileOpResult::Invalid;
 			}
+
 			auto result = copyItem(from, to, depth + 1);
 			if (result != FileOpResult::Ok) {
 				return result;
 			}
+
 			lexx::yield();
 		}
+
 		return FileOpResult::DepthLimit;
 	}
 
@@ -168,16 +200,20 @@ namespace {
 		if (depth > kMaxDepth || protectedPath(source)) {
 			return FileOpResult::Invalid;
 		}
+
 		lexx::FileStat stat{};
 		if (lexx::stat(source, stat) < 0) {
 			return FileOpResult::Missing;
 		}
+
 		if (stat.type == lexx::node_regular_file) {
 			return lexx::remove_file(source) == 0 ? FileOpResult::Ok : FileOpResult::IoError;
 		}
+
 		if (stat.type != lexx::node_directory) {
 			return FileOpResult::Invalid;
 		}
+
 		// Always fetch entry 0: deleting each child changes directory offsets.
 		unsigned countProcessed = 0;
 		while (countProcessed < kEntryLimit) {
@@ -189,31 +225,39 @@ namespace {
 				if (count < 0) {
 					return FileOpResult::IoError;
 				}
+
 				if (count == 0) {
 					return lexx::rmdir(source) == 0 ? FileOpResult::Ok : FileOpResult::IoError;
 				}
+
 				for (unsigned j = 0; j < sizeof(name); ++j) {
 					name[j] = g_entries[0].name[j];
 				}
+
 				if (!equal(name, ".") && !equal(name, "..")) {
 					break;
 				}
+
 				++offset;
 				if (offset > 2U) {
 					return FileOpResult::Invalid;
 				}
 			}
+
 			char child[kMaxPath]{};
 			if (!join(child, source, name)) {
 				return FileOpResult::Invalid;
 			}
+
 			auto const result = deleteItem(child, depth + 1);
 			if (result != FileOpResult::Ok) {
 				return result;
 			}
+
 			++countProcessed;
 			lexx::yield();
 		}
+
 		return FileOpResult::DepthLimit;
 	}
 
@@ -227,10 +271,12 @@ FileOpResult renamePath(char const* source, char const* destination) {
 	if (protectedPath(source) || equal(source, destination) || containedIn(destination, source)) {
 		return FileOpResult::Invalid;
 	}
+
 	lexx::FileStat existing{};
 	if (lexx::stat(destination, existing) == 0) {
 		return FileOpResult::Exists;
 	}
+
 	return lexx::rename_path(source, destination) == 0 ? FileOpResult::Ok : FileOpResult::IoError;
 }
 
@@ -238,21 +284,26 @@ FileOpResult movePath(char const* source, char const* destination) {
 	if (protectedPath(source) || equal(source, destination) || containedIn(destination, source)) {
 		return FileOpResult::Invalid;
 	}
+
 	lexx::FileStat existing{};
 	if (lexx::stat(destination, existing) == 0) {
 		return FileOpResult::Exists;
 	}
+
 	int const result = lexx::rename_path(source, destination);
 	if (result == 0) {
 		return FileOpResult::Ok;
 	}
+
 	if (result != -2) {
 		return FileOpResult::IoError; // fallback ONLY for cross-FS or cross-directory.
 	}
+
 	auto copied = copyItem(source, destination, 0);
 	if (copied != FileOpResult::Ok) {
 		return copied;
 	}
+
 	return deleteItem(source, 0);
 }
 
@@ -269,6 +320,7 @@ char const* describe(FileOpResult result) {
 		case FileOpResult::DepthLimit: return "Directory exceeds traversal limit";
 		case FileOpResult::IoError   : return "I/O or read-only filesystem error";
 	}
+
 	return "Operation failed";
 }
 

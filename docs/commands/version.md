@@ -1,6 +1,6 @@
 # `version`
 
-show LexxOS build and feature milestone.
+Показывает версию сборки LexxOS и этап реализации возможностей.
 
 ## Справка shell
 

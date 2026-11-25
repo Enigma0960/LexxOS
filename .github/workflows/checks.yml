@@ -26,6 +26,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          submodules: true
       - uses: actions/setup-python@v6
         with:
           python-version: '3.14'
@@ -45,7 +46,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      PYTHONPATH: emulator
+      PYTHONPATH: tools/emulator
+      UV_PROJECT_ENVIRONMENT: ${{ github.workspace }}/work/venvs/emulator
       QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v6
@@ -59,11 +61,11 @@ jobs:
       - name: Install emulator and GUI test dependencies
         run: |
           python -m pip install uv
-          uv sync --project emulator --locked
-          echo "$GITHUB_WORKSPACE/emulator/.venv/bin" >> "$GITHUB_PATH"
+          uv sync --project tools/emulator --locked
+          echo "$GITHUB_WORKSPACE/work/venvs/emulator/bin" >> "$GITHUB_PATH"
       - name: Build full simulator through GUI entry point
-        run: python emulator/lexxos_emu/gui.py --profile full --build-only
+        run: python tools/emulator/lexxos_emu/gui.py --profile full --build-only
       - name: Run simulator regression
         run: |
           test -f build/full-dev-sim/src/liblexxos_sim.so
-          python -m pytest emulator/tests --lexxos-sim-lib build/full-dev-sim/src/liblexxos_sim.so -q
+          python -m pytest tools/emulator/tests --lexxos-sim-lib build/full-dev-sim/src/liblexxos_sim.so -q

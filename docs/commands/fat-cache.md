@@ -1,6 +1,6 @@
 # `fat-cache`
 
-show FAT disk cache statistics.
+Показывает статистику дискового кеша FAT.
 
 ## Справка shell
 

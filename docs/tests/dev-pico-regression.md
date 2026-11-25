@@ -1,4 +1,4 @@
-# Dev Pico regression checklist
+# Регрессионные проверки Dev Pico
 
 Этот список предназначен для ручной регрессии полной сборки `dev_pico` перед слиянием крупных изменений.
 Пока это базовый профиль dev платы; отдельные платы вроде Pico 2W, PicoCalc, STM32F407 и ESP32/M5Stack должны получить
@@ -14,7 +14,7 @@ cmake --build --preset debug-host-full
 ctest --test-dir build/host-full --output-on-failure
 ctest --test-dir build/host-checks --output-on-failure
 cmake --build --preset lexxos-sim-full
-PYTHONPATH=emulator python3 -m pytest emulator/tests --lexxos-sim-lib build/sim-full/src/liblexxos_sim.dylib
+PYTHONPATH=tools/emulator python3 -m pytest tools/emulator/tests --lexxos-sim-lib build/sim-full/src/liblexxos_sim.dylib
 cmake --build --preset lexxos-pico-full
 ```
 
@@ -116,7 +116,7 @@ umount /mnt/sd
 - `fs-smoke /mnt/sd` проходит без ошибок;
 - после `umount` повторный `mount sd0 /mnt/sd` работает.
 
-## 6. Display
+## 6. Дисплей
 
 Проверить дисплей:
 
@@ -136,7 +136,7 @@ display-test
 - текст читаемый, без инверсии/сдвига;
 - после `display-test` shell остается responsive.
 
-## 7. Input, keyboard and gamepad
+## 7. Ввод, клавиатура и геймпад
 
 Проверить основное устройство ввода:
 
@@ -156,7 +156,7 @@ gamepad-live -s 10
 - направления и кнопки gamepad соответствуют физической раскладке;
 - `Ctrl+C` завершает live-команды.
 
-## 8. I2C and shared-device access
+## 8. I2C и совместный доступ к устройствам
 
 Проверить I2C и отсутствие зависаний при повторном доступе:
 
@@ -174,7 +174,7 @@ i2c-scan
 - повторный доступ к устройствам не приводит к assert, hard fault или зависанию;
 - после каждой команды shell возвращает prompt.
 
-## 9. Game Boy smoke
+## 9. Краткая проверка Game Boy
 
 Положить тестовые ROM на SD карту и проверить bounded runs:
 
@@ -193,7 +193,7 @@ gbemu /mnt/sd/gb/test-rom-1.gb --frames 2 --display crop
 - после `gbemu` команды `mem`, `tasks`, `storage` продолжают работать;
 - повторный запуск `gbemu` не требует reboot.
 
-## 10. Reboot and recovery
+## 10. Перезапуск и восстановление
 
 Завершить прогон:
 

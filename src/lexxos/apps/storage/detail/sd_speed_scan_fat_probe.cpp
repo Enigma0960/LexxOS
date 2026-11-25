@@ -47,6 +47,7 @@ bool runSpeedFatWriteProbe(
 				return false;
 			}
 		}
+
 		output.close();
 	}
 
@@ -98,16 +99,20 @@ bool runSpeedFatReadProbe(
 				} else {
 					context.writeLine(lexxos::vfs::toString(readStatus));
 				}
+
 				return false;
 			}
+
 			if (!verifyPattern(readBuffer, bytesRead, 73U + fileIndex * 17U, offset)) {
 				input.close();
 				context.write("sd-speed-scan: verify failed: ");
 				context.writeLine(path.data());
 				return false;
 			}
+
 			offset += bytesRead;
 		}
+
 		input.close();
 	}
 

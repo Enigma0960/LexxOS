@@ -6,6 +6,7 @@
 #include <lexxos/platform/stm32/detail/stm32_gpio.h>
 
 namespace lexxos::devices::stm32::detail {
+
 namespace {
 
 	constexpr std::uint32_t peripheralBase = 0x40000000U;
@@ -106,6 +107,7 @@ bool configureSdioPeripheral(lexxos::platform::SdioPins const& pins) {
 	    || !configureAlternateFunction(pins.data0, 12U, GpioPull::Up, 3U)) {
 		return false;
 	}
+
 	if (pins.data3.isValid()) {
 		(void) configureAlternateFunction(pins.data3, 12U, GpioPull::Up, 3U);
 	}
@@ -153,6 +155,7 @@ SdioCommandResult sendSdioCommand(std::uint8_t command, std::uint32_t argument, 
 	} else if (responseType == SdioResponseType::Long) {
 		commandValue |= sdioCmdWaitRespLong;
 	}
+
 	SDIO_CMD = commandValue;
 
 	SdioCommandResult result{};
@@ -163,6 +166,7 @@ SdioCommandResult sendSdioCommand(std::uint8_t command, std::uint32_t argument, 
 				result.ok = true;
 				break;
 			}
+
 			if ((status & staCtimeout) != 0U) {
 				break;
 			}
@@ -171,6 +175,7 @@ SdioCommandResult sendSdioCommand(std::uint8_t command, std::uint32_t argument, 
 				result.ok = (status & staCtimeout) == 0U;
 				break;
 			}
+
 			if ((status & staCtimeout) != 0U) {
 				break;
 			}
@@ -179,6 +184,7 @@ SdioCommandResult sendSdioCommand(std::uint8_t command, std::uint32_t argument, 
 				result.ok = true;
 				break;
 			}
+
 			if ((status & commandErrorFlags) != 0U) {
 				break;
 			}
@@ -193,6 +199,7 @@ SdioCommandResult sendSdioCommand(std::uint8_t command, std::uint32_t argument, 
 			result.response[3] = SDIO_RESP4;
 		}
 	}
+
 	clearSdioFlags();
 	return result;
 }
@@ -239,6 +246,7 @@ bool finishSdioBlockRead(std::uint8_t* buffer, std::size_t size) {
 		if ((status & dataErrorFlags) != 0U) {
 			break;
 		}
+
 		if ((status & staDataEnd) != 0U) {
 			dataEnded = true;
 			break;
@@ -262,6 +270,7 @@ bool finishSdioBlockWrite(std::uint8_t const* buffer, std::size_t size) {
 			cancelSdioDataTransfer();
 			return false;
 		}
+
 		if ((status & staTxFifoHe) != 0U) {
 			for (std::uint8_t index = 0; index < 8 && wordsWritten < blockSize / 4U; ++index) {
 				SDIO_FIFO = loadWordLe(buffer, wordsWritten++);
@@ -275,6 +284,7 @@ bool finishSdioBlockWrite(std::uint8_t const* buffer, std::size_t size) {
 		if ((status & dataErrorFlags) != 0U) {
 			break;
 		}
+
 		if ((status & staDataEnd) != 0U && (status & staTxFifoE) != 0U) {
 			dataEnded = true;
 			break;
@@ -293,6 +303,7 @@ std::uint32_t readCsdBits(std::uint32_t const response[4], int highBit, int lowB
 		std::uint8_t const byte = static_cast<std::uint8_t>((response[byteIndex / 4] >> ((3 - (byteIndex % 4)) * 8)) & 0xFFU);
 		value = (value << 1U) | ((byte >> bitInByte) & 1U);
 	}
+
 	return value;
 }
 

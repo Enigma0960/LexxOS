@@ -4,6 +4,7 @@
 #include <lexxos/program/program_manager.h>
 
 namespace lexxos::apps::system_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec helpArguments[] = {
@@ -27,9 +28,11 @@ int HelpProgram::run(lexxos::os::AppContext& context, lexxos::program::ProgramIn
 			context.writeLine(programName);
 			return 1;
 		}
+
 		programs.writeProgramHelp(context, *program);
 		return 0;
 	}
+
 	programs.writeProgramList(context);
 	return 0;
 }

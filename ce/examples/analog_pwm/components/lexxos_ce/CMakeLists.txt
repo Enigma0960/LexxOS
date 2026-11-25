@@ -1,0 +1,28 @@
+# Адаптер автономного приложения. Выбор исполнения относится к приложению.
+set(ce_library "$ENV{ANALOG_PWM_CE_LIBRARY}")
+set(ce_include "$ENV{ANALOG_PWM_CE_INCLUDE_DIR}")
+set(ce_execution "$ENV{ANALOG_PWM_CE_EXECUTION}")
+if (NOT ce_execution MATCHES "^(cooperative|freertos)$")
+    message(FATAL_ERROR "Invalid CE execution component")
+endif ()
+get_filename_component(ce_lib_dir "${ce_library}" DIRECTORY)
+set(ce_platform "${ce_lib_dir}/liblexxos_ce_espidf.a")
+set(ce_runtime "${ce_lib_dir}/liblexxos_ce_${ce_execution}.a")
+foreach (required IN ITEMS "${ce_library}" "${ce_platform}" "${ce_runtime}")
+    if (NOT EXISTS "${required}")
+        message(FATAL_ERROR "Missing CE component: ${required}")
+    endif ()
+endforeach ()
+idf_component_register(SRCS "sdk_check.cpp" INCLUDE_DIRS "${ce_include}"
+        REQUIRES freertos esp_driver_gpio esp_driver_i2c esp_driver_spi esp_adc esp_driver_ledc esp_driver_dac esp_timer esp_system esp_rom)
+add_prebuilt_library(lexxos_ce_archive "${ce_library}")
+add_prebuilt_library(lexxos_ce_platform_archive "${ce_platform}"
+        REQUIRES freertos esp_driver_gpio esp_driver_i2c esp_driver_spi esp_adc esp_driver_ledc esp_driver_dac esp_timer esp_system esp_rom)
+add_prebuilt_library(lexxos_ce_execution_archive "${ce_runtime}")
+target_link_libraries(${COMPONENT_LIB} PUBLIC
+        "-Wl,--start-group" lexxos_ce_archive lexxos_ce_platform_archive lexxos_ce_execution_archive "-Wl,--end-group")
+target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)
+target_compile_definitions(${COMPONENT_LIB} PUBLIC LEXXOS_PLATFORM_ESPIDF=1 LEXXOS_EDITION_CE=1)
+if (ce_execution STREQUAL "freertos")
+    target_compile_definitions(${COMPONENT_LIB} PUBLIC LEXXOS_CE_EXECUTION_FREERTOS=1)
+endif ()

@@ -11,6 +11,7 @@
 #endif
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::size_t spiDmaOwnerSlots = 4;
@@ -38,6 +39,7 @@ namespace {
 		if (!pin.isValid()) {
 			return;
 		}
+
 		uint const gpio = toPicoGpioPin(pin);
 		gpio_set_drive_strength(gpio, GPIO_DRIVE_STRENGTH_12MA);
 		gpio_set_slew_rate(gpio, GPIO_SLEW_RATE_FAST);
@@ -148,6 +150,7 @@ void PicoSpiBus::select() {
 	if (!isReady() || !_mutex.lock()) {
 		return;
 	}
+
 	++_selectLockDepth;
 	if (_pins.cs.isValid()) {
 		gpio_put(toPicoGpioPin(_pins.cs), 0);
@@ -158,12 +161,15 @@ void PicoSpiBus::deselect() {
 	if (!isReady()) {
 		return;
 	}
+
 	if (_pins.cs.isValid()) {
 		gpio_put(toPicoGpioPin(_pins.cs), 1);
 	}
+
 	if (_selectLockDepth == 0) {
 		return;
 	}
+
 	--_selectLockDepth;
 	_mutex.unlock();
 }
@@ -215,14 +221,17 @@ bool PicoSpiBus::startDmaTransfer(std::uint8_t const* tx, std::uint8_t* rx, std:
 	if (!isReady() || size == 0) {
 		return size == 0;
 	}
+
 	if (!_mutex.lock()) {
 		return false;
 	}
+
 	if (!ensureDmaReady()) {
 		bool const result = SpiBus::startDmaTransfer(tx, rx, size);
 		_mutex.unlock();
 		return result;
 	}
+
 	if (_dmaTransferActive) {
 		_mutex.unlock();
 		return false;
@@ -233,6 +242,7 @@ bool PicoSpiBus::startDmaTransfer(std::uint8_t const* tx, std::uint8_t* rx, std:
 	if (txSource == nullptr) {
 		txSource = &_dmaFill;
 	}
+
 	if (rxTarget == nullptr) {
 		rxTarget = &_dmaDiscard;
 	}
@@ -328,6 +338,7 @@ bool PicoSpiBus::ensureDmaReady() {
 		configureDmaDreq();
 		return true;
 	}
+
 	if (!isReady()) {
 		return false;
 	}
@@ -338,9 +349,11 @@ bool PicoSpiBus::ensureDmaReady() {
 		if (_txDmaChannel >= 0) {
 			dma_channel_unclaim(_txDmaChannel);
 		}
+
 		if (_rxDmaChannel >= 0) {
 			dma_channel_unclaim(_rxDmaChannel);
 		}
+
 		_txDmaChannel = -1;
 		_rxDmaChannel = -1;
 		return false;
@@ -360,6 +373,7 @@ bool PicoSpiBus::ensureDmaReady() {
 		irq_set_enabled(DMA_IRQ_0, true);
 		g_dmaIrqHandlerInstalled = true;
 	}
+
 	addDmaOwner(*this);
 	_dmaReady = true;
 	return true;
@@ -398,6 +412,7 @@ namespace {
 				return;
 			}
 		}
+
 		for (auto& owner : g_dmaOwners) {
 			if (owner == nullptr) {
 				owner = &bus;
@@ -427,4 +442,5 @@ namespace {
 	}
 
 } // namespace
+
 } // namespace lexxos::devices

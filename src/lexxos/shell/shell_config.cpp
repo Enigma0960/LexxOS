@@ -1,5 +1,3 @@
-#include <lexxos/shell/shell.h>
-
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -9,16 +7,12 @@
 #include <string_view>
 
 #include <lexxos/os/operating_system.h>
+#include <lexxos/shell/shell.h>
 #include <lexxos/vfs/vfs.h>
 
 namespace {
 
-// Config loading can run inside the console command stack. Keep both large
-// parsing buffers in one temporary allocation, released on every return path.
-struct ShellConfigWorkspace {
-	std::array<char, lexxos::shell::Shell::maxLineLength + 64U> line{};
-	std::array<char, lexxos::shell::Shell::maxLineLength> decoded{};
-};
+using ShellConfigLine = std::array<char, lexxos::shell::Shell::maxLineLength + 64U>;
 
 constexpr std::string_view shellConfigRoot = "/mnt/sd";
 constexpr std::string_view shellConfigDirectory = "/mnt/sd/.lexx";
@@ -33,9 +27,11 @@ std::string_view trim(std::string_view text) {
 	while (!text.empty() && (text.front() == ' ' || text.front() == '\t')) {
 		text.remove_prefix(1);
 	}
+
 	while (!text.empty() && (text.back() == ' ' || text.back() == '\t')) {
 		text.remove_suffix(1);
 	}
+
 	return text;
 }
 
@@ -45,10 +41,12 @@ bool parseBool(std::string_view text, bool& output) {
 		output = true;
 		return true;
 	}
+
 	if (text == "0" || text == "off" || text == "no" || text == "false") {
 		output = false;
 		return true;
 	}
+
 	return false;
 }
 
@@ -60,12 +58,15 @@ int hexValue(char value) {
 	if (value >= '0' && value <= '9') {
 		return value - '0';
 	}
+
 	if (value >= 'a' && value <= 'f') {
 		return value - 'a' + 10;
 	}
+
 	if (value >= 'A' && value <= 'F') {
 		return value - 'A' + 10;
 	}
+
 	return -1;
 }
 
@@ -80,14 +81,18 @@ bool writeEscaped(lexxos::vfs::FileHandle& file, std::string_view text) {
 			if (!writeAll(file, "\\\\")) {
 				return false;
 			}
+
 			continue;
 		}
+
 		if (character == '\t') {
 			if (!writeAll(file, "\\t")) {
 				return false;
 			}
+
 			continue;
 		}
+
 		if (value < 0x20U || value > 0x7EU) {
 			char escape[4]{'\\', 'x', hexDigit(static_cast<std::uint8_t>((value >> 4U) & 0x0FU)), hexDigit(static_cast<std::uint8_t>(value & 0x0FU))};
 			if (!writeAll(file, std::string_view{escape, sizeof(escape)})) {
@@ -95,24 +100,25 @@ bool writeEscaped(lexxos::vfs::FileHandle& file, std::string_view text) {
 			}
 			continue;
 		}
+
 		if (!writeAll(file, std::string_view{&character, 1})) {
 			return false;
 		}
 	}
+
 	return true;
 }
 
-bool decodeEscaped(
-    std::string_view text,
-    std::array<char, lexxos::shell::Shell::maxLineLength>& output,
-    std::size_t& outputLength) {
+// При декодировании на месте запись всегда остаётся позади чтения.
+bool decodeEscaped(char* text, std::size_t length, std::size_t& outputLength) {
 	outputLength = 0;
-	for (std::size_t index = 0; index < text.size(); ++index) {
+	for (std::size_t index = 0; index < length; ++index) {
 		char value = text[index];
 		if (value == '\\') {
-			if (index + 1 >= text.size()) {
+			if (index + 1 >= length) {
 				return false;
 			}
+
 			value = text[++index];
 			if (value == 't') {
 				value = '\t';
@@ -121,23 +127,27 @@ bool decodeEscaped(
 			} else if (value == 'r') {
 				value = '\r';
 			} else if (value == 'x') {
-				if (index + 2 >= text.size()) {
+				if (index + 2 >= length) {
 					return false;
 				}
+
 				auto const high = hexValue(text[++index]);
 				auto const low = hexValue(text[++index]);
 				if (high < 0 || low < 0) {
 					return false;
 				}
+
 				value = static_cast<char>((high << 4) | low);
 			}
 		}
-		if (outputLength + 1 >= output.size()) {
+
+		if (outputLength + 1 >= lexxos::shell::Shell::maxLineLength) {
 			return false;
 		}
-		output[outputLength++] = value;
+
+		text[outputLength++] = value;
 	}
-	output[outputLength] = '\0';
+
 	return true;
 }
 
@@ -149,7 +159,7 @@ enum class LineReadStatus : std::uint8_t {
 
 LineReadStatus readConfigLine(
     lexxos::vfs::FileHandle& file,
-    std::array<char, lexxos::shell::Shell::maxLineLength + 64U>& line,
+    ShellConfigLine& line,
     std::size_t& lineLength) {
 	lineLength = 0;
 	bool overflow = false;
@@ -160,20 +170,25 @@ LineReadStatus readConfigLine(
 		if (status != lexxos::vfs::ReadStatus::Ok) {
 			return LineReadStatus::Error;
 		}
+
 		if (bytesRead == 0) {
 			if (lineLength == 0 && !overflow) {
 				return LineReadStatus::End;
 			}
+
 			line[lineLength] = '\0';
 			return LineReadStatus::Line;
 		}
+
 		if (character == '\n') {
 			line[lineLength] = '\0';
 			return LineReadStatus::Line;
 		}
+
 		if (character == '\r') {
 			continue;
 		}
+
 		if (lineLength + 1 < line.size()) {
 			line[lineLength++] = character;
 		} else {
@@ -202,6 +217,7 @@ void Shell::setAutosuggestEnabled(bool enabled) {
 	if (_autosuggestEnabled == enabled) {
 		return;
 	}
+
 	_autosuggestEnabled = enabled;
 	_autosuggestionVisible = false;
 	_markShellConfigDirty();
@@ -211,9 +227,11 @@ bool Shell::loadShellConfig(bool force) {
 	if (!force && _shellConfigLoaded) {
 		return true;
 	}
+
 	if (!_shellConfigStorageReady()) {
 		return false;
 	}
+
 	return _readShellConfig(force || _historySize == 0);
 }
 
@@ -221,6 +239,7 @@ bool Shell::saveShellConfig() {
 	if (!_writeShellConfig()) {
 		return false;
 	}
+
 	_shellConfigDirty = false;
 	_shellConfigLoaded = true;
 	return true;
@@ -250,6 +269,7 @@ bool Shell::_ensureShellConfigDirectory() {
 	if (vfs->stat(shellConfigDirectory, node)) {
 		return node.type == lexxos::vfs::NodeType::Directory;
 	}
+
 	auto const status = vfs->createDirectory(shellConfigDirectory);
 	return status == lexxos::vfs::WriteStatus::Ok || status == lexxos::vfs::WriteStatus::IsDirectory;
 }
@@ -270,9 +290,11 @@ void Shell::_trySaveShellConfigIfDirty() {
 	if (!_shellConfigDirty) {
 		return;
 	}
+
 	if (!_shellConfigLoaded && !loadShellConfig(false)) {
 		return;
 	}
+
 	(void) saveShellConfig();
 }
 
@@ -305,8 +327,8 @@ bool Shell::_writeShellConfig() {
 		    && writeAll(file, "\n");
 	}
 
-	file.close();
-	return ok && vfs->sync() == lexxos::vfs::SyncStatus::Ok;
+	auto const finishStatus = file.finish();
+	return ok && finishStatus == lexxos::vfs::WriteStatus::Ok && vfs->sync() == lexxos::vfs::SyncStatus::Ok;
 }
 
 bool Shell::_readShellConfig(bool loadHistory) {
@@ -321,30 +343,38 @@ bool Shell::_readShellConfig(bool loadHistory) {
 		_shellConfigLoaded = true;
 		return true;
 	}
+
 	if (openStatus != lexxos::vfs::OpenStatus::Ok) {
 		return false;
 	}
 
-	auto workspace = std::unique_ptr<ShellConfigWorkspace>{new (std::nothrow) ShellConfigWorkspace{}};
+#if defined(LEXXOS_PLATFORM_PICO)
+	// На RP2040 куча SDK меньше максимальной строки истории shell.
+	ShellConfigLine line;
+#else
+	auto workspace = std::unique_ptr<ShellConfigLine>{new (std::nothrow) ShellConfigLine};
 	if (!workspace) {
 		return false;
 	}
+	auto& line = *workspace;
+#endif
 
 	if (loadHistory) {
 		_clearHistory();
 	}
 
-	auto& line = workspace->line;
 	for (;;) {
 		std::size_t lineLength = 0;
 		auto const status = readConfigLine(file, line, lineLength);
 		if (status == LineReadStatus::End) {
 			break;
 		}
+
 		if (status == LineReadStatus::Error) {
 			return false;
 		}
-		(void) _parseShellConfigLine(std::string_view{line.data(), lineLength}, loadHistory, workspace->decoded);
+
+		(void) _parseShellConfigLine(line.data(), lineLength, loadHistory);
 	}
 
 	_shellConfigLoaded = true;
@@ -352,9 +382,8 @@ bool Shell::_readShellConfig(bool loadHistory) {
 	return true;
 }
 
-bool Shell::_parseShellConfigLine(
-    std::string_view line, bool loadHistory, std::array<char, maxLineLength>& decoded) {
-	line = trim(line);
+bool Shell::_parseShellConfigLine(char* buffer, std::size_t length, bool loadHistory) {
+	auto const line = trim(std::string_view{buffer, length});
 	if (line.empty() || line.front() == '#') {
 		return true;
 	}
@@ -364,6 +393,7 @@ bool Shell::_parseShellConfigLine(
 		if (!parseBool(line.substr(autosuggestPrefix.size()), enabled)) {
 			return false;
 		}
+
 		_autosuggestEnabled = enabled;
 		return true;
 	}
@@ -372,11 +402,14 @@ bool Shell::_parseShellConfigLine(
 		if (!loadHistory) {
 			return true;
 		}
+
+		auto* const text = buffer + (line.data() - buffer) + historyPrefix.size();
 		std::size_t decodedLength = 0;
-		if (!decodeEscaped(line.substr(historyPrefix.size()), decoded, decodedLength)) {
+		if (!decodeEscaped(text, line.size() - historyPrefix.size(), decodedLength)) {
 			return false;
 		}
-		_storeHistoryEntry(std::string_view{decoded.data(), decodedLength});
+
+		_storeHistoryEntry(std::string_view{text, decodedLength});
 		return true;
 	}
 

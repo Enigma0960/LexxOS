@@ -95,6 +95,7 @@ std::array<std::uint8_t, oledFontWidth> const& glyphColumns(char value) {
 			return glyph.columns;
 		}
 	}
+
 	return font[0].columns;
 }
 
@@ -154,6 +155,7 @@ bool Ssd1306TextDisplay::initialize() {
 	if (_ready) {
 		clear();
 	}
+
 	return _ready;
 }
 
@@ -197,6 +199,7 @@ void Ssd1306TextDisplay::writeLine(std::uint8_t line, std::string_view text) {
 		for (std::uint8_t glyphColumn = 0; glyphColumn < oledFontWidth; ++glyphColumn) {
 			row[column++] = glyph[glyphColumn];
 		}
+
 		row[column++] = 0x00;
 	}
 

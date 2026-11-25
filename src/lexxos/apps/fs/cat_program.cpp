@@ -60,11 +60,14 @@ namespace {
 				context.writeLine("cat: stdin: read failed");
 				return false;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
+
 			context.write(std::string_view{buffer.data(), bytesRead});
 		}
+
 		return true;
 	}
 
@@ -83,11 +86,14 @@ namespace {
 				context.writeLine(lexxos::vfs::toString(readStatus));
 				return false;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
+
 			context.write(std::string_view{buffer.data(), bytesRead});
 		}
+
 		return true;
 	}
 
@@ -144,6 +150,7 @@ int CatProgram::run(
 			context.writeLine(lexxos::vfs::toString(openStatus));
 			return 1;
 		}
+
 		if (!copyFileToOutput(context, path->data(), file, *buffer)) {
 			return 1;
 		}

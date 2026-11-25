@@ -8,6 +8,7 @@
 #endif
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -18,10 +19,10 @@ namespace {
 
 	constexpr ProgramArgumentSpec hostedInfoArguments[] = {
 	    {
-         .name = "no-start",
-         .help = "do not start the hosted Wi-Fi backend before querying the coprocessor",
-         .kind = ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "no-start",
+	     .help = "do not start the hosted Wi-Fi backend before querying the coprocessor",
+	     .kind = ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	};
 
@@ -31,6 +32,7 @@ namespace {
 			context.write("-");
 			return;
 		}
+
 		writeUnsigned(context, version.major);
 		context.write(".");
 		writeUnsigned(context, version.minor);
@@ -43,6 +45,7 @@ namespace {
 			context.writeLine("transport: -");
 			return;
 		}
+
 		context.write("transport: sdio index=");
 		writeUnsigned(context, static_cast<std::uint32_t>(pins.index));
 		context.write(" clk=");
@@ -68,7 +71,7 @@ namespace {
 		context.writeLine("");
 	}
 
-	void writeHostedInfo(lexxos::os::AppContext& context, lexxos::platform::BoardDescriptor const& board,
+	void writeHostedInfo(lexxos::os::AppContext& context, lexxos::platform::LegacyBoardDescriptor const& board,
 	    lexxos::devices::espidf_hosted::Info const& info) {
 		context.write("supported: ");
 		context.writeLine(info.supported ? "yes" : "no");
@@ -105,6 +108,7 @@ namespace {
 		} else {
 			context.writeLine("coprocessor-newer");
 		}
+
 		context.write("activate-supported: ");
 		context.writeLine(lexxos::devices::espidf_hosted::activateSupported(info.coprocessorVersion) ? "yes" : "no");
 		context.write("app-desc: ");
@@ -147,6 +151,7 @@ int HostedInfoProgram::run(lexxos::os::AppContext& context, lexxos::program::Pro
 	if (!info.supported) {
 		return 1;
 	}
+
 	if (info.app.valid) {
 		writeAppField(context, "app-name: ", info.app.projectName);
 		writeAppField(context, "app-version: ", info.app.version);
@@ -157,6 +162,7 @@ int HostedInfoProgram::run(lexxos::os::AppContext& context, lexxos::program::Pro
 		writeUnsigned(context, info.app.secureVersion);
 		context.writeLine("");
 	}
+
 	return info.coprocessorVersion.valid || info.app.valid ? 0 : 1;
 #else
 	(void) arguments;

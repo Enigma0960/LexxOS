@@ -12,6 +12,7 @@
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices::rtc::software {
+
 namespace {
 
 	constexpr std::uint32_t validFlag = 1U << 0U;
@@ -59,7 +60,7 @@ namespace {
 
 	RuntimeConfigOverride g_configOverride{};
 
-	lexxos::platform::BoardDescriptor const& boardFor(lexxos::platform::PlatformServices const& platform) {
+	lexxos::platform::LegacyBoardDescriptor const& boardFor(lexxos::platform::PlatformServices const& platform) {
 		auto const& board = platform.board;
 		return board.current != nullptr ? board.current() : lexxos::platform::board();
 	}
@@ -75,6 +76,7 @@ namespace {
 			if (g_state.writer.compare_exchange_weak(expected, 1, std::memory_order_acquire, std::memory_order_relaxed)) {
 				return;
 			}
+
 			lexxos::kernel::yield();
 		}
 	}
@@ -89,6 +91,7 @@ namespace {
 			if (g_configOverride.writer.compare_exchange_weak(expected, 1, std::memory_order_acquire, std::memory_order_relaxed)) {
 				return;
 			}
+
 			lexxos::kernel::yield();
 		}
 	}
@@ -148,6 +151,7 @@ namespace {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -167,10 +171,12 @@ namespace {
 				if (!active) {
 					return false;
 				}
+
 				output = value;
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -191,7 +197,7 @@ namespace {
 
 } // namespace
 
-bool configured(lexxos::platform::BoardDescriptor const& board) {
+bool configured(lexxos::platform::LegacyBoardDescriptor const& board) {
 	return board.softwareRtc.isValid();
 }
 
@@ -199,7 +205,7 @@ bool configured(lexxos::platform::PlatformServices const& platform) {
 	return config(platform).isValid();
 }
 
-bool preferredAsDefault(lexxos::platform::BoardDescriptor const& board) {
+bool preferredAsDefault(lexxos::platform::LegacyBoardDescriptor const& board) {
 	return configured(board) && board.softwareRtc.preferAsDefault;
 }
 
@@ -223,6 +229,7 @@ bool applyRuntimeConfigOverride(
 	if (!configured(boardFor(platform)) || networkSyncServer.empty() || networkSyncServer.size() > maxRuntimeNetworkSyncServerLength) {
 		return false;
 	}
+
 	for (char const character : networkSyncServer) {
 		if (character == '\r' || character == '\n' || character == '\0') {
 			return false;
@@ -299,6 +306,7 @@ bool setUnixSeconds(lexxos::platform::PlatformServices const& platform, std::uin
 	if (!unixSecondsToDateTime(unixSeconds, decoded)) {
 		return false;
 	}
+
 	(void) decoded;
 
 	std::uint32_t const nowMs = uptimeMs(platform);
@@ -316,6 +324,7 @@ bool setUnixSeconds(lexxos::platform::PlatformServices const& platform, std::uin
 		g_state.networkSyncCount.store(g_state.networkSyncCount.load(std::memory_order_relaxed) + 1U, std::memory_order_relaxed);
 		flags |= lastNetworkAttemptValidFlag | lastNetworkAttemptOkFlag;
 	}
+
 	g_state.flags.store(flags, std::memory_order_relaxed);
 	endWrite();
 	releaseWriter();
@@ -336,6 +345,7 @@ void recordNetworkAttempt(lexxos::platform::PlatformServices const& platform, bo
 	} else {
 		flags &= ~lastNetworkAttemptOkFlag;
 	}
+
 	g_state.lastNetworkAttemptUptimeMs.store(uptimeMs(platform), std::memory_order_relaxed);
 	g_state.flags.store(flags, std::memory_order_relaxed);
 	endWrite();
@@ -377,6 +387,7 @@ Status status(lexxos::platform::PlatformServices const& platform) {
 	if (currentUnixSeconds(platform, value, result.unixSeconds)) {
 		(void) unixSecondsToDateTime(result.unixSeconds, result.now);
 	}
+
 	return result;
 }
 
@@ -386,9 +397,13 @@ char const* toString(SetSource source) {
 			return "manual";
 		case SetSource::Network:
 			return "network";
+		case SetSource::Host:
+			return "host";
 		case SetSource::None:
+		default:
 			break;
 	}
+
 	return "none";
 }
 

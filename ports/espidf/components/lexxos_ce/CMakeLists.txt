@@ -1,0 +1,10 @@
+get_filename_component(LEXXOS_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
+include("${LEXXOS_ROOT}/config/cmake/lexxos_core_sources.cmake")
+
+idf_component_register(SRCS ${LEXXOS_CORE_SOURCES} INCLUDE_DIRS "${LEXXOS_ROOT}/src")
+if (NOT IDF_TARGET STREQUAL "esp32")
+    message(FATAL_ERROR "This LexxCE SDK build requires IDF_TARGET=esp32")
+endif ()
+target_compile_definitions(${COMPONENT_LIB} PUBLIC LEXXOS_PLATFORM_ESPIDF=1 LEXXOS_EDITION_CE=1)
+target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)
+target_compile_options(${COMPONENT_LIB} PRIVATE -fno-exceptions -fno-rtti)

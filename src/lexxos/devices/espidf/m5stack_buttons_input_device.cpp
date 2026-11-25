@@ -3,23 +3,24 @@
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr M5StackButtonConfig defaultButtons[] = {
 	    {
-         .pin = {39},
-         .key = KeyCode::A,
-         .activeLevel = lexxos::platform::GpioActiveLevel::Low,
+	     .pin = {39},
+	     .key = KeyCode::A,
+	     .activeLevel = lexxos::platform::GpioActiveLevel::Low,
 	     },
 	    {
-         .pin = {38},
-         .key = KeyCode::B,
-         .activeLevel = lexxos::platform::GpioActiveLevel::Low,
+	     .pin = {38},
+	     .key = KeyCode::B,
+	     .activeLevel = lexxos::platform::GpioActiveLevel::Low,
 	     },
 	    {
-         .pin = {37},
-         .key = KeyCode::C,
-         .activeLevel = lexxos::platform::GpioActiveLevel::Low,
+	     .pin = {37},
+	     .key = KeyCode::C,
+	     .activeLevel = lexxos::platform::GpioActiveLevel::Low,
 	     },
 	};
 
@@ -122,11 +123,13 @@ bool M5StackButtonsInputDevice::_isConfigurationValid() const {
 	if (_config.name.empty() || _config.buttons == nullptr || _config.buttonCount == 0 || _config.buttonCount > maxButtons) {
 		return false;
 	}
+
 	for (std::size_t index = 0; index < _config.buttonCount; ++index) {
 		if (!_config.buttons[index].pin.isValid() || _config.buttons[index].key == KeyCode::Unknown) {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -138,10 +141,12 @@ std::uint32_t M5StackButtonsInputDevice::_readRawState() const {
 		if (gpio.read == nullptr || !gpio.read(_config.buttons[index].pin, value)) {
 			continue;
 		}
+
 		if (isActive(value, _config.buttons[index].activeLevel)) {
 			state |= (1U << index);
 		}
 	}
+
 	return state;
 }
 
@@ -190,6 +195,7 @@ bool M5StackButtonsInputDevice::_popEvent(InputEvent& event) {
 	if (_eventCount == 0) {
 		return false;
 	}
+
 	event = _events[_eventTail];
 	_eventTail = (_eventTail + 1) % _events.size();
 	--_eventCount;
@@ -208,6 +214,7 @@ std::uint32_t M5StackButtonsInputDevice::_pressedKeyMask(std::uint32_t rawState)
 			mask |= _keyMask(_config.buttons[index].key);
 		}
 	}
+
 	return mask;
 }
 

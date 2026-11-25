@@ -11,6 +11,7 @@
 #include <lexxos/program/program_memory_arena.h>
 
 namespace lexxos::apps::filesystem_programs::detail {
+
 namespace {
 
 	using PathBuffer = std::array<char, lexxos::vfs::maxPathLength>;
@@ -61,6 +62,7 @@ namespace {
 				context.writeLine(": stdin: read failed");
 				return false;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
@@ -75,6 +77,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -129,22 +132,35 @@ int runTextFileWriter(
 
 	// With no text arguments, stream standard input into the file.
 	constexpr int firstTextArgument = 2;
-	if (invocation.argc <= firstTextArgument) {
-		return copyInputToFile(context, commandName, path->data(), file, *buffer) ? 0 : 1;
-	}
+	bool written = true;
 
-	// Join command-line text arguments with spaces and terminate the line.
-	if (!writeFileChunk(context, commandName, path->data(), file, invocation.argv[firstTextArgument])) {
-		return 1;
-	}
-	for (int index = firstTextArgument + 1; index < invocation.argc; ++index) {
-		if (!writeFileChunk(context, commandName, path->data(), file, " ")
-		    || !writeFileChunk(context, commandName, path->data(), file, invocation.argv[index])) {
-			return 1;
+	if (invocation.argc <= firstTextArgument) {
+		written = copyInputToFile(context, commandName, path->data(), file, *buffer);
+	} else {
+		// Join command-line text arguments with spaces and terminate the line.
+		written = writeFileChunk(context, commandName, path->data(), file, invocation.argv[firstTextArgument]);
+
+		for (int index = firstTextArgument + 1; written && index < invocation.argc; ++index) {
+			written = writeFileChunk(context, commandName, path->data(), file, " ")
+			    && writeFileChunk(context, commandName, path->data(), file, invocation.argv[index]);
+		}
+
+		if (written) {
+			written = writeFileChunk(context, commandName, path->data(), file, "\n");
 		}
 	}
 
-	return writeFileChunk(context, commandName, path->data(), file, "\n") ? 0 : 1;
+	auto const finishStatus = file.finish();
+	if (finishStatus != lexxos::vfs::WriteStatus::Ok) {
+		context.write(commandName);
+		context.write(": ");
+		context.write(path->data());
+		context.write(": close failed: ");
+		context.writeLine(lexxos::vfs::toString(finishStatus));
+		return 1;
+	}
+
+	return written ? 0 : 1;
 }
 
 } // namespace lexxos::apps::filesystem_programs::detail

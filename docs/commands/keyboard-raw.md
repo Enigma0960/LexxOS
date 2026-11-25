@@ -1,6 +1,6 @@
 # `keyboard-raw`
 
-run a live raw matrix keyboard test.
+Проверяет необработанные события матричной клавиатуры.
 
 ## Справка shell
 

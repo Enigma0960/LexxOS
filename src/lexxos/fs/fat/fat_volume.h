@@ -1,13 +1,14 @@
 #pragma once
 
 #include <array>
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
 
 #include <lexxos/devices/storage/block_device.h>
 #include <lexxos/feature.h>
+#include <lexxos/fs/fat/detail/fat_operation_guard.h>
+#include <lexxos/fs/fat/fat_mount_operations.h>
 #include <lexxos/vfs/vfs.h>
 
 #if defined(FEATURE_FATFS) && FEATURE_FATFS > 0
@@ -19,19 +20,6 @@ extern "C" {
 #endif
 
 namespace lexxos::fs::fat {
-
-enum class FatMountStatus : std::uint8_t {
-	Ok,
-	NoDevice,
-	DeviceNotReady,
-	ReadError,
-	UnsupportedSectorSize,
-	UnsupportedFatType,
-	InvalidBootSector,
-	NoSupportedPartition,
-	AlreadyMounted,
-	NoMountSlot,
-};
 
 struct FatVolumeInfo {
 	std::string_view source;
@@ -53,8 +41,6 @@ struct FatVolumeInfo {
 };
 
 using FatVolumeVisitor = bool (*)(FatVolumeInfo const& volume, void* userData);
-
-[[nodiscard]] char const* toString(FatMountStatus status);
 
 class FatVolume final : public lexxos::vfs::ReadOnlyFilesystem {
 public:
@@ -85,6 +71,7 @@ public:
 	lexxos::vfs::WriteStatus beginWrite(std::string_view path, lexxos::vfs::WriteMode mode) override;
 	lexxos::vfs::WriteStatus write(std::string_view path, std::uint64_t offset, std::string_view data) override;
 	void closeWrite(std::string_view path) override;
+	lexxos::vfs::WriteStatus finishWrite(std::string_view path) override;
 	lexxos::vfs::RemoveStatus remove(std::string_view path) override;
 	lexxos::vfs::WriteStatus createDirectory(std::string_view path) override;
 	lexxos::vfs::RemoveStatus removeDirectory(std::string_view path) override;
@@ -94,29 +81,27 @@ public:
 	[[nodiscard]] FatVolumeInfo info() const;
 
 private:
-	class OperationGuard {
-	public:
-		explicit OperationGuard(FatVolume const& volume);
-		~OperationGuard();
-
-		[[nodiscard]] bool locked() const;
-
-	private:
-		FatVolume const& _volume;
-		bool _locked{false};
-	};
+	using OperationGuard = detail::FatOperationGuard;
+	friend class detail::FatOperationGuard;
 
 	[[nodiscard]] bool lockOperation() const;
 	void unlockOperation() const;
+	void releaseCachedWriteBuffer();
+	void closeCachedReadFile();
 
 	[[nodiscard]] bool makeFatPath(std::string_view path, char* output, std::size_t outputCapacity) const;
 	[[nodiscard]] bool isCachedReadPath(std::string_view path) const;
 	[[nodiscard]] bool isCachedWritePath(std::string_view path) const;
-	void closeCachedReadFile();
 	[[nodiscard]] lexxos::vfs::WriteStatus flushCachedWriteBuffer();
 	[[nodiscard]] lexxos::vfs::WriteStatus closeCachedWriteFile();
-	void releaseCachedWriteBuffer();
 	[[nodiscard]] lexxos::vfs::ReadStatus ensureCachedReadFile(std::string_view path, char const* fatPath);
+
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+	void closeCachedLexxReadFile();
+
+	[[nodiscard]] bool isCachedLexxReadPath(std::string_view path) const;
+	[[nodiscard]] lexxos::vfs::ReadStatus ensureCachedLexxReadFile(std::string_view path, char const* fatPath);
+#endif
 
 	lexxos::devices::BlockDevice* _device{nullptr};
 	std::array<char, lexxos::vfs::maxPathLength> _mountSource{};
@@ -128,7 +113,6 @@ private:
 
 #if defined(LEXXOS_KERNEL_FREERTOS)
 	mutable void* _operationLock{nullptr};
-	mutable std::atomic<bool> _operationLockCreationGuard{false};
 #endif
 
 #if defined(FEATURE_FATFS) && FEATURE_FATFS > 0
@@ -137,6 +121,15 @@ private:
 	std::array<char, lexxos::vfs::maxPathLength> _cachedReadPath{};
 	std::size_t _cachedReadPathSize{0};
 	bool _cachedReadOpen{false};
+
+	#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+	// Dedicated package reader survives reads/writes of unrelated save files.
+	FIL _lexxReadFile{};
+	std::array<char, lexxos::vfs::maxPathLength> _lexxReadPath{};
+	std::size_t _lexxReadPathSize{0};
+	bool _lexxReadOpen{false};
+	DWORD* _lexxClusterMap{nullptr};
+	#endif
 
 	FIL _cachedWriteFile{};
 	std::array<char, lexxos::vfs::maxPathLength> _cachedWritePath{};
@@ -149,13 +142,6 @@ private:
 #endif
 };
 
-[[nodiscard]] FatMountStatus mount(lexxos::vfs::Vfs& vfs, std::string_view source, std::string_view target);
-[[nodiscard]] FatMountStatus mount(std::string_view source, std::string_view target);
-lexxos::vfs::UnmountStatus unmount(lexxos::vfs::Vfs& vfs, std::string_view target);
-lexxos::vfs::UnmountStatus unmount(std::string_view target);
-lexxos::vfs::UnmountStatus forceUnmount(lexxos::vfs::Vfs& vfs, std::string_view target);
-lexxos::vfs::UnmountStatus forceUnmount(std::string_view target);
-[[nodiscard]] bool isMounted(std::string_view target);
 bool visitMountedVolumes(FatVolumeVisitor visitor, void* userData);
 bool registerVfsFactory(lexxos::vfs::Vfs& vfs);
 

@@ -18,6 +18,9 @@ struct FreeRtosTask {
 	TaskHandle_t handle{nullptr};
 	TaskSnapshot snapshot{};
 	bool allocated{false};
+	// Retiring tasks have finished their entry but may still execute in the
+	// trampoline until FreeRTOS has suspended them. Never recycle early.
+	bool retiring{false};
 };
 
 } // namespace lexxos::kernel::freertos::detail

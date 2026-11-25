@@ -13,6 +13,7 @@ char const* toString(SdCardInterface interfaceType) {
 		case SdCardInterface::Simulated:
 			return "sim";
 	}
+
 	return "unknown";
 }
 
@@ -35,6 +36,7 @@ char const* toString(SdCardState state) {
 		case SdCardState::CardRemoved:
 			return "card-removed";
 	}
+
 	return "unknown";
 }
 
@@ -49,6 +51,7 @@ char const* toString(SdCardType type) {
 		case SdCardType::SdV2BlockAddressed:
 			return "sd-v2-block";
 	}
+
 	return "unknown";
 }
 
@@ -151,6 +154,7 @@ char const* toString(SdCardDiagnosticCode code) {
 		case SdCardDiagnosticCode::TransferFailure:
 			return "transfer failure";
 	}
+
 	return "unknown";
 }
 

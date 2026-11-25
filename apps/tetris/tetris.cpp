@@ -1,6 +1,6 @@
-#include <lexx/lexx.h>
-
 #include "game.h"
+
+#include <lexx/lexx.h>
 
 namespace {
 
@@ -69,6 +69,7 @@ void draw() {
 			tiles[row][column] = game.board[row][column];
 		}
 	}
+
 	if (game.phase != tetris::Phase::Lost) {
 		int const landing = game.landingY();
 		for (int row = 0; row < 4; ++row) {
@@ -76,11 +77,13 @@ void draw() {
 				if (!tetris::Game::hasCell(game.shape, column, row)) {
 					continue;
 				}
+
 				int const shadowY = landing + row;
 				int const col = game.x + column;
 				if (shadowY >= 0 && shadowY < tetris::height && col >= 0 && col < tetris::width && tiles[shadowY][col] == 0) {
 					tiles[shadowY][col] = 8;
 				}
+
 				int const actualY = game.y + row;
 				if (actualY >= 0 && actualY < tetris::height && col >= 0 && col < tetris::width) {
 					tiles[actualY][col] = static_cast<unsigned char>(static_cast<unsigned>(game.kind) + 1U);
@@ -98,9 +101,11 @@ void draw() {
 				tileColor(tile);
 				previous = tile;
 			}
+
 			append(tile == 0 ? "  " : tile == 8 ? ".."
 			                                    : "[]");
 		}
+
 		append("\x1b[0m|\x1b[K");
 		if (row == 0) {
 			append("  NEXT:");
@@ -111,6 +116,7 @@ void draw() {
 			for (int col = 0; col < 4; ++col) {
 				append(tetris::Game::hasCell(mask, col, row - 1) ? "[]" : "  ");
 			}
+
 			append("\x1b[0m");
 		} else if (row == 6) {
 			append("  LINES:");
@@ -123,8 +129,10 @@ void draw() {
 			number(game.tickIntervalMs());
 			append("ms");
 		}
+
 		append("\r\n");
 	}
+
 	append("  +--------------------+\x1b[K\r\n  ");
 	switch (game.phase) {
 		case tetris::Phase::Ready  : append("ENTER to start"); break;
@@ -132,6 +140,7 @@ void draw() {
 		case tetris::Phase::Paused : append("PAUSED - press P"); break;
 		case tetris::Phase::Lost   : append("GAME OVER - press R"); break;
 	}
+
 	append("\x1b[K\r\n  LEFT/RIGHT move  UP rotate  Z reverse");
 	append("\x1b[K\r\n  DOWN soft SPACE drop P pause R reset");
 	append("\x1b[K\r\n  M mute Q quit");
@@ -161,6 +170,7 @@ void sound(tetris::Sound effect) {
 	if (!soundEnabled) {
 		return;
 	}
+
 	switch (effect) {
 		case tetris::Sound::Rotate  : tone(760, 65, 125); break;
 		case tetris::Sound::Lock    : tone(380, 65, 125); break;
@@ -191,6 +201,7 @@ bool applyAction(Action action, lexx::uint32_t& lastFall) {
 				lastFall = lexx::milliseconds();
 				changed = true;
 			}
+
 			break;
 		case Action::Clockwise:
 		case Action::Counterclockwise:
@@ -198,9 +209,11 @@ bool applyAction(Action action, lexx::uint32_t& lastFall) {
 			if (changed) {
 				sound(tetris::Sound::Rotate);
 			}
+
 			break;
 		case Action::None: break;
 	}
+
 	return changed;
 }
 
@@ -208,6 +221,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting, lexx::uint32_t& lastFa
 	if (key.type != static_cast<lexx::uint8_t>(lexx::KeyEventType::KeyDown)) {
 		return false;
 	}
+
 	Action action = Action::None;
 	switch (key.key_code) {
 		case 1 : action = Action::Clockwise; break;
@@ -217,6 +231,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting, lexx::uint32_t& lastFa
 		case 6 : quitting = true; return false;
 		default: break;
 	}
+
 	if (action == Action::None) {
 		char const c = static_cast<char>(key.character);
 		// UART arrow escape sequences, in addition to direct key events.
@@ -224,6 +239,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting, lexx::uint32_t& lastFa
 			escapeState = (c == '[' || c == 'O') ? 2U : 0U;
 			return false;
 		}
+
 		if (escapeState == 2) {
 			escapeState = 0;
 			switch (c) {
@@ -256,6 +272,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting, lexx::uint32_t& lastFa
 						lastFall = lexx::milliseconds();
 						return true;
 					}
+
 					return false;
 				case 'q':
 				case 'Q': quitting = true; return false;
@@ -269,10 +286,10 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting, lexx::uint32_t& lastFa
 					game.reset(lexx::milliseconds());
 					lastFall = lexx::milliseconds();
 					return true;
-				case 'm':
-				case 'M': soundEnabled = !soundEnabled; return true;
-				case 't':
-				case 'T': tone(880, 300, 200); return true;
+				case 'm' :
+				case 'M' : soundEnabled = !soundEnabled; return true;
+				case 't' :
+				case 'T' : tone(880, 300, 200); return true;
 				case '\r':
 				case '\n':
 					game.start();
@@ -282,13 +299,16 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting, lexx::uint32_t& lastFa
 			}
 		}
 	}
+
 	if (action != Action::None) {
 		if (game.phase == tetris::Phase::Ready) {
 			game.start();
 			lastFall = lexx::milliseconds();
 		}
+
 		return applyAction(action, lastFall);
 	}
+
 	return false;
 }
 
@@ -298,6 +318,7 @@ int gameMain() {
 		lexx::write("tetris: clock unavailable\r\n");
 		return 1;
 	}
+
 	game.reset(lastFall);
 	lexx::write("\x1b[2J\x1b[H\x1b[?25l");
 	draw();
@@ -311,9 +332,11 @@ int gameMain() {
 				break;
 			}
 		}
+
 		if (quitting) {
 			break;
 		}
+
 		lexx::uint32_t const now = lexx::milliseconds();
 		if (game.phase == tetris::Phase::Playing) {
 			if (static_cast<lexx::uint32_t>(now - lastFall) >= game.tickIntervalMs()) {
@@ -324,15 +347,19 @@ int gameMain() {
 		} else {
 			lastFall = now; // Avoid catch-up after pause, ready or game over.
 		}
+
 		if (game.score > bestScore) {
 			bestScore = game.score;
 			redraw = true;
 		}
+
 		if (redraw) {
 			draw();
 		}
+
 		lexx::yield();
 	}
+
 	lexx::write("\x1b[0m\x1b[?25h\x1b[2J\x1b[H");
 	return 0;
 }

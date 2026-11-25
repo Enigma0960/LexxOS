@@ -1,14 +1,14 @@
-#include <lexxos/devices/storage/sd_spi_backend.h>
-
 #include <algorithm>
 #include <array>
 #include <cstdint>
 
 #include <lexxos/devices/storage/detail/sd_card_transfer_guard.h>
 #include <lexxos/devices/storage/detail/sd_spi_backend_detail.h>
+#include <lexxos/devices/storage/sd_spi_backend.h>
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices {
+
 using storage::detail::acmd41SendOpCond;
 using storage::detail::cmd0Attempts;
 using storage::detail::cmd0GoIdle;
@@ -62,10 +62,12 @@ bool SdSpiBackend::initialize() {
 		recordDiagnostic(SdCardDiagnosticCode::LockFailed);
 		return false;
 	}
+
 	bool const ok = initializeCard();
 	if (!ok) {
 		recordDiagnostic(SdCardDiagnosticCode::InitializeFailed);
 	}
+
 	return ok;
 }
 
@@ -83,6 +85,7 @@ bool SdSpiBackend::initializeCard() {
 		setFailure(SdCardState::NoBus);
 		return false;
 	}
+
 	if (!physicalCardPresent()) {
 		setFailure(SdCardState::NoCard);
 		return false;
@@ -148,9 +151,11 @@ bool SdSpiBackend::initializeCard() {
 			enteredReadyState = true;
 			break;
 		}
+
 		if (r1 == commandTimeoutResponse) {
 			break;
 		}
+
 		sleepMs(1);
 	}
 
@@ -166,6 +171,7 @@ bool SdSpiBackend::initializeCard() {
 			setFailure(SdCardState::IoError);
 			return false;
 		}
+
 		_cardType = (ocr[0] & 0x40U) != 0 ? SdCardType::SdV2BlockAddressed : SdCardType::SdV2ByteAddressed;
 	} else {
 		_cardType = SdCardType::SdV1;
@@ -216,6 +222,7 @@ bool SdSpiBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size_
 		recordDiagnostic(SdCardDiagnosticCode::NullBuffer, 0xFFU, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		return false;
 	}
+
 	if (!isReady()) {
 		if (!physicalCardPresent()) {
 			recordDiagnostic(SdCardDiagnosticCode::CardRemoved, 0xFFU, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
@@ -223,6 +230,7 @@ bool SdSpiBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size_
 		} else {
 			recordDiagnostic(SdCardDiagnosticCode::NotReady, 0xFFU, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		}
+
 		return false;
 	}
 
@@ -235,6 +243,7 @@ bool SdSpiBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size_
 		if (readMultipleBlocksWithRecovery(firstBlock, output, blockCount)) {
 			return true;
 		}
+
 		return false;
 	}
 
@@ -243,6 +252,7 @@ bool SdSpiBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size_
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -257,6 +267,7 @@ bool SdSpiBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, std
 		recordDiagnostic(SdCardDiagnosticCode::NullBuffer, 0xFFU, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		return false;
 	}
+
 	if (!isReady()) {
 		if (!physicalCardPresent()) {
 			recordDiagnostic(SdCardDiagnosticCode::CardRemoved, 0xFFU, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
@@ -264,6 +275,7 @@ bool SdSpiBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, std
 		} else {
 			recordDiagnostic(SdCardDiagnosticCode::NotReady, 0xFFU, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		}
+
 		return false;
 	}
 
@@ -281,6 +293,7 @@ bool SdSpiBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, std
 		if (writeMultipleBlocksWithRecovery(firstBlock, input, blockCount)) {
 			return true;
 		}
+
 		return false;
 	}
 
@@ -290,6 +303,7 @@ bool SdSpiBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, std
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -337,10 +351,12 @@ bool SdSpiBackend::setSpiClockMode(SpiClockMode mode) {
 		recordDiagnostic(SdCardDiagnosticCode::SetModeFailed, 0xFFU, static_cast<std::uint32_t>(mode));
 		return false;
 	}
+
 	if (_transport.isReady()) {
 		_transport.deselect();
 		(void) clockIdle(2);
 	}
+
 	return true;
 }
 
@@ -482,6 +498,7 @@ bool SdSpiBackend::setTransferBaudRate(std::uint32_t baudRate) {
 	if (!ok) {
 		recordDiagnostic(SdCardDiagnosticCode::SetBaudFailed, 0xFFU, baudRate);
 	}
+
 	return ok;
 }
 
@@ -559,6 +576,7 @@ bool SdSpiBackend::readRegister(std::uint8_t command, std::array<std::uint8_t, 1
 	if (!ok) {
 		recordDiagnostic(dataOk ? SdCardDiagnosticCode::ReadCrcMismatch : SdCardDiagnosticCode::RegisterReadFailed, command, r1);
 	}
+
 	endTransaction();
 	return ok;
 }
@@ -577,6 +595,7 @@ bool SdSpiBackend::readSingleBlockWithRecovery(std::uint64_t block, std::uint8_t
 		if (readSingleBlock(block, buffer)) {
 			return true;
 		}
+
 		if (!physicalCardPresent()) {
 			setFailure(_cardDetect.isValid() ? SdCardState::CardRemoved : SdCardState::Timeout);
 			return false;
@@ -593,10 +612,12 @@ bool SdSpiBackend::readSingleBlockWithRecovery(std::uint64_t block, std::uint8_t
 			recordDiagnostic(SdCardDiagnosticCode::ReadFallbackToSafeBaud, cmd17ReadSingleBlock, 0xFFFFFFFFU, block, 1);
 			setActiveBaudRate(fallbackBaud);
 		}
+
 		clockIdle(2);
 		clockIdle(8);
 		sleepMs(recoveryDelayMs);
 	}
+
 	return recoverReadPath(block, buffer);
 }
 
@@ -605,10 +626,12 @@ bool SdSpiBackend::recoverReadPath(std::uint64_t block, std::uint8_t* buffer) {
 		markTransferFailure();
 		return false;
 	}
+
 	if (!physicalCardPresent()) {
 		setFailure(_cardDetect.isValid() ? SdCardState::CardRemoved : SdCardState::Timeout);
 		return false;
 	}
+
 	++_readRecoveryReinitializations;
 	_transport.deselect();
 	(void) clockIdle(16);
@@ -622,13 +645,16 @@ bool SdSpiBackend::recoverReadPath(std::uint64_t block, std::uint8_t* buffer) {
 		recordDiagnostic(SdCardDiagnosticCode::ReinitializeFailed, cmd17ReadSingleBlock, 0xFFFFFFFFU, block, 1);
 		return false;
 	}
+
 	for (std::uint8_t attempt = 0; attempt < readRecoveryAttempts; ++attempt) {
 		if (readSingleBlock(block, buffer)) {
 			return true;
 		}
+
 		clockIdle(8);
 		sleepMs(recoveryDelayMs);
 	}
+
 	markTransferFailure();
 	return false;
 }
@@ -646,6 +672,7 @@ bool SdSpiBackend::readMultipleBlocksWithRecovery(std::uint64_t firstBlock, std:
 		if (readMultipleBlocks(firstBlock, buffer, blockCount)) {
 			return true;
 		}
+
 		if (!physicalCardPresent()) {
 			setFailure(_cardDetect.isValid() ? SdCardState::CardRemoved : SdCardState::Timeout);
 			return false;
@@ -656,6 +683,7 @@ bool SdSpiBackend::readMultipleBlocksWithRecovery(std::uint64_t firstBlock, std:
 			recordDiagnostic(SdCardDiagnosticCode::ReadFallbackToSafeBaud, cmd18ReadMultipleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 			setActiveBaudRate(fallbackBaud);
 		}
+
 		clockIdle(2);
 		clockIdle(8);
 		sleepMs(recoveryDelayMs);
@@ -669,6 +697,7 @@ bool SdSpiBackend::readMultipleBlocksWithRecovery(std::uint64_t firstBlock, std:
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -703,6 +732,7 @@ bool SdSpiBackend::writeSingleBlockWithRecovery(std::uint64_t block, std::uint8_
 			recordDiagnostic(SdCardDiagnosticCode::WriteFallbackToSafeBaud, cmd24WriteSingleBlock, 0xFFFFFFFFU, block, 1);
 			setActiveBaudRate(fallbackBaud);
 		}
+
 		clockIdle(2);
 		sleepMs(recoveryDelayMs);
 	}
@@ -722,6 +752,7 @@ bool SdSpiBackend::writeMultipleBlocksWithRecovery(std::uint64_t firstBlock, std
 			recordDiagnostic(SdCardDiagnosticCode::WriteFallbackToSafeBaud, cmd25WriteMultipleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 			setActiveBaudRate(fallbackBaud);
 		}
+
 		clockIdle(2);
 		sleepMs(recoveryDelayMs);
 	}
@@ -851,6 +882,7 @@ SdCardDiagnostics SdSpiBackend::diagnosticsUnlocked() const {
 	for (std::uint32_t index = 0; index < _diagnosticStoredCount; ++index) {
 		snapshot.entries[index] = _diagnosticEntries[(first + index) % sdCardDiagnosticEntryCount];
 	}
+
 	return snapshot;
 }
 
@@ -932,6 +964,7 @@ void SdSpiBackend::setFailure(SdCardState state) {
 		(void) _transport.setClockMode(SpiClockMode::Mode0);
 		(void) _transport.setBaudRate(initializationBaudRate);
 	}
+
 	_transport.deselect();
 }
 

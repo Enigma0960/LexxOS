@@ -5,7 +5,9 @@
 #include <lexxos/devices/picocalc/picocalc_southbridge.h>
 
 namespace lexxos::platform {
+
 struct PlatformClockService;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices::input_detail {

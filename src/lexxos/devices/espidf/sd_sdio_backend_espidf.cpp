@@ -1,5 +1,3 @@
-#include <lexxos/devices/storage/sd_sdio_backend.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -13,9 +11,11 @@
 #include <sdmmc_cmd.h>
 #include <soc/soc_caps.h>
 
+#include <lexxos/devices/storage/sd_sdio_backend.h>
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::size_t dmaBounceBlocks = 8;
@@ -98,6 +98,7 @@ namespace {
 				(void) sdmmc_host_deinit();
 			}
 		}
+
 		g_runtime.hostInitialized = false;
 		g_runtime.hostSlotInitialized = false;
 
@@ -144,17 +145,20 @@ bool SdSdioBackend::initialize() {
 		setFailure(SdCardState::NoBus);
 		return false;
 	}
+
 	if (!physicalCardPresent()) {
 		recordDiagnostic(SdCardDiagnosticCode::CardRemoved);
 		setFailure(SdCardState::NoCard);
 		return false;
 	}
+
 	if (!_pins.isValid()) {
 		recordDiagnostic(SdCardDiagnosticCode::InitializeFailed);
 		setFailure(SdCardState::NoBus);
 		releaseRuntime();
 		return false;
 	}
+
 	if (!configurePeripheral()) {
 		setFailure(SdCardState::NoBus);
 		releaseRuntime();
@@ -177,6 +181,7 @@ bool SdSdioBackend::initialize() {
 		recordDiagnostic(SdCardDiagnosticCode::InitializeFailed);
 		return false;
 	}
+
 	return true;
 }
 
@@ -200,6 +205,7 @@ bool SdSdioBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size
 		recordDiagnostic(SdCardDiagnosticCode::NullBuffer, cmd17ReadSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		return false;
 	}
+
 	if (!isReady()) {
 		if (!physicalCardPresent()) {
 			recordDiagnostic(SdCardDiagnosticCode::CardRemoved, cmd17ReadSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
@@ -207,8 +213,10 @@ bool SdSdioBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size
 		} else {
 			recordDiagnostic(SdCardDiagnosticCode::NotReady, cmd17ReadSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		}
+
 		return false;
 	}
+
 	if (firstBlock > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
 		recordDiagnostic(SdCardDiagnosticCode::TransferFailure, cmd17ReadSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		setFailure(SdCardState::IoError);
@@ -221,6 +229,7 @@ bool SdSdioBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size
 		setFailure(stateForError(result));
 		return false;
 	}
+
 	return true;
 }
 
@@ -229,6 +238,7 @@ bool SdSdioBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, st
 		recordDiagnostic(SdCardDiagnosticCode::NullBuffer, cmd24WriteSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		return false;
 	}
+
 	if (!isReady()) {
 		if (!physicalCardPresent()) {
 			recordDiagnostic(SdCardDiagnosticCode::CardRemoved, cmd24WriteSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
@@ -236,8 +246,10 @@ bool SdSdioBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, st
 		} else {
 			recordDiagnostic(SdCardDiagnosticCode::NotReady, cmd24WriteSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		}
+
 		return false;
 	}
+
 	if (firstBlock > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
 		recordDiagnostic(SdCardDiagnosticCode::TransferFailure, cmd24WriteSingleBlock, 0xFFFFFFFFU, firstBlock, static_cast<std::uint32_t>(blockCount));
 		setFailure(SdCardState::IoError);
@@ -250,6 +262,7 @@ bool SdSdioBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, st
 		setFailure(stateForError(result));
 		return false;
 	}
+
 	return true;
 }
 
@@ -295,10 +308,12 @@ bool SdSdioBackend::setTransferBaudRate(std::uint32_t baudRate) {
 		recordDiagnostic(SdCardDiagnosticCode::SetBaudFailed, 0xFFU, baudRate);
 		return false;
 	}
+
 	_pins.transferClockHz = baudRate;
 	if (_state != SdCardState::Ready) {
 		return true;
 	}
+
 	return setClock(baudRate);
 }
 
@@ -340,6 +355,7 @@ bool SdSdioBackend::physicalCardPresent() const {
 	if (gpio.read == nullptr || !gpio.read(_cardDetect.detect, value)) {
 		return false;
 	}
+
 	return _cardDetect.insertedLevel == lexxos::platform::GpioActiveLevel::High ? value : !value;
 }
 
@@ -356,15 +372,18 @@ bool SdSdioBackend::configurePeripheral() {
 	if (!_pins.supportsWideBus()) {
 		g_runtime.host.flags &= ~SDMMC_HOST_FLAG_4BIT;
 	}
+
 	if (_pins.transferClockHz != 0) {
 		g_runtime.host.max_freq_khz = static_cast<int>(_pins.transferClockHz / 1000U);
 	}
+
 	g_runtime.host.unaligned_multi_block_rw_max_chunk_size = dmaBounceBlocks;
 	g_runtime.host.dma_aligned_buffer = heap_caps_aligned_alloc(64, dmaBounceBytes, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
 	if (g_runtime.host.dma_aligned_buffer == nullptr) {
 		recordDiagnostic(SdCardDiagnosticCode::DmaStartFailed);
 		return false;
 	}
+
 	g_runtime.dmaBuffer = g_runtime.host.dma_aligned_buffer;
 
 #if SOC_SDMMC_IO_POWER_EXTERNAL
@@ -377,6 +396,7 @@ bool SdSdioBackend::configurePeripheral() {
 			recordDiagnostic(SdCardDiagnosticCode::SdioPowerControlFailed, 0xFFU, static_cast<std::uint32_t>(result));
 			return false;
 		}
+
 		g_runtime.host.pwr_ctrl_handle = g_runtime.powerControl;
 	}
 #endif
@@ -398,12 +418,14 @@ bool SdSdioBackend::configurePeripheral() {
 		recordDiagnostic(SdCardDiagnosticCode::SdioHostInitFailed, 0xFFU, static_cast<std::uint32_t>(result));
 		return false;
 	}
+
 	g_runtime.hostInitialized = true;
 	result = sdmmc_host_init_slot(g_runtime.host.slot, &slotConfig);
 	if (result != ESP_OK) {
 		recordDiagnostic(SdCardDiagnosticCode::SdioSlotInitFailed, 0xFFU, static_cast<std::uint32_t>(result));
 		return false;
 	}
+
 	g_runtime.hostSlotInitialized = true;
 	return true;
 }
@@ -412,17 +434,20 @@ bool SdSdioBackend::setClock(std::uint32_t clockHz) {
 	if (!g_runtime.hostSlotInitialized || g_runtime.host.set_card_clk == nullptr) {
 		return false;
 	}
+
 	auto result = g_runtime.host.set_card_clk(g_runtime.host.slot, clockHz / 1000U);
 	if (result != ESP_OK) {
 		recordDiagnostic(SdCardDiagnosticCode::SetBaudFailed, 0xFFU, static_cast<std::uint32_t>(result));
 		return false;
 	}
+
 	int realFreqKhz = 0;
 	if (g_runtime.host.get_real_freq != nullptr && g_runtime.host.get_real_freq(g_runtime.host.slot, &realFreqKhz) == ESP_OK) {
 		_activeClockHz = static_cast<std::uint32_t>(std::max(realFreqKhz, 0) * 1000);
 	} else {
 		_activeClockHz = clockHz;
 	}
+
 	return true;
 }
 
@@ -515,6 +540,7 @@ SdCardDiagnostics SdSdioBackend::diagnosticsUnlocked() const {
 	for (std::uint32_t index = 0; index < _diagnosticStoredCount; ++index) {
 		snapshot.entries[index] = _diagnosticEntries[(first + index) % sdCardDiagnosticEntryCount];
 	}
+
 	return snapshot;
 }
 

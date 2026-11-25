@@ -88,6 +88,7 @@ bool AsyncBlockDevice::submit(Request& request) {
 	if (queued) {
 		queued = xSemaphoreTake(completion, portMAX_DELAY) == pdTRUE;
 	}
+
 	vSemaphoreDelete(completion);
 	return queued && request.result;
 #else
@@ -104,6 +105,7 @@ bool AsyncBlockDevice::executeInline(Request& request) {
 		case Operation::Write:
 			return _inner.writeBlocks(request.firstBlock, request.constBuffer, request.blockCount);
 	}
+
 	return false;
 }
 
@@ -120,9 +122,11 @@ bool AsyncBlockDevice::shouldUseWorker() {
 	if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
 		return false;
 	}
+
 	if (calledFromWorker()) {
 		return false;
 	}
+
 	return ensureWorkerStarted();
 #else
 	return false;

@@ -1,6 +1,6 @@
 # `hexdump`
 
-print file or stdin as hexadecimal bytes.
+Выводит файл или стандартный ввод в виде шестнадцатеричных байтов.
 
 ## Справка shell
 

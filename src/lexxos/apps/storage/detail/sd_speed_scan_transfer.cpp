@@ -24,6 +24,7 @@ bool setSpeedScanTransfer(
 		printSdLastDiagnostic(context);
 		return false;
 	}
+
 	if (!lexxos::devices::sd_card::setTransferBaudRate(baudRate)) {
 		context.write("sd-speed-scan: ");
 		context.write(phase);
@@ -31,6 +32,7 @@ bool setSpeedScanTransfer(
 		printSdLastDiagnostic(context);
 		return false;
 	}
+
 	return true;
 }
 
@@ -46,6 +48,7 @@ bool readBlocksAtSettings(
 	if (!setSpeedScanTransfer(context, mode, expectedBaudRate, phase)) {
 		return false;
 	}
+
 	if (!device.readBlocks(firstBlock, output, blockCount)) {
 		context.write("sd-speed-scan: ");
 		context.write(phase);
@@ -55,10 +58,12 @@ bool readBlocksAtSettings(
 			context.write(" count=");
 			lexxos::apps::writeUnsigned(context, blockCount);
 		}
+
 		context.writeLine("");
 		printSdLastDiagnostic(context);
 		return false;
 	}
+
 	std::uint32_t const activeBaudRate = lexxos::devices::sd_card::activeBaudRate();
 	if (activeBaudRate != expectedBaudRate) {
 		context.write("sd-speed-scan: ");
@@ -71,6 +76,7 @@ bool readBlocksAtSettings(
 		printSdLastDiagnostic(context);
 		return false;
 	}
+
 	return true;
 }
 
@@ -92,6 +98,7 @@ bool recoverSpeedScanReference(
 			context.writeLine(lexxos::devices::toString(lexxos::devices::sd_card::state()));
 			return false;
 		}
+
 		lexxos::devices::sd_card::setReadCrcValidation(false);
 		lexxos::devices::sd_card::setMultiBlockRead(false);
 		if (!setSpeedScanTransfer(context, sdSpeedReferenceMode, sdSpeedReferenceBaudRate(), phase)) {
@@ -114,11 +121,13 @@ bool recoverSpeedScanReference(
 		context.writeLine(lexxos::devices::toString(lexxos::devices::sd_card::state()));
 		return false;
 	}
+
 	lexxos::devices::sd_card::setReadCrcValidation(false);
 	lexxos::devices::sd_card::setMultiBlockRead(false);
 	if (!setSpeedScanTransfer(context, sdSpeedReferenceMode, sdSpeedReferenceBaudRate(), phase)) {
 		return false;
 	}
+
 	return device.readBlocks(0, probe.data(), 1);
 }
 

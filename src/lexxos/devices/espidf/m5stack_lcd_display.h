@@ -9,8 +9,10 @@
 #include <lexxos/platform/board.h>
 
 namespace lexxos::platform {
-struct BoardDescriptor;
+
+struct LegacyBoardDescriptor;
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices {
@@ -56,7 +58,7 @@ private:
 	bool _writeBytes(std::uint8_t const* data, std::size_t size);
 	bool _writePixels(std::uint16_t const* pixels, int count);
 	bool _writeRepeatedPixel(std::uint16_t rgb565, int count);
-	[[nodiscard]] lexxos::platform::BoardDescriptor const& _board() const;
+	[[nodiscard]] lexxos::platform::LegacyBoardDescriptor const& _board() const;
 	[[nodiscard]] bool _configureOutput(lexxos::platform::GpioPin pin, bool initialValue) const;
 	void _writeGpio(lexxos::platform::GpioPin pin, bool value) const;
 	void _sleepMs(std::uint32_t milliseconds) const;

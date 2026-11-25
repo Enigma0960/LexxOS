@@ -1,10 +1,12 @@
-#include <lexxos/composition/detail/platform_device_providers.h>
-
 #include <iterator>
 #include <string_view>
 
+#include <lexxos/composition/detail/ili9488_workspace.h>
+#include <lexxos/composition/detail/picocalc_display_profile.h>
+#include <lexxos/composition/detail/platform_device_providers.h>
 #include <lexxos/devices/bus/i2c_bus.h>
 #include <lexxos/devices/device_manager.h>
+#include <lexxos/devices/display/legacy_ili9488_backend.h>
 #include <lexxos/feature.h>
 #include <lexxos/platform/platform.h>
 #include <lexxos/platform/platform_services.h>
@@ -58,8 +60,9 @@ using lexxos::devices::KeyboardGamepadAdapter;
 #endif
 
 namespace {
+
 #if defined(LEXXOS_PLATFORM_PICO) && FEATURE_ENABLED(DISPLAY) && FEATURE_ENABLED(PICO_CALC)
-	bool isPicoCalcBoard(lexxos::platform::BoardDescriptor const& board) {
+	bool isPicoCalcBoard(lexxos::platform::LegacyBoardDescriptor const& board) {
 		return std::string_view(board.boardId) == "picocalc_pico"
 		    || std::string_view(board.boardId) == "picocalc_pico_w"
 		    || std::string_view(board.boardId) == "picocalc_pico2"
@@ -74,7 +77,15 @@ namespace {
 #endif
 #if defined(LEXXOS_PLATFORM_PICO) && FEATURE_ENABLED(DISPLAY) && FEATURE_ENABLED(PICO_CALC)
 	Ili9488Display& boardPicoCalcDisplay(lexxos::platform::PlatformServices const& platform) {
-		static Ili9488Display display{lexxos::platform::effectiveSpiTftDisplay(boardFor(platform)), platform};
+		static lexxos::composition::detail::Ili9488Workspace workspace;
+		auto const pins = lexxos::platform::effectiveSpiTftDisplay(boardFor(platform));
+		static lexxos::devices::LegacyIli9488Backend backend{pins, platform};
+		static Ili9488Display display{
+		    {pins.width, pins.height, pins.columnOffset, pins.rowOffset, pins.invertColors,
+		     lexxos::composition::detail::picoCalcDisplayWireFormat,
+		     lexxos::composition::detail::picoCalcDisplayReset},
+		    backend, workspace.buffers()
+        };
 		return display;
 	}
 #endif
@@ -188,12 +199,13 @@ namespace {
 		return gamepad;
 	}
 #endif
+
 } // namespace
 
-void registerPicoBoardDevices(
+static void registerPicoBoardDevices(
     DeviceManager& devices,
     lexxos::platform::PlatformServices const& platformServices,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	(void) devices;
 	(void) platformServices;
 	(void) board;
@@ -244,6 +256,11 @@ void registerPicoBoardDevices(
 	    "PicoCalc STM32 southbridge runtime service",
 	    picoCalcInput.southbridgeRuntimeService());
 #endif
+}
+
+std::span<BoardDeviceProvider const> selectedBoardDeviceProviders() {
+	static constexpr BoardDeviceProvider providers[]{registerLegacyBoardDevices, registerPicoBoardDevices};
+	return providers;
 }
 
 } // namespace lexxos::composition::detail

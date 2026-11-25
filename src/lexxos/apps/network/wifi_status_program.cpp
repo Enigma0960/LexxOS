@@ -19,7 +19,7 @@ lexxos::program::ProgramDescriptor WifiStatusProgram::descriptor() {
 	    .handler = run,
 	    .runtime = {
 	                  .launchMode = ProgramLaunchMode::ForegroundTask,
-	                  .stackSizeBytes = 4096,
+	                  .stackSizeBytes = lexxos::runtime::standardRuntimeProfile.programs.networkStatusStackBytes,
 	                  .priority = 1,
 	                  .memoryClass = ProgramMemoryClass::InternalOnly,
 	                  .externalMemoryQuotaBytes = 0,

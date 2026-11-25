@@ -12,11 +12,13 @@
 #include <esp_netif.h>
 #include <esp_wifi.h>
 #include <esp_wifi_default.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <nvs_flash.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 namespace lexxos::devices::espidf_wifi {
+
 namespace {
 
 	constexpr std::uint32_t pollIntervalMs = 100;
@@ -25,7 +27,6 @@ namespace {
 	struct Runtime {
 		esp_netif_t* netif{nullptr};
 		Status status{};
-		bool eventHandlersRegistered{false};
 		bool scanActive{false};
 		bool scanDone{false};
 		bool connectInProgress{false};
@@ -86,12 +87,15 @@ namespace {
 		if (rssi >= -55) {
 			return 3;
 		}
+
 		if (rssi >= -70) {
 			return 2;
 		}
+
 		if (rssi >= -85) {
 			return 1;
 		}
+
 		return 0;
 	}
 
@@ -100,6 +104,7 @@ namespace {
 			g_runtime.status.hostname[0] = '\0';
 			return;
 		}
+
 		auto const byte4 = g_runtime.status.mac[4];
 		auto const byte5 = g_runtime.status.mac[5];
 		std::snprintf(g_runtime.status.hostname,
@@ -116,6 +121,7 @@ namespace {
 		if (result != ESP_OK) {
 			result = esp_read_mac(g_runtime.status.mac, ESP_MAC_WIFI_STA);
 		}
+
 		g_runtime.status.macValid = result == ESP_OK;
 		refreshHostnameFromMac();
 	}
@@ -126,6 +132,7 @@ namespace {
 			output[length] = static_cast<char>(input[length]);
 			++length;
 		}
+
 		output[length] = '\0';
 	}
 
@@ -141,12 +148,14 @@ namespace {
 		if (g_runtime.netif == nullptr) {
 			return;
 		}
+
 		esp_netif_dns_info_t dns{};
 		if (esp_netif_get_dns_info(g_runtime.netif, type, &dns) != ESP_OK
 		    || dns.ip.type != ESP_IPADDR_TYPE_V4
 		    || dns.ip.u_addr.ip4.addr == 0) {
 			return;
 		}
+
 		esp_ip4addr_ntoa(&dns.ip.u_addr.ip4, output, sizeof(output));
 	}
 
@@ -199,12 +208,15 @@ namespace {
 				setError(eraseResult);
 				return false;
 			}
+
 			result = nvs_flash_init();
 		}
+
 		if (result != ESP_OK) {
 			setError(result);
 			return false;
 		}
+
 		return true;
 	}
 
@@ -220,6 +232,7 @@ namespace {
 			setError(result);
 			return false;
 		}
+
 		return true;
 	}
 
@@ -236,6 +249,7 @@ namespace {
 			case AuthMode::Auto:
 				return WIFI_AUTH_WPA_PSK;
 		}
+
 		return WIFI_AUTH_WPA_PSK;
 	}
 
@@ -297,6 +311,7 @@ namespace {
 				if (event != nullptr) {
 					copySsid(g_runtime.status.ssid, event->ssid, event->ssid_len);
 				}
+
 				break;
 			}
 			case WIFI_EVENT_STA_DISCONNECTED: {
@@ -315,10 +330,12 @@ namespace {
 			clearIp();
 			return;
 		}
+
 		auto* event = static_cast<ip_event_got_ip_t*>(eventData);
 		if (event == nullptr) {
 			return;
 		}
+
 		g_runtime.status.gotIp = true;
 		esp_ip4addr_ntoa(&event->ip_info.ip, g_runtime.status.ip, sizeof(g_runtime.status.ip));
 		esp_ip4addr_ntoa(&event->ip_info.netmask, g_runtime.status.netmask, sizeof(g_runtime.status.netmask));
@@ -328,7 +345,7 @@ namespace {
 		g_runtime.connectInProgress = false;
 	}
 
-	bool installDriver(lexxos::platform::BoardDescriptor const& board) {
+	bool installDriver(lexxos::platform::LegacyBoardDescriptor const& board) {
 		if (!board.wireless.wifi) {
 			g_runtime.status = {};
 			g_runtime.status.supported = false;
@@ -340,64 +357,80 @@ namespace {
 		if (g_runtime.status.initialized) {
 			return true;
 		}
+
 		if (!ensureNvs() || !ensureNetworkCore()) {
 			return false;
 		}
 
-		g_runtime.netif = esp_netif_create_default_wifi_sta();
+		esp_netif_config_t netifConfig = ESP_NETIF_DEFAULT_WIFI_STA();
+		g_runtime.netif = esp_netif_new(&netifConfig);
 		if (g_runtime.netif == nullptr) {
 			setError(ESP_ERR_NO_MEM);
 			return false;
 		}
 
-		wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
-		auto result = esp_wifi_init(&config);
-		if (result != ESP_OK) {
-			setError(result);
+		bool driverInitialized = false;
+		auto const fail = [&](esp_err_t error) {
+			(void) esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifiEventHandler);
+			(void) esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &gotIpEventHandler);
+			(void) esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_LOST_IP, &gotIpEventHandler);
+			esp_netif_destroy_default_wifi(g_runtime.netif);
+			g_runtime.netif = nullptr;
+			if (driverInitialized) {
+				(void) esp_wifi_deinit();
+			}
+			setError(error);
 			return false;
+		};
+
+		auto result = esp_netif_attach_wifi_station(g_runtime.netif);
+		if (result != ESP_OK) {
+			return fail(result);
 		}
+
+		result = esp_wifi_set_default_wifi_sta_handlers();
+		if (result != ESP_OK) {
+			return fail(result);
+		}
+
+		wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
+		result = esp_wifi_init(&config);
+		if (result != ESP_OK) {
+			return fail(result);
+		}
+		driverInitialized = true;
 
 		result = esp_wifi_set_storage(WIFI_STORAGE_RAM);
 		if (result != ESP_OK) {
-			setError(result);
-			return false;
+			return fail(result);
 		}
 
 		result = esp_wifi_set_mode(WIFI_MODE_STA);
 		if (result != ESP_OK) {
-			setError(result);
-			return false;
+			return fail(result);
 		}
-		g_runtime.status.staModeEnabled = true;
 
 		refreshMac();
 		if (g_runtime.status.hostname[0] != '\0') {
 			result = esp_netif_set_hostname(g_runtime.netif, g_runtime.status.hostname);
 			if (result != ESP_OK) {
-				setError(result);
-				return false;
+				return fail(result);
 			}
 		}
 
-		if (!g_runtime.eventHandlersRegistered) {
-			result = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifiEventHandler, nullptr);
-			if (result != ESP_OK) {
-				setError(result);
-				return false;
-			}
-			result = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &gotIpEventHandler, nullptr);
-			if (result != ESP_OK) {
-				setError(result);
-				return false;
-			}
-			result = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_LOST_IP, &gotIpEventHandler, nullptr);
-			if (result != ESP_OK) {
-				setError(result);
-				return false;
-			}
-			g_runtime.eventHandlersRegistered = true;
+		result = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifiEventHandler, nullptr);
+		if (result != ESP_OK) {
+			return fail(result);
 		}
-
+		result = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &gotIpEventHandler, nullptr);
+		if (result != ESP_OK) {
+			return fail(result);
+		}
+		result = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_LOST_IP, &gotIpEventHandler, nullptr);
+		if (result != ESP_OK) {
+			return fail(result);
+		}
+		g_runtime.status.staModeEnabled = true;
 		g_runtime.status.initialized = true;
 		clearError();
 		return true;
@@ -407,10 +440,12 @@ namespace {
 		if (value.size() > capacity) {
 			return false;
 		}
+
 		std::memset(output, 0, capacity);
 		if (!value.empty()) {
 			std::memcpy(output, value.data(), value.size());
 		}
+
 		return true;
 	}
 
@@ -429,6 +464,7 @@ char const* toString(AuthMode mode) {
 		case AuthMode::Mixed:
 			return "mixed";
 	}
+
 	return "unknown";
 }
 
@@ -437,45 +473,53 @@ bool parseAuthMode(std::string_view text, AuthMode& output) {
 		output = AuthMode::Auto;
 		return true;
 	}
+
 	if (text == "open") {
 		output = AuthMode::Open;
 		return true;
 	}
+
 	if (text == "wpa") {
 		output = AuthMode::Wpa;
 		return true;
 	}
+
 	if (text == "wpa2") {
 		output = AuthMode::Wpa2;
 		return true;
 	}
+
 	if (text == "mixed") {
 		output = AuthMode::Mixed;
 		return true;
 	}
+
 	return false;
 }
 
-bool start(lexxos::platform::BoardDescriptor const& board) {
+bool start(lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!installDriver(board)) {
 		return false;
 	}
+
 	if (g_runtime.status.started) {
 		clearError();
 		return true;
 	}
+
 	auto const result = esp_wifi_start();
 	if (result != ESP_OK && result != ESP_ERR_WIFI_CONN) {
 		setError(result);
 		return false;
 	}
+
 	g_runtime.status.started = true;
 	clearError();
 	return true;
 }
 
 bool connect(
-    lexxos::platform::BoardDescriptor const& board,
+    lexxos::platform::LegacyBoardDescriptor const& board,
     std::string_view ssid,
     std::string_view password,
     AuthMode auth,
@@ -484,10 +528,12 @@ bool connect(
 		setError(ESP_ERR_INVALID_ARG);
 		return false;
 	}
+
 	if (auth != AuthMode::Open && password.size() < 8U) {
 		setError(ESP_ERR_INVALID_ARG);
 		return false;
 	}
+
 	if (!start(board)) {
 		return false;
 	}
@@ -498,6 +544,7 @@ bool connect(
 		setError(ESP_ERR_INVALID_ARG);
 		return false;
 	}
+
 	config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
 	config.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
 	config.sta.threshold.authmode = espAuthMode(auth);
@@ -519,6 +566,7 @@ bool connect(
 		setError(result);
 		return false;
 	}
+
 	g_runtime.connectInProgress = true;
 	g_runtime.lastConnectAttemptMs = nowMs();
 
@@ -531,6 +579,7 @@ bool connect(
 			clearError();
 			return true;
 		}
+
 		if (!g_runtime.status.connected && static_cast<std::uint32_t>(nowMs() - g_runtime.lastConnectAttemptMs) >= reconnectIntervalMs) {
 			auto const retryResult = esp_wifi_connect();
 			if (retryResult == ESP_OK || retryResult == ESP_ERR_WIFI_CONN) {
@@ -539,6 +588,7 @@ bool connect(
 				setError(retryResult);
 			}
 		}
+
 		delayMs(pollIntervalMs);
 	}
 
@@ -551,18 +601,20 @@ bool disconnect() {
 	if (!g_runtime.status.initialized) {
 		return true;
 	}
+
 	auto const result = esp_wifi_disconnect();
 	if (result != ESP_OK && result != ESP_ERR_WIFI_NOT_CONNECT) {
 		setError(result);
 		return false;
 	}
+
 	clearLink();
 	clearError();
 	return true;
 }
 
 bool scan(
-    lexxos::platform::BoardDescriptor const& board,
+    lexxos::platform::LegacyBoardDescriptor const& board,
     std::uint32_t timeoutMs,
     ScanRecord* records,
     std::size_t capacity,
@@ -572,13 +624,16 @@ bool scan(
 		setError(ESP_ERR_INVALID_ARG);
 		return false;
 	}
+
 	if (!board.wireless.scan) {
 		setError(ESP_ERR_NOT_SUPPORTED);
 		return false;
 	}
+
 	if (!start(board)) {
 		return false;
 	}
+
 	if (g_runtime.scanActive) {
 		setError(ESP_ERR_INVALID_STATE);
 		return false;
@@ -606,8 +661,10 @@ bool scan(
 			setError(ESP_ERR_TIMEOUT);
 			return false;
 		}
+
 		delayMs(pollIntervalMs);
 	}
+
 	g_runtime.scanActive = false;
 
 	std::uint16_t apCount = 0;
@@ -637,6 +694,7 @@ bool scan(
 		destination.channel = source.primary;
 		copyString(destination.auth, sizeof(destination.auth), scanAuthModeName(source.authmode));
 	}
+
 	count = outputCount;
 	clearError();
 	return true;
@@ -648,6 +706,7 @@ Status status() {
 		refreshIpDetails();
 		refreshApInfo();
 	}
+
 	return g_runtime.status;
 }
 

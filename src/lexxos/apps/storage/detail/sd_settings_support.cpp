@@ -4,6 +4,7 @@
 #include <lexxos/devices/sd_card.h>
 
 namespace lexxos::apps::storage_programs::detail {
+
 namespace {
 
 	constexpr std::uint32_t fallbackSdInitializationClockHz = 400000;
@@ -52,6 +53,7 @@ bool parseSpiMode(std::string_view text, lexxos::devices::SpiClockMode& output) 
 	if (!parseUnsigned32(text, value) || value > 3) {
 		return false;
 	}
+
 	output = static_cast<lexxos::devices::SpiClockMode>(value);
 	return true;
 }
@@ -61,10 +63,12 @@ bool parseOnOff(std::string_view text, bool& output) {
 		output = true;
 		return true;
 	}
+
 	if (text == "off" || text == "0" || text == "false") {
 		output = false;
 		return true;
 	}
+
 	return false;
 }
 
