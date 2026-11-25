@@ -7,16 +7,17 @@
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::apps::utility_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec ledArguments[] = {
 	    {
-         .name = "state",
-         .valueName = "on|off|toggle",
-         .help = "status LED state",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = true,
+	     .name = "state",
+	     .valueName = "on|off|toggle",
+	     .help = "status LED state",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = true,
 	     },
 	};
 
@@ -47,16 +48,19 @@ int LedProgram::run(lexxos::os::AppContext& context, lexxos::program::ProgramInv
 		gpio.setStatusLed(ledEnabled);
 		return 0;
 	}
+
 	if (state == "off") {
 		ledEnabled = false;
 		gpio.setStatusLed(ledEnabled);
 		return 0;
 	}
+
 	if (state == "toggle") {
 		ledEnabled = !ledEnabled;
 		gpio.setStatusLed(ledEnabled);
 		return 0;
 	}
+
 	context.writeLine("usage: led <on|off|toggle>");
 	return 1;
 }

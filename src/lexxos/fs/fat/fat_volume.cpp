@@ -9,8 +9,16 @@
 #include <cstring>
 #include <string_view>
 
+#include <lexxos/fs/fat/detail/lexx_fast_seek_policy.h>
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+extern "C" void* rk3506_heap_allocate(std::size_t bytes);
+extern "C" void rk3506_heap_release(void* pointer);
+#endif
+
 #if defined(LEXXOS_KERNEL_FREERTOS)
 	#include <FreeRTOS.h>
+	#include <lexxos/kernel/freertos/lazy_mutex.h>
 	#include <semphr.h>
 	#include <task.h>
 #endif
@@ -31,6 +39,7 @@ bool copyText(std::string_view source, char* output, std::size_t outputCapacity)
 	if (outputCapacity == 0 || source.size() + 1 > outputCapacity) {
 		return false;
 	}
+
 	std::memcpy(output, source.data(), source.size());
 	output[source.size()] = '\0';
 	return true;
@@ -72,6 +81,8 @@ char* allocateFatWriteBuffer() {
 	}
 #if defined(LEXXOS_KERNEL_FREERTOS)
 	return static_cast<char*>(pvPortMalloc(fatfsWriteBufferBytes));
+#elif defined(LEXXOS_PLATFORM_RK3506)
+	return static_cast<char*>(rk3506_heap_allocate(fatfsWriteBufferBytes));
 #else
 	return static_cast<char*>(std::malloc(fatfsWriteBufferBytes));
 #endif
@@ -83,10 +94,38 @@ void freeFatWriteBuffer(char* buffer) {
 	}
 #if defined(LEXXOS_KERNEL_FREERTOS)
 	vPortFree(buffer);
+#elif defined(LEXXOS_PLATFORM_RK3506)
+	rk3506_heap_release(buffer);
 #else
 	std::free(buffer);
 #endif
 }
+
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+DWORD* allocateLexxClusterMap() {
+	constexpr std::size_t bytes = lexxos::fs::fat::detail::lexxClusterMapWords * sizeof(DWORD);
+	#if defined(LEXXOS_KERNEL_FREERTOS)
+	return static_cast<DWORD*>(pvPortMalloc(bytes));
+	#elif defined(LEXXOS_PLATFORM_RK3506)
+	return static_cast<DWORD*>(rk3506_heap_allocate(bytes));
+	#else
+	return static_cast<DWORD*>(std::malloc(bytes));
+	#endif
+}
+
+void releaseLexxClusterMap(DWORD* table) {
+	if (table == nullptr) {
+		return;
+	}
+	#if defined(LEXXOS_KERNEL_FREERTOS)
+	vPortFree(table);
+	#elif defined(LEXXOS_PLATFORM_RK3506)
+	rk3506_heap_release(table);
+	#else
+	std::free(table);
+	#endif
+}
+#endif
 
 std::array<lexxos::fs::fat::FatVolume, mountedVolumeCount>& mountedVolumes() {
 	static std::array<lexxos::fs::fat::FatVolume, mountedVolumeCount> volumes{};
@@ -119,8 +158,9 @@ lexxos::vfs::WriteStatus mapWriteStatus(FRESULT result) {
 		case FR_INVALID_NAME:
 			return lexxos::vfs::WriteStatus::InvalidPath;
 		case FR_DENIED:
-		case FR_WRITE_PROTECTED:
 			return lexxos::vfs::WriteStatus::NotWritable;
+		case FR_WRITE_PROTECTED:
+			return lexxos::vfs::WriteStatus::ReadOnlyFilesystem;
 		case FR_NOT_ENOUGH_CORE:
 		case FR_TOO_MANY_OPEN_FILES:
 			return lexxos::vfs::WriteStatus::NoSpace;
@@ -238,35 +278,10 @@ char const* lexxos::fs::fat::toString(FatMountStatus status) {
 	}
 }
 
-lexxos::fs::fat::FatVolume::OperationGuard::OperationGuard(FatVolume const& volume)
-    : _volume(volume)
-    , _locked(_volume.lockOperation()) {
-}
-
-lexxos::fs::fat::FatVolume::OperationGuard::~OperationGuard() {
-	if (_locked) {
-		_volume.unlockOperation();
-	}
-}
-
-bool lexxos::fs::fat::FatVolume::OperationGuard::locked() const {
-	return _locked;
-}
-
 bool lexxos::fs::fat::FatVolume::lockOperation() const {
 #if defined(LEXXOS_KERNEL_FREERTOS)
-	if (_operationLock == nullptr) {
-		while (_operationLockCreationGuard.exchange(true, std::memory_order_acquire)) {
-			if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
-				taskYIELD();
-			}
-		}
-		if (_operationLock == nullptr) {
-			_operationLock = xSemaphoreCreateRecursiveMutex();
-		}
-		_operationLockCreationGuard.store(false, std::memory_order_release);
-	}
-	return _operationLock != nullptr && xSemaphoreTakeRecursive(static_cast<SemaphoreHandle_t>(_operationLock), portMAX_DELAY) == pdTRUE;
+	auto mutex = lexxos::kernel::freertos::ensureRecursiveMutex(_operationLock);
+	return mutex != nullptr && xSemaphoreTakeRecursive(mutex, portMAX_DELAY) == pdTRUE;
 #else
 	return true;
 #endif
@@ -290,6 +305,7 @@ lexxos::fs::fat::FatMountStatus lexxos::fs::fat::FatVolume::mount(lexxos::device
 	if (!device.isReady()) {
 		return FatMountStatus::DeviceNotReady;
 	}
+
 	if (device.blockSizeBytes() != sectorSize) {
 		return FatMountStatus::UnsupportedSectorSize;
 	}
@@ -326,11 +342,18 @@ void lexxos::fs::fat::FatVolume::reset() {
 	}
 
 	closeCachedReadFile();
+
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+	closeCachedLexxReadFile();
+#endif
+
 	(void) closeCachedWriteFile();
+
 	if (_drive != 0xFF) {
 		f_mount(nullptr, _drivePath.data(), 0);
 		fatfs_backend::releaseDrive(static_cast<BYTE>(_drive));
 	}
+
 	_device = nullptr;
 	_mountSource = {};
 	_mountTarget = {};
@@ -409,7 +432,7 @@ std::string_view lexxos::fs::fat::FatVolume::typeName() const {
 }
 
 bool lexxos::fs::fat::FatVolume::isReadOnly() const {
-	return false;
+	return _device != nullptr && _device->isReadOnly();
 }
 
 bool lexxos::fs::fat::FatVolume::stat(std::string_view path, lexxos::vfs::Stat& output) {
@@ -504,13 +527,16 @@ bool lexxos::fs::fat::FatVolume::list(std::string_view path, lexxos::vfs::Direct
 			ok = false;
 			break;
 		}
+
 		if (info.fname[0] == '\0') {
 			break;
 		}
+
 		std::string_view const name{info.fname};
 		if (name == "." || name == "..") {
 			continue;
 		}
+
 		lexxos::vfs::DirectoryEntry const entry{
 		    .name = name,
 		    .type = (info.fattrib & AM_DIR) != 0 ? lexxos::vfs::NodeType::Directory : lexxos::vfs::NodeType::RegularFile,
@@ -518,6 +544,7 @@ bool lexxos::fs::fat::FatVolume::list(std::string_view path, lexxos::vfs::Direct
 		};
 		ok = visitor(entry, userData);
 	}
+
 	f_closedir(&directory);
 	return ok;
 }
@@ -538,9 +565,11 @@ lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::read(
 	if (!isReady()) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
+
 	if (buffer == nullptr && capacity != 0) {
 		return lexxos::vfs::ReadStatus::InvalidPath;
 	}
+
 	if (capacity == 0) {
 		return lexxos::vfs::ReadStatus::Ok;
 	}
@@ -550,19 +579,43 @@ lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::read(
 		return lexxos::vfs::ReadStatus::InvalidPath;
 	}
 
-	if (closeCachedWriteFile() != lexxos::vfs::WriteStatus::Ok) {
+	// Keep a different destination FIL open while streaming the source.
+	// Closing it at every read forces f_sync/f_close/f_open on each chunk
+	// and defeats the FatFs write buffer during copies on one volume.
+	// A read of the file currently being written must still flush first.
+	if (isCachedWritePath(path) && closeCachedWriteFile() != lexxos::vfs::WriteStatus::Ok) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
+
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+	bool const package = detail::isLexxPackagePath(path);
+	auto const openStatus = package
+	    ? ensureCachedLexxReadFile(path, fatPath.data())
+	    : ensureCachedReadFile(path, fatPath.data());
+	FIL& file = package ? _lexxReadFile : _cachedReadFile;
+	auto closeRead = [&]() {
+		if (package) {
+			closeCachedLexxReadFile();
+		} else {
+			closeCachedReadFile();
+		}
+	};
+#else
 	auto const openStatus = ensureCachedReadFile(path, fatPath.data());
+	FIL& file = _cachedReadFile;
+	auto closeRead = [&]() {
+		closeCachedReadFile();
+	};
+#endif
+
 	if (openStatus != lexxos::vfs::ReadStatus::Ok) {
 		return openStatus;
 	}
 
-	FIL& file = _cachedReadFile;
 	if (f_tell(&file) != static_cast<FSIZE_t>(offset)) {
 		FRESULT const seekResult = f_lseek(&file, static_cast<FSIZE_t>(offset));
 		if (seekResult != FR_OK) {
-			closeCachedReadFile();
+			closeRead();
 			return mapReadStatus(seekResult);
 		}
 	}
@@ -577,9 +630,10 @@ lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::read(
 		UINT actual = 0;
 		FRESULT const readResult = f_read(&file, output + totalRead, chunk, &actual);
 		if (readResult != FR_OK) {
-			closeCachedReadFile();
+			closeRead();
 			return mapReadStatus(readResult);
 		}
+
 		totalRead += static_cast<std::size_t>(actual);
 		if (actual == 0 || actual < chunk) {
 			break;
@@ -599,13 +653,16 @@ lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::readText(std::string_view pa
 	if (!isReady()) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
+
 	if (writer == nullptr) {
 		return lexxos::vfs::ReadStatus::InvalidPath;
 	}
+
 	std::array<char, lexxos::vfs::maxPathLength + 8> fatPath{};
 	if (!makeFatPath(path, fatPath.data(), fatPath.size())) {
 		return lexxos::vfs::ReadStatus::InvalidPath;
 	}
+
 	if (closeCachedWriteFile() != lexxos::vfs::WriteStatus::Ok) {
 		return lexxos::vfs::ReadStatus::NotReadable;
 	}
@@ -624,9 +681,11 @@ lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::readText(std::string_view pa
 			f_close(&file);
 			return mapReadStatus(result);
 		}
+
 		if (actual == 0) {
 			break;
 		}
+
 		writer(std::string_view{buffer.data(), static_cast<std::size_t>(actual)}, userData);
 	}
 
@@ -644,11 +703,13 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::writeText(std::string_view 
 	if (beginStatus != lexxos::vfs::WriteStatus::Ok) {
 		return beginStatus;
 	}
+
 	auto const writeStatus = write(path, mode == lexxos::vfs::WriteMode::Append ? f_size(&_cachedWriteFile) : 0, text);
 	if (writeStatus != lexxos::vfs::WriteStatus::Ok) {
 		(void) closeCachedWriteFile();
 		return writeStatus;
 	}
+
 	return closeCachedWriteFile();
 }
 
@@ -661,18 +722,28 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::beginWrite(std::string_view
 	if (!isReady()) {
 		return lexxos::vfs::WriteStatus::NotWritable;
 	}
+
 	std::array<char, lexxos::vfs::maxPathLength + 8> fatPath{};
 	if (!makeFatPath(path, fatPath.data(), fatPath.size())) {
 		return lexxos::vfs::WriteStatus::InvalidPath;
 	}
 
 	closeCachedReadFile();
+
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+	// Never write a .lexx while its read-only CLMT is attached to a FIL.
+	if (detail::isLexxPackagePath(path)) {
+		closeCachedLexxReadFile();
+	}
+#endif
+
 	if (_cachedWriteOpen) {
 		auto const closeStatus = closeCachedWriteFile();
 		if (closeStatus != lexxos::vfs::WriteStatus::Ok) {
 			return closeStatus;
 		}
 	}
+
 	if (path.size() + 1 > _cachedWritePath.size()) {
 		return lexxos::vfs::WriteStatus::InvalidPath;
 	}
@@ -702,6 +773,7 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::beginWrite(std::string_view
 		_cachedWriteBuffer = allocateFatWriteBuffer();
 		_cachedWriteBufferCapacity = _cachedWriteBuffer != nullptr ? fatfsWriteBufferBytes : 0U;
 	}
+
 	return lexxos::vfs::WriteStatus::Ok;
 }
 
@@ -714,9 +786,11 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::write(std::string_view path
 	if (!isReady()) {
 		return lexxos::vfs::WriteStatus::NotWritable;
 	}
+
 	if (data.empty()) {
 		return lexxos::vfs::WriteStatus::Ok;
 	}
+
 	if (!isCachedWritePath(path)) {
 		auto const beginStatus = beginWrite(path, lexxos::vfs::WriteMode::Append);
 		if (beginStatus != lexxos::vfs::WriteStatus::Ok) {
@@ -732,6 +806,7 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::write(std::string_view path
 			(void) closeCachedWriteFile();
 			return flushStatus;
 		}
+
 		FRESULT const seekResult = f_lseek(&file, static_cast<FSIZE_t>(offset));
 		if (seekResult != FR_OK) {
 			(void) closeCachedWriteFile();
@@ -750,12 +825,14 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::write(std::string_view path
 				(void) closeCachedWriteFile();
 				return mapWriteStatus(result);
 			}
+
 			consumed += static_cast<std::size_t>(actual);
 			_cachedWriteDirty = true;
 			if (actual != chunk) {
 				(void) closeCachedWriteFile();
 				return lexxos::vfs::WriteStatus::NoSpace;
 			}
+
 			continue;
 		}
 
@@ -771,6 +848,7 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::write(std::string_view path
 					(void) closeCachedWriteFile();
 					return mapWriteStatus(result);
 				}
+
 				directWritten += static_cast<std::size_t>(actual);
 				_cachedWriteDirty = true;
 				if (actual != chunk) {
@@ -778,6 +856,7 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::write(std::string_view path
 					return lexxos::vfs::WriteStatus::NoSpace;
 				}
 			}
+
 			consumed += directBytes;
 			continue;
 		}
@@ -800,14 +879,20 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::write(std::string_view path
 }
 
 void lexxos::fs::fat::FatVolume::closeWrite(std::string_view path) {
+	(void) finishWrite(path);
+}
+
+lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::finishWrite(std::string_view path) {
 	OperationGuard guard{*this};
 	if (!guard.locked()) {
-		return;
+		return lexxos::vfs::WriteStatus::NotWritable;
 	}
 
 	if (path.empty() || isCachedWritePath(path)) {
-		(void) closeCachedWriteFile();
+		return closeCachedWriteFile(); // Flush, f_sync and f_close all checked.
 	}
+
+	return lexxos::vfs::WriteStatus::Ok;
 }
 
 lexxos::vfs::RemoveStatus lexxos::fs::fat::FatVolume::remove(std::string_view path) {
@@ -819,12 +904,17 @@ lexxos::vfs::RemoveStatus lexxos::fs::fat::FatVolume::remove(std::string_view pa
 	if (!isReady()) {
 		return lexxos::vfs::RemoveStatus::NotWritable;
 	}
+
 	std::array<char, lexxos::vfs::maxPathLength + 8> fatPath{};
 	if (!makeFatPath(path, fatPath.data(), fatPath.size())) {
 		return lexxos::vfs::RemoveStatus::InvalidPath;
 	}
 
 	closeCachedReadFile();
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+	closeCachedLexxReadFile(); // Unlink/rename can invalidate the saved cluster map.
+#endif
+
 	if (closeCachedWriteFile() != lexxos::vfs::WriteStatus::Ok) {
 		return lexxos::vfs::RemoveStatus::NotWritable;
 	}
@@ -834,9 +924,11 @@ lexxos::vfs::RemoveStatus lexxos::fs::fat::FatVolume::remove(std::string_view pa
 	if (result != FR_OK) {
 		return mapRemoveStatus(result);
 	}
+
 	if ((info.fattrib & AM_DIR) != 0) {
 		return lexxos::vfs::RemoveStatus::IsDirectory;
 	}
+
 	return mapRemoveStatus(f_unlink(fatPath.data()));
 }
 
@@ -849,13 +941,16 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::createDirectory(std::string
 	if (!isReady()) {
 		return lexxos::vfs::WriteStatus::NotWritable;
 	}
+
 	std::array<char, lexxos::vfs::maxPathLength + 8> fatPath{};
 	if (!makeFatPath(path, fatPath.data(), fatPath.size())) {
 		return lexxos::vfs::WriteStatus::InvalidPath;
 	}
+
 	if (closeCachedWriteFile() != lexxos::vfs::WriteStatus::Ok) {
 		return lexxos::vfs::WriteStatus::NotWritable;
 	}
+
 	return mapWriteStatus(f_mkdir(fatPath.data()));
 }
 
@@ -868,10 +963,12 @@ lexxos::vfs::RemoveStatus lexxos::fs::fat::FatVolume::removeDirectory(std::strin
 	if (!isReady()) {
 		return lexxos::vfs::RemoveStatus::NotWritable;
 	}
+
 	std::array<char, lexxos::vfs::maxPathLength + 8> fatPath{};
 	if (!makeFatPath(path, fatPath.data(), fatPath.size())) {
 		return lexxos::vfs::RemoveStatus::InvalidPath;
 	}
+
 	if (closeCachedWriteFile() != lexxos::vfs::WriteStatus::Ok) {
 		return lexxos::vfs::RemoveStatus::NotWritable;
 	}
@@ -881,9 +978,11 @@ lexxos::vfs::RemoveStatus lexxos::fs::fat::FatVolume::removeDirectory(std::strin
 	if (result != FR_OK) {
 		return mapRemoveStatus(result);
 	}
+
 	if ((info.fattrib & AM_DIR) == 0) {
 		return lexxos::vfs::RemoveStatus::NotFound;
 	}
+
 	return mapRemoveStatus(f_unlink(fatPath.data()));
 }
 
@@ -896,6 +995,7 @@ lexxos::vfs::RenameStatus lexxos::fs::fat::FatVolume::rename(std::string_view so
 	if (!isReady()) {
 		return lexxos::vfs::RenameStatus::NotWritable;
 	}
+
 	std::array<char, lexxos::vfs::maxPathLength + 8> sourcePath{};
 	std::array<char, lexxos::vfs::maxPathLength + 8> targetPath{};
 	if (!makeFatPath(source, sourcePath.data(), sourcePath.size()) || !makeFatPath(target, targetPath.data(), targetPath.size())) {
@@ -903,6 +1003,9 @@ lexxos::vfs::RenameStatus lexxos::fs::fat::FatVolume::rename(std::string_view so
 	}
 
 	closeCachedReadFile();
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+	closeCachedLexxReadFile(); // Unlink/rename can invalidate the saved cluster map.
+#endif
 	if (closeCachedWriteFile() != lexxos::vfs::WriteStatus::Ok) {
 		return lexxos::vfs::RenameStatus::NotWritable;
 	}
@@ -911,6 +1014,7 @@ lexxos::vfs::RenameStatus lexxos::fs::fat::FatVolume::rename(std::string_view so
 	if (f_stat(targetPath.data(), &existing) == FR_OK) {
 		return lexxos::vfs::RenameStatus::TargetExists;
 	}
+
 	return mapRenameStatus(f_rename(sourcePath.data(), targetPath.data()));
 }
 
@@ -923,6 +1027,7 @@ bool lexxos::fs::fat::FatVolume::sync() {
 	if (!isReady()) {
 		return false;
 	}
+
 	closeCachedReadFile();
 	return closeCachedWriteFile() == lexxos::vfs::WriteStatus::Ok;
 }
@@ -943,6 +1048,7 @@ lexxos::fs::fat::FatVolumeInfo lexxos::fs::fat::FatVolume::info() const {
 		std::uint64_t const blocks = _device->blockCount();
 		result.partitionBlockCount = blocks > UINT32_MAX ? UINT32_MAX : static_cast<std::uint32_t>(blocks);
 	}
+
 	if (_ready) {
 		result.type = fatfsTypeName(_filesystem);
 		result.fatStartBlock = static_cast<std::uint32_t>(_filesystem.fatbase);
@@ -953,6 +1059,7 @@ lexxos::fs::fat::FatVolumeInfo lexxos::fs::fat::FatVolume::info() const {
 		result.sectorsPerCluster = static_cast<std::uint8_t>(_filesystem.csize);
 		result.bytesPerCluster = static_cast<std::uint32_t>(_filesystem.csize) * sectorSize;
 	}
+
 	return result;
 }
 
@@ -966,6 +1073,7 @@ bool lexxos::fs::fat::FatVolume::makeFatPath(std::string_view path, char* output
 		if (size + 1 >= outputCapacity) {
 			return false;
 		}
+
 		output[size++] = value;
 		output[size] = '\0';
 		return true;
@@ -976,20 +1084,24 @@ bool lexxos::fs::fat::FatVolume::makeFatPath(std::string_view path, char* output
 				return false;
 			}
 		}
+
 		return true;
 	};
 
 	if (!appendText(_drivePath.data())) {
 		return false;
 	}
+
 	if (path.empty() || path == "/") {
 		return append('/');
 	}
+
 	if (path.front() != '/') {
 		if (!append('/')) {
 			return false;
 		}
 	}
+
 	return appendText(path);
 }
 
@@ -1005,12 +1117,34 @@ void lexxos::fs::fat::FatVolume::closeCachedReadFile() {
 	if (!_cachedReadOpen) {
 		return;
 	}
+
 	f_close(&_cachedReadFile);
 	_cachedReadFile = {};
 	_cachedReadPath = {};
 	_cachedReadPathSize = 0;
 	_cachedReadOpen = false;
 }
+
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+bool lexxos::fs::fat::FatVolume::isCachedLexxReadPath(std::string_view path) const {
+	return _lexxReadOpen && path.size() == _lexxReadPathSize && std::memcmp(_lexxReadPath.data(), path.data(), path.size()) == 0;
+}
+
+void lexxos::fs::fat::FatVolume::closeCachedLexxReadFile() {
+	if (!_lexxReadOpen) {
+		return;
+	}
+
+	_lexxReadFile.cltbl = nullptr;
+	f_close(&_lexxReadFile);
+	releaseLexxClusterMap(_lexxClusterMap);
+	_lexxClusterMap = nullptr;
+	_lexxReadFile = {};
+	_lexxReadPath = {};
+	_lexxReadPathSize = 0;
+	_lexxReadOpen = false;
+}
+#endif
 
 lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::flushCachedWriteBuffer() {
 	if (!_cachedWriteOpen || _cachedWriteBuffer == nullptr || _cachedWriteBufferUsed == 0U) {
@@ -1027,6 +1161,7 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::flushCachedWriteBuffer() {
 			_cachedWriteBufferUsed = 0;
 			return mapWriteStatus(result);
 		}
+
 		flushed += static_cast<std::size_t>(actual);
 		_cachedWriteDirty = true;
 		if (actual != chunk) {
@@ -1034,6 +1169,7 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::flushCachedWriteBuffer() {
 			return lexxos::vfs::WriteStatus::NoSpace;
 		}
 	}
+
 	_cachedWriteBufferUsed = 0;
 	return lexxos::vfs::WriteStatus::Ok;
 }
@@ -1056,6 +1192,7 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::closeCachedWriteFile() {
 	if (flushStatus == lexxos::vfs::WriteStatus::Ok && _cachedWriteDirty) {
 		syncResult = f_sync(&_cachedWriteFile);
 	}
+
 	FRESULT const closeResult = f_close(&_cachedWriteFile);
 	fatfs_backend::invalidateDiskCache();
 	_cachedWriteFile = {};
@@ -1067,11 +1204,56 @@ lexxos::vfs::WriteStatus lexxos::fs::fat::FatVolume::closeCachedWriteFile() {
 	if (flushStatus != lexxos::vfs::WriteStatus::Ok) {
 		return flushStatus;
 	}
+
 	if (syncResult != FR_OK) {
 		return mapWriteStatus(syncResult);
 	}
+
 	return closeResult == FR_OK ? lexxos::vfs::WriteStatus::Ok : mapWriteStatus(closeResult);
 }
+
+#if defined(FF_USE_FASTSEEK) && FF_USE_FASTSEEK
+lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::ensureCachedLexxReadFile(
+    std::string_view path, char const* fatPath) {
+	if (isCachedLexxReadPath(path)) {
+		return lexxos::vfs::ReadStatus::Ok;
+	}
+
+	closeCachedLexxReadFile();
+	if (path.size() + 1U > _lexxReadPath.size()) {
+		return lexxos::vfs::ReadStatus::InvalidPath;
+	}
+
+	FRESULT const opened = f_open(&_lexxReadFile, fatPath, FA_READ);
+	if (opened != FR_OK) {
+		_lexxReadFile = {};
+		return mapReadStatus(opened);
+	}
+
+	std::memcpy(_lexxReadPath.data(), path.data(), path.size());
+	_lexxReadPath[path.size()] = '\0';
+	_lexxReadPathSize = path.size();
+	_lexxReadOpen = true;
+
+	// Building a CLMT is a one-time sequential FAT walk. Keep the bounded table
+	// only on success; other files and fragmented .lexx packages use normal seek.
+	if (detail::useLexxClusterMap(f_size(&_lexxReadFile))) {
+		DWORD* table = allocateLexxClusterMap();
+		if (table != nullptr) {
+			table[0] = static_cast<DWORD>(detail::lexxClusterMapWords);
+			_lexxReadFile.cltbl = table;
+			if (f_lseek(&_lexxReadFile, CREATE_LINKMAP) == FR_OK) {
+				_lexxClusterMap = table;
+			} else {
+				_lexxReadFile.cltbl = nullptr;
+				releaseLexxClusterMap(table);
+			}
+		}
+	}
+
+	return lexxos::vfs::ReadStatus::Ok;
+}
+#endif
 
 lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::ensureCachedReadFile(std::string_view path, char const* fatPath) {
 	if (isCachedReadPath(path)) {
@@ -1082,11 +1264,13 @@ lexxos::vfs::ReadStatus lexxos::fs::fat::FatVolume::ensureCachedReadFile(std::st
 	if (path.size() + 1 > _cachedReadPath.size()) {
 		return lexxos::vfs::ReadStatus::InvalidPath;
 	}
+
 	FRESULT const result = f_open(&_cachedReadFile, fatPath, FA_READ);
 	if (result != FR_OK) {
 		_cachedReadFile = {};
 		return mapReadStatus(result);
 	}
+
 	std::memcpy(_cachedReadPath.data(), path.data(), path.size());
 	_cachedReadPath[path.size()] = '\0';
 	_cachedReadPathSize = path.size();
@@ -1108,6 +1292,7 @@ lexxos::fs::fat::FatMountStatus lexxos::fs::fat::mount(
 	if (device == nullptr) {
 		return FatMountStatus::NoDevice;
 	}
+
 	if (!device->isReady()) {
 		return FatMountStatus::DeviceNotReady;
 	}
@@ -1129,6 +1314,7 @@ lexxos::fs::fat::FatMountStatus lexxos::fs::fat::mount(
 				volume.reset();
 				return FatMountStatus::NoMountSlot;
 			}
+
 			return FatMountStatus::Ok;
 		}
 
@@ -1136,6 +1322,7 @@ lexxos::fs::fat::FatMountStatus lexxos::fs::fat::mount(
 		if (mountStatus == lexxos::vfs::MountStatus::TargetBusy) {
 			return FatMountStatus::AlreadyMounted;
 		}
+
 		return FatMountStatus::NoMountSlot;
 	}
 
@@ -1174,6 +1361,7 @@ lexxos::vfs::UnmountStatus lexxos::fs::fat::forceUnmount(lexxos::vfs::Vfs& vfs, 
 			volume.reset();
 		}
 	}
+
 	return status;
 }
 
@@ -1195,14 +1383,17 @@ bool lexxos::fs::fat::visitMountedVolumes(FatVolumeVisitor visitor, void* userDa
 	if (visitor == nullptr) {
 		return false;
 	}
+
 	for (auto const& volume : mountedVolumes()) {
 		if (!volume.isMounted()) {
 			continue;
 		}
+
 		if (!visitor(volume.info(), userData)) {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -1220,14 +1411,15 @@ bool lexxos::fs::fat::registerVfsFactory(lexxos::vfs::Vfs& vfs) {
 				return lexxos::vfs::MountStatus::TargetBusy;
 			case FatMountStatus::NoMountSlot:
 				return lexxos::vfs::MountStatus::NoMountSlot;
-			case FatMountStatus::DeviceNotReady:
-			case FatMountStatus::ReadError:
+			case FatMountStatus::DeviceNotReady       :
+			case FatMountStatus::ReadError            :
 			case FatMountStatus::UnsupportedSectorSize:
-			case FatMountStatus::UnsupportedFatType:
-			case FatMountStatus::InvalidBootSector:
+			case FatMountStatus::UnsupportedFatType   :
+			case FatMountStatus::InvalidBootSector    :
 			case FatMountStatus::NoSupportedPartition:
 				return lexxos::vfs::MountStatus::InvalidSource;
 		}
+
 		return lexxos::vfs::MountStatus::InvalidSource;
 	};
 

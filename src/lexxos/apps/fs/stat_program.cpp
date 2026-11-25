@@ -23,12 +23,12 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec statArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "required VFS path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "required VFS path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	};
 

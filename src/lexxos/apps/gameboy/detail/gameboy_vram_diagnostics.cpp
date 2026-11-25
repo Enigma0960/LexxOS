@@ -15,6 +15,7 @@ VramFirstNonZero firstNonZeroRange(lexxos::gameboy::Bus& bus, std::uint16_t star
 			};
 		}
 	}
+
 	return {};
 }
 
@@ -25,6 +26,7 @@ std::uint32_t countNonZeroRange(lexxos::gameboy::Bus& bus, std::uint16_t start, 
 			++count;
 		}
 	}
+
 	return count;
 }
 
@@ -42,6 +44,7 @@ std::uint32_t countNonZeroForTarget(lexxos::gameboy::Bus& bus, VramWarmupTarget 
 		case VramWarmupTarget::Map1:
 			return countNonZeroRange(bus, 0x9C00, 0x9FFF);
 	}
+
 	return bus.nonZeroVramBytes();
 }
 
@@ -63,9 +66,11 @@ std::uint16_t backgroundMapBaseFor(std::uint8_t lcdc, lexxos::gameboy::Backgroun
 	if (mode == lexxos::gameboy::BackgroundMapMode::Map9800) {
 		return gbBgMap0Address;
 	}
+
 	if (mode == lexxos::gameboy::BackgroundMapMode::Map9C00) {
 		return gbBgMap1Address;
 	}
+
 	return (lcdc & gbLcdcBgMapSelect) != 0 ? gbBgMap1Address : gbBgMap0Address;
 }
 
@@ -73,9 +78,11 @@ bool backgroundTileDataIsSigned(std::uint8_t lcdc, lexxos::gameboy::BackgroundTi
 	if (mode == lexxos::gameboy::BackgroundTileDataMode::Signed8800) {
 		return true;
 	}
+
 	if (mode == lexxos::gameboy::BackgroundTileDataMode::Unsigned8000) {
 		return false;
 	}
+
 	return (lcdc & gbLcdcTileDataSelect) == 0;
 }
 
@@ -96,6 +103,7 @@ std::uint32_t countFrameNonWhitePixels(lexxos::gameboy::FrameBuffer const& frame
 			}
 		}
 	}
+
 	return count;
 }
 
@@ -145,6 +153,7 @@ BackgroundUsageStats analyzeBackgroundUsage(
 					++nonZeroBytes;
 				}
 			}
+
 			++stats.tileRefs;
 			stats.nonZeroTileBytes += nonZeroBytes;
 			if (nonZeroBytes != 0) {
@@ -201,6 +210,7 @@ SpriteUsageStats analyzeSpriteUsage(lexxos::gameboy::Bus& bus) {
 		if (bus.read8OrFF(entry) != 0 || bus.read8OrFF(static_cast<std::uint16_t>(entry + 1U)) != 0 || tileIndex != 0 || attributes != 0) {
 			++stats.usedSprites;
 		}
+
 		if (x <= -8 || x >= lexxos::gameboy::screenWidth || y <= -spriteHeight || y >= lexxos::gameboy::screenHeight) {
 			continue;
 		}
@@ -219,6 +229,7 @@ SpriteUsageStats analyzeSpriteUsage(lexxos::gameboy::Bus& bus) {
 					++nonZeroBytes;
 				}
 			}
+
 			++stats.tileRefs;
 			stats.nonZeroTileBytes += nonZeroBytes;
 			if (nonZeroBytes != 0) {

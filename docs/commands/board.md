@@ -1,6 +1,6 @@
 # `board`
 
-show active board descriptor.
+Показывает описание активной платы.
 
 ## Вывод
 

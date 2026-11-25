@@ -1,6 +1,6 @@
 # `tmp-info`
 
-show /tmp diagnostic information.
+Показывает сведения о временной файловой системе.
 
 ## Справка shell
 

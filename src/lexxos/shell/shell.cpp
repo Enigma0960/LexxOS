@@ -8,13 +8,17 @@
 #include <lexxos/app/console_mirror.h>
 #include <lexxos/app/console_output.h>
 #include <lexxos/app/program_input.h>
+#include <lexxos/build_info.h>
 #include <lexxos/devices/input_device.h>
+#include <lexxos/io/file_input_stream.h>
+#include <lexxos/io/file_output_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/os/operating_system.h>
 #include <lexxos/platform/platform_services.h>
 #include <lexxos/program/program.h>
 #include <lexxos/program/program_supervisor.h>
 #include <lexxos/shell/shell_redirection_parser.h>
+#include <lexxos/shortcuts/shortcut.h>
 #include <lexxos/vfs/vfs.h>
 
 namespace {
@@ -32,13 +36,14 @@ constexpr char const* kBootLogo = R"(
 | |__|  __/>  <  >  <| |_| |___) |
 |_____\___/_/\_\/_/\_\\___/|____/
 
-     organic kernel console
-)";
+         kernel console )";
 
 // @formatter:on
 
 constexpr char const* kLexxRunProgramName = "lexx-run";
 constexpr std::string_view kLexxExecutableSuffix{".lexx"};
+constexpr char const* kShortcutProgramName = "link";
+constexpr char const* kShortcutRunSubcommand = "run";
 
 bool isSpace(char value) {
 	return value == ' ' || value == '\t';
@@ -133,10 +138,19 @@ lexxos::devices::KeyCode keyCodeFromShellInputKey(lexxos::shell::detail::ShellIn
 		case lexxos::shell::detail::ShellInputKey::Delete:
 			return KeyCode::Delete;
 	}
+
 	return KeyCode::Unknown;
 }
 
-void publishUartInputToFocusedProgram(
+lexxos::app::ConsoleInputService& consoleInput(lexxos::os::OperatingSystem* system) {
+	return system != nullptr ? system->consoleInput() : lexxos::app::console_input::defaultService();
+}
+
+lexxos::app::ProgramInputService& programInput(lexxos::os::OperatingSystem* system) {
+	return system != nullptr ? system->programInput() : lexxos::app::program_input::defaultService();
+}
+
+void publishUartInputToFocusedProgram(lexxos::os::OperatingSystem* system,
     lexxos::devices::KeyCode key,
     char character,
     std::uint8_t modifiers,
@@ -149,16 +163,21 @@ void publishUartInputToFocusedProgram(
 	    .scanCode = 0,
 	    .modifiers = modifiers,
 	};
-	lexxos::app::program_input::publish(event);
+	programInput(system).publish(event);
 }
 
-void injectFocusedProgramConsoleByte(char value) {
-	lexxos::app::console_input::inject(std::string_view{&value, 1});
+void injectFocusedProgramConsoleByte(lexxos::os::OperatingSystem* system, char value) {
+	auto const focus = lexxos::program::supervisor().focus();
+	if (focus.programFocused()
+	    && programInput(system).inputMode(focus.processId)
+	        == lexxos::app::program_input::InputMode::Terminal) {
+		(void) consoleInput(system).inject(std::string_view{&value, 1});
+	}
 }
 
-void forwardUartInputToFocusedProgram(char value, lexxos::platform::PlatformServices const& platform) {
-	injectFocusedProgramConsoleByte(value);
-	publishUartInputToFocusedProgram(
+void forwardUartInputToFocusedProgram(lexxos::os::OperatingSystem* system, char value, lexxos::platform::PlatformServices const& platform) {
+	injectFocusedProgramConsoleByte(system, value);
+	publishUartInputToFocusedProgram(system,
 	    keyCodeFromUartChar(value),
 	    value,
 	    static_cast<std::uint8_t>(static_cast<unsigned char>(value) == 0x03U ? lexxos::devices::InputModifierCtrl : 0U),
@@ -205,9 +224,9 @@ void writeRedirectionError(lexxos::shell::Shell& shell, RedirectionParseResult c
 	}
 }
 
-void applyLaunchFocusToConsole() {
+void applyLaunchFocusToConsole(lexxos::os::OperatingSystem* system) {
 	auto const focus = lexxos::program::supervisor().focus();
-	lexxos::app::console_input::setMode(
+	consoleInput(system).setMode(
 	    focus.programFocused() ? lexxos::app::console_input::Mode::Program : lexxos::app::console_input::Mode::Shell);
 
 	if (focus.graphicalProgramFocused()) {
@@ -246,7 +265,8 @@ void Shell::printBanner() {
 	auto const& board = _platformServices().board;
 	auto const& descriptor = board.current != nullptr ? board.current() : lexxos::platform::board();
 
-	writeLine(kBootLogo);
+	write(kBootLogo);
+	writeLine(lexxos::version);
 
 	writeLine("");
 	writeLine("LexxOS shell");
@@ -293,23 +313,28 @@ void Shell::feed(char value) {
 	if (focus.programFocused()) {
 		_deactivateInputLineGuard();
 		_previousWasCarriageReturn = false;
+
 		if (_escapeParser.active()) {
-			injectFocusedProgramConsoleByte(value);
+			injectFocusedProgramConsoleByte(_operatingSystem, value);
 			auto const result = _escapeParser.consume(value);
 			if (result.hasKey) {
-				publishUartInputToFocusedProgram(keyCodeFromShellInputKey(result.key), 0, 0, _platformServices());
+				publishUartInputToFocusedProgram(_operatingSystem, keyCodeFromShellInputKey(result.key), 0, 0, _platformServices());
 			}
+
 			return;
 		}
+
 		if (static_cast<unsigned char>(value) == 0x1BU) {
-			injectFocusedProgramConsoleByte(value);
+			injectFocusedProgramConsoleByte(_operatingSystem, value);
 			_escapeParser.start();
 			return;
 		}
-		auto const inputMode = lexxos::app::console_input::mode();
+
+		auto const inputMode = consoleInput(_operatingSystem).mode();
+
 		if (static_cast<unsigned char>(value) == 0x03U
 		    && inputMode != lexxos::app::console_input::Mode::RawProgram) {
-			publishUartInputToFocusedProgram(
+			publishUartInputToFocusedProgram(_operatingSystem,
 			    lexxos::devices::KeyCode::C,
 			    value,
 			    lexxos::devices::InputModifierCtrl,
@@ -318,7 +343,8 @@ void Shell::feed(char value) {
 			writeLine("^C");
 			return;
 		}
-		forwardUartInputToFocusedProgram(value, _platformServices());
+
+		forwardUartInputToFocusedProgram(_operatingSystem, value, _platformServices());
 		return;
 	}
 
@@ -327,17 +353,21 @@ void Shell::feed(char value) {
 		_previousWasCarriageReturn = false;
 		_escapeParser.reset();
 		_programCancellation.request();
+
 		if (_autosuggestionVisible) {
 			write("\x1B[K");
 			_autosuggestionVisible = false;
 		}
+
 		writeLine("^C");
+
 		if (!_programRunning) {
 			_resetLine();
 			if (!shouldStop()) {
 				printPrompt();
 			}
 		}
+
 		return;
 	}
 
@@ -346,6 +376,7 @@ void Shell::feed(char value) {
 		if (!_acceptAutosuggestion()) {
 			write("\a");
 		}
+
 		return;
 	}
 
@@ -354,6 +385,7 @@ void Shell::feed(char value) {
 		if (result.hasKey) {
 			_handleInputKey(result.key);
 		}
+
 		return;
 	}
 
@@ -367,15 +399,19 @@ void Shell::feed(char value) {
 		_deactivateInputLineGuard();
 		_previousWasCarriageReturn = true;
 		_escapeParser.reset();
+
 		if (_autosuggestionVisible) {
 			write("\x1B[K");
 			_autosuggestionVisible = false;
 		}
+
 		writeLine("");
 		_executeLine();
+
 		if (!shouldStop()) {
 			_printOrDeferPrompt();
 		}
+
 		return;
 	}
 
@@ -387,15 +423,19 @@ void Shell::feed(char value) {
 
 		_deactivateInputLineGuard();
 		_escapeParser.reset();
+
 		if (_autosuggestionVisible) {
 			write("\x1B[K");
 			_autosuggestionVisible = false;
 		}
+
 		writeLine("");
 		_executeLine();
+
 		if (!shouldStop()) {
 			_printOrDeferPrompt();
 		}
+
 		return;
 	}
 
@@ -427,18 +467,22 @@ void Shell::feed(std::string_view text) {
 			while (index < text.size() && isCommandLineCharacter(text[index])) {
 				++index;
 			}
+
 			if (index > start) {
 				_previousWasCarriageReturn = false;
 				auto const run = text.substr(start, index - start);
 				auto const available = _lineLength < _lineBuffer.size() ? _lineBuffer.size() - _lineLength - 1U : 0U;
+
 				if (run.size() <= available) {
 					_insertText(run);
 				} else {
 					if (available != 0) {
 						_insertText(run.substr(0, available));
 					}
+
 					write("\a");
 				}
+
 				continue;
 			}
 		}
@@ -471,6 +515,7 @@ bool Shell::setWorkingDirectory(std::string_view path) {
 	if (path.empty() || path.size() + 1 > _workingDirectory.size()) {
 		return false;
 	}
+
 	std::memcpy(_workingDirectory.data(), path.data(), path.size());
 	_workingDirectory[path.size()] = '\0';
 	return true;
@@ -498,6 +543,7 @@ void Shell::_activateInputLineGuard() {
 	    .clear = _clearInputLineForExternalConsoleWriteCallback,
 	    .redraw = _redrawInputLineAfterExternalConsoleWriteCallback,
 	});
+
 	_inputLineGuardActive = true;
 }
 
@@ -592,9 +638,11 @@ void Shell::_executeLine() {
 					++cursor;
 					continue;
 				}
+
 				if (quote == '"' && *cursor == '\\' && cursor[1] != '\0') {
 					++cursor;
 				}
+
 				*writer++ = *cursor++;
 				continue;
 			}
@@ -602,15 +650,18 @@ void Shell::_executeLine() {
 			if (isSpace(*cursor)) {
 				break;
 			}
+
 			if (*cursor == '"' || *cursor == '\'') {
 				quote = *cursor;
 				closedQuote = false;
 				++cursor;
 				continue;
 			}
+
 			if (*cursor == '\\' && cursor[1] != '\0') {
 				++cursor;
 			}
+
 			*writer++ = *cursor++;
 		}
 
@@ -639,8 +690,25 @@ void Shell::_executeLine() {
 		writeRedirectionError(*this, redirectionResult);
 		return;
 	}
+
 	if (commandArgc == 0) {
 		return;
+	}
+
+	// Portable .lnk files are handled by a single launcher for both shell and boot.
+	if (lexxos::shortcuts::isShortcut(_commandArgv[0])) {
+		if (commandArgc + 2 > static_cast<int>(_commandArgv.size())) {
+			writeLine("too many arguments");
+			return;
+		}
+
+		for (int index = commandArgc - 1; index >= 0; --index) {
+			_commandArgv[static_cast<std::size_t>(index + 2)] = _commandArgv[static_cast<std::size_t>(index)];
+		}
+
+		_commandArgv[0] = kShortcutProgramName;
+		_commandArgv[1] = kShortcutRunSubcommand;
+		commandArgc += 2;
 	}
 
 	if (isLexxExecutableToken(_commandArgv[0])) {
@@ -648,9 +716,11 @@ void Shell::_executeLine() {
 			writeLine("too many arguments");
 			return;
 		}
+
 		for (int index = commandArgc; index > 0; --index) {
 			_commandArgv[static_cast<std::size_t>(index)] = _commandArgv[static_cast<std::size_t>(index - 1)];
 		}
+
 		_commandArgv[0] = kLexxRunProgramName;
 		++commandArgc;
 	}
@@ -679,6 +749,7 @@ void Shell::_executeLine() {
 			writeLine(lexxos::vfs::toString(standardInputFile.status()));
 			return;
 		}
+
 		redirection.standardInput = &standardInputFile;
 	}
 
@@ -691,6 +762,7 @@ void Shell::_executeLine() {
 			writeLine(lexxos::vfs::toString(standardOutputFile.status()));
 			return;
 		}
+
 		redirection.standardOutput = &standardOutputFile;
 	}
 
@@ -703,6 +775,7 @@ void Shell::_executeLine() {
 			writeLine(lexxos::vfs::toString(standardErrorFile.status()));
 			return;
 		}
+
 		redirection.standardError = &standardErrorFile;
 	}
 
@@ -717,13 +790,13 @@ void Shell::_executeLine() {
 	};
 
 	_programCancellation.reset();
-	lexxos::app::console_input::setMode(lexxos::app::console_input::Mode::Program);
+	consoleInput(_operatingSystem).setMode(lexxos::app::console_input::Mode::Program);
 	_deactivateInputLineGuard();
 	_programRunning = true;
 	auto const result = context.launch(request);
 	_programRunning = false;
 
-	applyLaunchFocusToConsole();
+	applyLaunchFocusToConsole(_operatingSystem);
 
 	if (result.launchStatus == lexxos::program::ProgramLaunchStatus::NotFound
 	    || (result.launchStatus != lexxos::program::ProgramLaunchStatus::Available

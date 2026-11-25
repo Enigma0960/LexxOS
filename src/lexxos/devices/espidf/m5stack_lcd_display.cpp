@@ -90,14 +90,17 @@ bool M5StackLcdDisplay::initialize() {
 	if (!_writeCommand(commandSoftwareReset)) {
 		return false;
 	}
+
 	_sleepMs(150);
 	if (!_writeCommand(commandSleepOut)) {
 		return false;
 	}
+
 	_sleepMs(120);
 	if (!_initializeController()) {
 		return false;
 	}
+
 	_sleepMs(50);
 
 	_ready = true;
@@ -106,6 +109,7 @@ bool M5StackLcdDisplay::initialize() {
 		_setBacklight(false);
 		return false;
 	}
+
 	_setBacklight(true);
 	return true;
 }
@@ -138,6 +142,7 @@ bool M5StackLcdDisplay::clear(std::uint16_t rgb565) {
 	if (!_beginWrite(true)) {
 		return false;
 	}
+
 	auto const result = _writeRepeatedPixel(rgb565, _config.width * _config.height);
 	_endWrite();
 	return result;
@@ -167,6 +172,7 @@ bool M5StackLcdDisplay::blitRgb565(Rect const& rect, std::uint16_t const* pixels
 			return false;
 		}
 	}
+
 	return endRgb565Stream();
 }
 
@@ -353,6 +359,7 @@ bool M5StackLcdDisplay::_writeCommand(std::uint8_t command) {
 	if (!_beginWrite(false)) {
 		return false;
 	}
+
 	auto const result = _writeBytes(&command, 1);
 	_endWrite();
 	return result;
@@ -366,6 +373,7 @@ bool M5StackLcdDisplay::_writeData(std::uint8_t const* data, std::size_t size) {
 	if (!_beginWrite(true)) {
 		return false;
 	}
+
 	auto const result = _writeBytes(data, size);
 	_endWrite();
 	return result;
@@ -417,6 +425,7 @@ bool M5StackLcdDisplay::_beginWrite(bool dataMode) {
 	if (_writeActive || !_prepareBusForLcd() || !_bus.beginTransaction()) {
 		return false;
 	}
+
 	_writeActive = true;
 	_writeGpio(_config.cs, false);
 	_writeGpio(_config.dc, dataMode);
@@ -427,6 +436,7 @@ void M5StackLcdDisplay::_endWrite() {
 	if (!_writeActive) {
 		return;
 	}
+
 	_writeGpio(_config.cs, true);
 	_bus.endTransaction();
 	_writeActive = false;
@@ -453,11 +463,14 @@ bool M5StackLcdDisplay::_writePixels(std::uint16_t const* pixels, int count) {
 			buffer[static_cast<std::size_t>(index * 2)] = highByte(pixel);
 			buffer[static_cast<std::size_t>(index * 2 + 1)] = lowByte(pixel);
 		}
+
 		if (!_writeBytes(buffer.data(), static_cast<std::size_t>(chunk * 2))) {
 			return false;
 		}
+
 		offset += chunk;
 	}
+
 	return true;
 }
 
@@ -477,12 +490,14 @@ bool M5StackLcdDisplay::_writeRepeatedPixel(std::uint16_t rgb565, int count) {
 		if (!_writeBytes(buffer.data(), static_cast<std::size_t>(chunk * 2))) {
 			return false;
 		}
+
 		count -= chunk;
 	}
+
 	return true;
 }
 
-lexxos::platform::BoardDescriptor const& M5StackLcdDisplay::_board() const {
+lexxos::platform::LegacyBoardDescriptor const& M5StackLcdDisplay::_board() const {
 	auto const& board = _platformServices.board;
 	return board.current != nullptr ? board.current() : lexxos::platform::board();
 }

@@ -2,8 +2,16 @@
 
 #include <cstdint>
 
+namespace lexxos::os {
+
+class AppContext;
+
+} // namespace lexxos::os
+
 namespace lexxos::io {
+
 class OutputStream;
+
 } // namespace lexxos::io
 
 namespace lexxos::terminal {
@@ -36,6 +44,7 @@ struct Key {
 
 [[nodiscard]] bool isPrintableAscii(Key const& key);
 [[nodiscard]] Key readKey();
+[[nodiscard]] Key readKey(lexxos::os::AppContext& context);
 
 void clearScreen(lexxos::io::OutputStream& output);
 void eraseLine(lexxos::io::OutputStream& output);

@@ -6,6 +6,7 @@ void LcdConsoleCsiState::reset() {
 	for (auto& parameter : _parameters) {
 		parameter = 0;
 	}
+
 	_parameterCount = 0;
 	_currentValue = 0;
 	_currentPresent = false;
@@ -24,6 +25,7 @@ bool LcdConsoleCsiState::consume(char value) {
 			_currentValue = _currentValue * 10 + value - '0';
 			_currentPresent = true;
 		}
+
 		return true;
 	}
 
@@ -48,6 +50,7 @@ void LcdConsoleCsiState::finishParameter() {
 	if (_ignore) {
 		return;
 	}
+
 	if (_parameterCount >= _parameters.size()) {
 		_ignore = true;
 		return;

@@ -9,6 +9,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::network_programs::detail {
+
 namespace {
 
 	constexpr std::string_view wifiConfigDirectory = "/mnt/sd/.lexx";
@@ -23,10 +24,12 @@ namespace {
 		if (text == nullptr) {
 			return 0;
 		}
+
 		std::size_t length = 0;
 		while (length < capacity && text[length] != '\0') {
 			++length;
 		}
+
 		return length;
 	}
 
@@ -40,17 +43,21 @@ namespace {
 		if (text.size() >= output.size()) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < text.size(); ++index) {
 			char const character = text[index];
 			if (character == '\r' || character == '\n') {
 				return false;
 			}
+
 			output[index] = character;
 		}
+
 		output[text.size()] = '\0';
 		for (std::size_t index = text.size() + 1U; index < output.size(); ++index) {
 			output[index] = '\0';
 		}
+
 		return true;
 	}
 
@@ -58,17 +65,21 @@ namespace {
 		if (text.empty()) {
 			return false;
 		}
+
 		std::uint32_t value = 0;
 		for (char const character : text) {
 			if (character < '0' || character > '9') {
 				return false;
 			}
+
 			std::uint32_t const digit = static_cast<std::uint32_t>(character - '0');
 			if (value > (0xFFFFFFFFU - digit) / 10U) {
 				return false;
 			}
+
 			value = value * 10U + digit;
 		}
+
 		output = value;
 		return true;
 	}
@@ -78,10 +89,12 @@ namespace {
 			output = true;
 			return true;
 		}
+
 		if (text == "0" || text == "false" || text == "no" || text == "off") {
 			output = false;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -100,6 +113,7 @@ namespace {
 		if (length + text.size() >= buffer.size()) {
 			return false;
 		}
+
 		std::memcpy(buffer.data() + length, text.data(), text.size());
 		length += text.size();
 		buffer[length] = '\0';
@@ -114,6 +128,7 @@ namespace {
 			text[--index] = static_cast<char>('0' + (value % 10U));
 			value /= 10U;
 		} while (value != 0 && index > 0);
+
 		return appendText(buffer, length, {text + index, sizeof(text) - 1U - index});
 	}
 
@@ -148,6 +163,7 @@ namespace {
 		if (separator == std::string_view::npos) {
 			return WifiCredentialsStatus::Invalid;
 		}
+
 		auto const key = line.substr(0, separator);
 		auto const value = line.substr(separator + 1U);
 
@@ -156,23 +172,29 @@ namespace {
 			if (!parseBoolean(value, enabled)) {
 				return WifiCredentialsStatus::Invalid;
 			}
+
 			output.enabled = enabled;
 			return WifiCredentialsStatus::Ok;
 		}
+
 		if (key == "ssid") {
 			return copyString(value, output.ssid) ? WifiCredentialsStatus::Ok : WifiCredentialsStatus::Invalid;
 		}
+
 		if (key == "password") {
 			return copyString(value, output.password) ? WifiCredentialsStatus::Ok : WifiCredentialsStatus::Invalid;
 		}
+
 		if (key == "auth") {
 			return copyString(value, output.auth) ? WifiCredentialsStatus::Ok : WifiCredentialsStatus::Invalid;
 		}
+
 		if (key == "timeout") {
 			std::uint32_t timeoutMs = 0;
 			if (!parseUnsigned(value, timeoutMs)) {
 				return WifiCredentialsStatus::Invalid;
 			}
+
 			output.timeoutMs = timeoutMs;
 			return WifiCredentialsStatus::Ok;
 		}
@@ -191,9 +213,11 @@ namespace {
 			if (status != WifiCredentialsStatus::Ok) {
 				return status;
 			}
+
 			if (newline == std::string_view::npos) {
 				break;
 			}
+
 			offset = newline + 1U;
 		}
 
@@ -201,6 +225,7 @@ namespace {
 		if (!validateWifiCredentials(output, error)) {
 			return output.enabled ? WifiCredentialsStatus::Invalid : WifiCredentialsStatus::Disabled;
 		}
+
 		return output.enabled ? WifiCredentialsStatus::Ok : WifiCredentialsStatus::Disabled;
 	}
 
@@ -209,6 +234,7 @@ namespace {
 		if (lexxos::vfs::stat(wifiConfigDirectory, stat)) {
 			return stat.type == lexxos::vfs::NodeType::Directory;
 		}
+
 		auto const status = lexxos::vfs::createDirectory(wifiConfigDirectory);
 		return status == lexxos::vfs::WriteStatus::Ok;
 	}
@@ -221,6 +247,7 @@ namespace {
 		if (openStatus == lexxos::vfs::OpenStatus::NotFound) {
 			return WifiCredentialsStatus::NotFound;
 		}
+
 		if (openStatus != lexxos::vfs::OpenStatus::Ok) {
 			return WifiCredentialsStatus::IoError;
 		}
@@ -233,16 +260,20 @@ namespace {
 			if (readStatus != lexxos::vfs::ReadStatus::Ok) {
 				return WifiCredentialsStatus::IoError;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
+
 			totalRead += bytesRead;
 		}
+
 		buffer[totalRead] = '\0';
 
 		if (totalRead == buffer.size() - 1U && file.position() < file.size()) {
 			return WifiCredentialsStatus::Invalid;
 		}
+
 		return parseConfig({buffer.data(), totalRead}, output);
 	}
 
@@ -261,6 +292,7 @@ std::string_view toString(WifiCredentialsStatus status) {
 		case WifiCredentialsStatus::Disabled:
 			return "disabled";
 	}
+
 	return "unknown";
 }
 
@@ -304,22 +336,27 @@ bool validateWifiCredentials(WifiCredentials const& credentials, std::string_vie
 	if (!credentials.enabled) {
 		return true;
 	}
+
 	if (ssid.empty()) {
 		error = "SSID is empty";
 		return false;
 	}
+
 	if (!isSupportedWifiAuth(auth)) {
 		error = "auth must be auto, open, wpa, wpa2 or mixed";
 		return false;
 	}
+
 	if (credentials.timeoutMs == 0 || credentials.timeoutMs > wifiMaxTimeoutMs) {
 		error = "timeout is invalid";
 		return false;
 	}
+
 	if (auth != "open" && password.size() < 8U) {
 		error = "password must contain at least 8 characters for WPA/WPA2";
 		return false;
 	}
+
 	return true;
 }
 
@@ -328,12 +365,14 @@ WifiCredentialsStatus loadWifiCredentials(WifiCredentials& output) {
 	if (status != WifiCredentialsStatus::NotFound) {
 		return status;
 	}
+
 	status = loadWifiCredentialsFromPath(wifiLegacyConfigPath, output);
 	if (status == WifiCredentialsStatus::Ok || status == WifiCredentialsStatus::Disabled) {
 		if (saveWifiCredentials(output) == WifiCredentialsStatus::Ok) {
 			(void) lexxos::vfs::remove(wifiLegacyConfigPath);
 		}
 	}
+
 	return status;
 }
 
@@ -342,6 +381,7 @@ WifiCredentialsStatus saveWifiCredentials(WifiCredentials const& credentials) {
 	if (!validateWifiCredentials(credentials, error)) {
 		return WifiCredentialsStatus::Invalid;
 	}
+
 	if (!ensureConfigDirectory()) {
 		return WifiCredentialsStatus::IoError;
 	}
@@ -369,6 +409,7 @@ WifiCredentialsStatus clearWifiCredentials() {
 	    && (legacyStatus == lexxos::vfs::RemoveStatus::Ok || legacyStatus == lexxos::vfs::RemoveStatus::NotFound)) {
 		return WifiCredentialsStatus::Ok;
 	}
+
 	return WifiCredentialsStatus::IoError;
 }
 

@@ -7,16 +7,17 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::filesystem_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec cdArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "optional VFS path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = false,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "optional VFS path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = false,
 	     },
 	};
 
@@ -50,6 +51,7 @@ int CdProgram::run(
 		context.writeLine(path.data());
 		return 1;
 	}
+
 	if (stat.type != lexxos::vfs::NodeType::Directory) {
 		context.write("cd: not a directory: ");
 		context.writeLine(path.data());
@@ -61,6 +63,7 @@ int CdProgram::run(
 		context.writeLine("cd: failed to update working directory");
 		return 1;
 	}
+
 	return 0;
 }
 

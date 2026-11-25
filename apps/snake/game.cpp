@@ -1,6 +1,7 @@
 #include "game.h"
 
 namespace snake {
+
 namespace {
 
 	bool same(Point a, Point b) {
@@ -21,6 +22,7 @@ namespace {
 			case Direction::Left : --p.x; break;
 			case Direction::Right: ++p.x; break;
 		}
+
 		return p;
 	}
 
@@ -39,6 +41,7 @@ bool Game::occupies(Point p) const {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -47,6 +50,7 @@ bool Game::placeFood() {
 	if (freeCells == 0) {
 		return false;
 	}
+
 	unsigned choice = random() % freeCells;
 	for (int y = 1; y < height - 1; ++y) {
 		for (int x = 1; x < width - 1; ++x) {
@@ -54,13 +58,16 @@ bool Game::placeFood() {
 			if (occupies(p)) {
 				continue;
 			}
+
 			if (choice == 0) {
 				food = p;
 				return true;
 			}
+
 			--choice;
 		}
 	}
+
 	return false;
 }
 
@@ -77,6 +84,7 @@ void Game::reset(unsigned seed) {
 	for (unsigned i = 0; i < length; ++i) {
 		body[i] = {head.x - static_cast<int>(i), head.y};
 	}
+
 	(void) placeFood();
 }
 
@@ -90,11 +98,13 @@ void Game::turn(Direction next) {
 	if (phase == Phase::Won || phase == Phase::Lost || phase == Phase::Paused || turnQueued) {
 		return;
 	}
+
 	// Compare with the actual direction, not the pending direction. Prevent a
 	// pair of rapid key presses from reversing the snake between game ticks.
 	if (opposite(next, direction)) {
 		return;
 	}
+
 	pending = next;
 	turnQueued = true;
 	start();
@@ -118,6 +128,7 @@ Sound Game::step() {
 	if (phase != Phase::Playing) {
 		return Sound::None;
 	}
+
 	direction = pending;
 	turnQueued = false;
 	Point const next = advance(body[0], direction);
@@ -139,19 +150,23 @@ Sound Game::step() {
 	if (eating && length < static_cast<unsigned>(maxLength)) {
 		++length;
 	}
+
 	for (unsigned i = length - 1; i > 0; --i) {
 		body[i] = body[i - 1];
 	}
+
 	body[0] = next;
 	if (!eating) {
 		return Sound::None;
 	}
+
 	++eaten;
 	score += 10;
 	if (!placeFood()) {
 		phase = Phase::Won;
 		return Sound::Win;
 	}
+
 	return Sound::Eat;
 }
 

@@ -2,7 +2,7 @@
 
 Практические заметки по bring-up Guition / Jingcai `JC-ESP32P4-M3-DEV`.
 
-## ESP32-C6 coprocessor
+## Сопроцессор ESP32-C6
 
 Плата использует ESP32-C6-MINI как Wi-Fi/Bluetooth coprocessor для ESP32-P4. P4 общается с C6 через ESP-Hosted SDIO:
 
@@ -87,7 +87,7 @@ ESP-IDF environment (проверьте `command -v python` после `export.s
 
 ```bash
 source /path/to/esp-idf/export.sh
-cmake -S managed_components/espressif__esp_hosted/slave -B build/esp-hosted-c6-slave -G Ninja \
+cmake -S work/espidf/managed_components/espressif__esp_hosted/slave -B build/esp-hosted-c6-slave -G Ninja \
   -DIDF_TARGET=esp32c6 \
   -DPYTHON=/path/to/esp-idf-python \
   -DPYTHON_DEPS_CHECKED=1 \
@@ -175,7 +175,7 @@ wifi-connect <ssid> <password>
 net-status
 ```
 
-## Wi-Fi scan
+## Поиск сетей Wi-Fi
 
 Официальный `wifi_scan` demo из репозитория платы делает минимальную последовательность:
 
@@ -255,7 +255,7 @@ power
 примерно 10%, ещё через 300 секунд экран выключается. Любой UART/USB keyboard input или touch activity будит экран и
 сбрасывает idle timer. `backlight lcd <0..255>` позволяет вручную проверить яркость.
 
-## Touch input
+## Сенсорный ввод
 
 Текущая TFT70 ревизия отвечает на `system` I2C sideband (`GPIO7/GPIO8`) по адресу `0x38`, поэтому профиль платы
 регистрирует FocalTech/FT5x06-compatible контроллер как `ft5x06-touch`:
@@ -289,7 +289,7 @@ touch-draw -s 30 -r 4
 multi-touch. Если эта BTT revision не показывает pixels, первые быстрые ручки профиля остаются `dataLanes`,
 `laneBitRateMbps` и DSI timing block в `src/lexxos/platform/espidf/board_jc_esp32p4_m3_dev.cpp`.
 
-## RTC/NTP settings
+## Настройки RTC/NTP
 
 Профиль `jc_esp32p4_m3_dev` использует software RTC как default backend. Настройки auto-sync, NTP server, timeout,
 timezone и default `rtc-sync` source хранятся на SD:
@@ -311,7 +311,7 @@ rtc-status --source software
 `rtc-config: restored path=/mnt/sd/.lexx/rtc.conf`. Успешный `rtc-sync --tz +07:00` также обновляет этот файл, поэтому
 смещение часового пояса и NTP параметры переживают reboot.
 
-## ES8311 audio / speaker
+## Аудио ES8311 и динамик
 
 Профиль платы включает основной `AudioDevice` через ES8311 на I2C `0x18` и I2S0:
 
@@ -334,15 +334,15 @@ mplay --test
 
 ## Источники
 
-- Espressif ESP32-P4 Function EV board guide:
+- Руководство Espressif по плате ESP32-P4 Function EV:
   `https://github.com/espressif/esp-hosted-mcu/blob/main/docs/esp32_p4_function_ev_board.md`
-- JC-ESP32P4-M3-DEV community schematic bundle:
+- Комплект схем JC-ESP32P4-M3-DEV от сообщества:
   `https://github.com/DRubioG/JC-ESP32P4-M3-DEV/blob/main/5-Schematic/schematic.pdf`
-- ESP32-P4 ES8311 Arduino discussion with JC pin notes:
+- Обсуждение ESP32-P4/ES8311 Arduino с распиновкой JC:
   `https://github.com/espressif/arduino-esp32/discussions/12434`
 - Espressif `host_performs_slave_ota` example:
   `https://components.espressif.com/components/espressif/esp_hosted/versions/2.11.7/examples/host_performs_slave_ota?language=en`
-- Espressif MIPI DSI LCD API:
+- API дисплеев MIPI DSI от Espressif:
   `https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html`
-- BIGTREETECH Pi TFT70 V2.0 hardware manual:
+- Аппаратное руководство BIGTREETECH Pi TFT70 V2.0:
   `https://github.com/bigtreetech/BIGTREETECH-TouchScreenHardware/blob/master/BTT%20Pi%20TFT70%20V2.0%20Github/Hardware/BTT-Pi%20TFT70%20user%20manual.pdf`

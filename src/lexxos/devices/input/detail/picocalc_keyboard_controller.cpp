@@ -38,12 +38,14 @@ bool PicoCalcKeyboardController::initialize() {
 		if (!result.drainOk) {
 			_handleCommunicationFailure("drain-keyboard-fifo-read");
 		}
+
 		_lastKeyboardCount = 0;
 	} else {
 		auto const now = _uptimeMs();
 		_recordCommunicationFailure("initialize-keyboard-state-read", now);
 		_tryRecoverSouthbridge(now);
 	}
+
 	return _ready;
 }
 
@@ -53,6 +55,7 @@ void PicoCalcKeyboardController::update() {
 		if (!_recovery.canAttemptInitialize(now)) {
 			return;
 		}
+
 		if (!initialize()) {
 			return;
 		}
@@ -65,6 +68,7 @@ void PicoCalcKeyboardController::update() {
 		_diagnostics.recordCommunicationSuccess();
 		_lastKeyboardStatus = pollResult.lastStatus;
 	}
+
 	if (!pollResult.communicationOk) {
 		_handleCommunicationFailure("update-keyboard-fifo-read");
 		return;
@@ -95,7 +99,7 @@ std::string_view PicoCalcKeyboardController::name() const {
 }
 
 bool PicoCalcKeyboardController::isReady() const {
-	return _ready || _bus.isReady();
+	return _ready;
 }
 
 bool PicoCalcKeyboardController::pollEvent(lexxos::devices::InputEvent& event) {
@@ -189,6 +193,7 @@ void PicoCalcKeyboardController::_tryRecoverSouthbridge(std::uint32_t now) {
 PicoCalcKeyboardDiagnosticContext PicoCalcKeyboardController::_diagnosticContext() const {
 	return {
 	    .ready = _ready,
+	    .i2cFailure = _bus.lastFailure(),
 	    .lastKeyboardStatus = _lastKeyboardStatus,
 	    .lastKeyboardCount = _lastKeyboardCount,
 	    .lastRawEvent = _eventBridge.rawState(),
@@ -201,9 +206,11 @@ bool PicoCalcKeyboardController::_canRefreshSouthbridge(std::uint32_t now) const
 	if (_eventBridge.hasPendingEvents() || _eventBridge.hasActiveInput()) {
 		return false;
 	}
+
 	if (_lastKeyboardActivityMs == 0) {
 		return true;
 	}
+
 	return now - _lastKeyboardActivityMs >= southbridgeRefreshQuietMs;
 }
 

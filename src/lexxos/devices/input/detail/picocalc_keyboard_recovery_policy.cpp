@@ -22,9 +22,11 @@ bool PicoCalcKeyboardRecoveryPolicy::canAttemptInitialize(std::uint32_t now) con
 	if (_lastSouthbridgeResetAttemptMs != 0 && now - _lastSouthbridgeResetAttemptMs < southbridgeResetRecoveryMs) {
 		return false;
 	}
+
 	if (_lastInitializeAttemptMs != 0 && now - _lastInitializeAttemptMs < initializeBackoffMs) {
 		return false;
 	}
+
 	return true;
 }
 
@@ -34,9 +36,11 @@ bool PicoCalcKeyboardRecoveryPolicy::shouldAttemptSouthbridgeReset(
 	if (consecutiveCommunicationFailures < autoResetFailureThreshold) {
 		return false;
 	}
+
 	if (_lastSouthbridgeResetAttemptMs != 0 && now - _lastSouthbridgeResetAttemptMs < southbridgeResetBackoffMs) {
 		return false;
 	}
+
 	return true;
 }
 

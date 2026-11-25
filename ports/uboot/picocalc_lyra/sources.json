@@ -1,0 +1,22 @@
+[
+  {
+    "url": "https://raw.githubusercontent.com/nekocharm/picocalc-luckfox-lyra/1edbd23240c8adc5b9dccd6eae6f735515fe75fd/src/u-boot/configs/picocalc_rk3506_luckfox_defconfig",
+    "sha256": "2e6960caea68aa5b5053227bf0616944250edb134bf8ef6bcdbb8b1b9770d500",
+    "destination": "configs/picocalc_rk3506_luckfox_defconfig"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/Calculinux/picocalc-drivers/c86eb883f04260348da0b99d19a8ac111493d084/luckfox-lyra/uboot-rk3506-luckfox.dts",
+    "sha256": "0ab99cc1d0465e4a70a7c9dbd3bb5909f0ccfd0e8d14589068d89121abfd2e07",
+    "destination": "arch/arm/dts/rk3506-luckfox.dts"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/Calculinux/picocalc-drivers/c86eb883f04260348da0b99d19a8ac111493d084/luckfox-lyra/uboot-rk3506-luckfox.dtsi",
+    "sha256": "65216f6815def86edc899493e1d33e7fc3f7037ffa076124d6a9f76c38881acb",
+    "destination": "arch/arm/dts/rk3506-luckfox.dtsi"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/rockchip-linux/rkbin/3e288fe814e059dd06833495f845cab04ac20a5c/bin/rk35/rk3506_tee_v2.50.bin",
+    "sha256": "25ecab701828b2c0381b026b3e3ab7b00a76114b92415208a1e8d3c8fbdb7065",
+    "destination": "tee.bin"
+  }
+]

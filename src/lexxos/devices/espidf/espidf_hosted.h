@@ -43,9 +43,9 @@ struct Info {
 	int versionComparison{0};
 };
 
-[[nodiscard]] bool isHostedBoard(lexxos::platform::BoardDescriptor const& board);
+[[nodiscard]] bool isHostedBoard(lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] bool activateSupported(Version version);
-[[nodiscard]] Info readInfo(lexxos::platform::BoardDescriptor const& board, bool startWifiBackend);
+[[nodiscard]] Info readInfo(lexxos::platform::LegacyBoardDescriptor const& board, bool startWifiBackend);
 [[nodiscard]] char const* errorName(int error);
 
 } // namespace lexxos::devices::espidf_hosted

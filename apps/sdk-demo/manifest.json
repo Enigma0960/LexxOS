@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.apps.sdk-demo",
+  "name": "LexxOS SDK Diagnostics",
+  "version": "0.1.0",
+  "description": "Portable VM, graphics, time, input, audio and VFS smoke tests",
+  "author": "LexxOS Contributors",
+  "license": "Apache-2.0",
+  "capabilities": [
+    "console",
+    "keyboard",
+    "storage-read",
+    "storage-write",
+    "graphics",
+    "clock",
+    "audio",
+    "devices"
+  ],
+  "memory": {
+    "guest_bytes": 65536,
+    "stack_bytes": 8192
+  },
+  "resources": {
+    ":/img/lexxos.lxim": "assets/lexxos.lxim",
+    ":/img/banner.lxim": "assets/banner.lxim",
+    ":/img/orb.lxim": "assets/orb.lxim"
+  }
+}

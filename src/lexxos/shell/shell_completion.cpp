@@ -1,12 +1,11 @@
-#include <lexxos/shell/shell.h>
-#include <lexxos/shell/shell_completion_types.h>
-
 #include <array>
 #include <cstddef>
 #include <cstring>
 #include <string_view>
 
 #include <lexxos/os/operating_system.h>
+#include <lexxos/shell/shell.h>
+#include <lexxos/shell/shell_completion_types.h>
 #include <lexxos/vfs/vfs.h>
 
 namespace {
@@ -53,6 +52,7 @@ void Shell::_completeInputLine() {
 			write("\a");
 			return;
 		}
+
 		_completeProgramName(tokenStart, tokenEnd);
 		return;
 	}
@@ -66,6 +66,7 @@ void Shell::_completeProgramName(std::size_t tokenStart, std::size_t tokenEnd) {
 		write("\a");
 		return;
 	}
+
 	auto const& programs = _operatingSystem->programs();
 
 	std::array<char, maxLineLength> commonPrefix{};
@@ -83,6 +84,7 @@ void Shell::_completeProgramName(std::size_t tokenStart, std::size_t tokenEnd) {
 			if (commonLength >= commonPrefix.size()) {
 				commonLength = commonPrefix.size() - 1;
 			}
+
 			std::memcpy(commonPrefix.data(), descriptor.name.data(), commonLength);
 			commonPrefix[commonLength] = '\0';
 		} else {
@@ -103,6 +105,7 @@ void Shell::_completeProgramName(std::size_t tokenStart, std::size_t tokenEnd) {
 		if (_cursorPosition >= _lineLength || !isSpace(_lineBuffer[_cursorPosition])) {
 			_insertText(" ");
 		}
+
 		return;
 	}
 
@@ -146,6 +149,7 @@ void Shell::_completePath(std::size_t tokenStart, std::size_t tokenEnd) {
 			if (target.commonLength >= target.commonName.size()) {
 				target.commonLength = target.commonName.size() - 1;
 			}
+
 			std::memcpy(target.commonName.data(), entry.name.data(), target.commonLength);
 			target.commonName[target.commonLength] = '\0';
 			target.singleType = entry.type;
@@ -174,6 +178,7 @@ void Shell::_completePath(std::size_t tokenStart, std::size_t tokenEnd) {
 		if (replacementLength + text.size() >= replacement.size()) {
 			return false;
 		}
+
 		std::memcpy(replacement.data() + replacementLength, text.data(), text.size());
 		replacementLength += text.size();
 		replacement[replacementLength] = '\0';
@@ -198,6 +203,7 @@ void Shell::_completePath(std::size_t tokenStart, std::size_t tokenEnd) {
 				return;
 			}
 		}
+
 		_replaceInputRange(tokenStart, tokenEnd, std::string_view(replacement.data(), replacementLength));
 		return;
 	}
@@ -216,12 +222,14 @@ void Shell::_writeProgramCompletionMatches(std::string_view prefix) {
 	if (_operatingSystem == nullptr) {
 		return;
 	}
+
 	auto const& programs = _operatingSystem->programs();
 	for (std::size_t index = 0; index < programs.size(); ++index) {
 		auto const& descriptor = programs.at(index);
 		if (!descriptor.enabled || !startsWith(descriptor.name, prefix)) {
 			continue;
 		}
+
 		write("  ");
 		writeLine(descriptor.name);
 	}
@@ -242,6 +250,7 @@ void Shell::_writePathCompletionMatches(std::string_view directoryPath, std::str
 		    if (entry.type == lexxos::vfs::NodeType::Directory) {
 			    target.shell->write("/");
 		    }
+
 		    target.shell->writeLine("");
 		    return true;
 	    },
@@ -286,6 +295,7 @@ bool Shell::_findCompletionToken(std::size_t& tokenStart, std::size_t& tokenEnd,
 	} else {
 		programToken = false;
 	}
+
 	return true;
 }
 

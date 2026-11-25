@@ -10,6 +10,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr std::uint32_t samsungTvPowerCode = 0xE0E040BF;
@@ -18,40 +19,40 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec irArguments[] = {
 	    {
-         .name = "repeat",
-         .shortName = 'r',
-         .valueName = "count",
-         .help = "number of frames to send",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "1",
+	     .name = "repeat",
+	     .shortName = 'r',
+	     .valueName = "count",
+	     .help = "number of frames to send",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "1",
 	     },
 	    {
-         .name = "code",
-         .shortName = 'c',
-         .valueName = "hex",
-         .help = "Samsung 32-bit code for samsung-code, default E0E040BF",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "E0E040BF",
+	     .name = "code",
+	     .shortName = 'c',
+	     .valueName = "hex",
+	     .help = "Samsung 32-bit code for samsung-code, default E0E040BF",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "E0E040BF",
 	     },
 	    {
-         .name = "action",
-         .valueName = "action",
-         .help = "info, samsung-power, samsung-on, samsung-off or samsung-code",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "action",
+	     .valueName = "action",
+	     .help = "info, samsung-power, samsung-on, samsung-off or samsung-code",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "IR transmitter device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "IR transmitter device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -82,14 +83,17 @@ namespace {
 			value = static_cast<std::uint8_t>(character - '0');
 			return true;
 		}
+
 		if (character >= 'a' && character <= 'f') {
 			value = static_cast<std::uint8_t>(character - 'a' + 10);
 			return true;
 		}
+
 		if (character >= 'A' && character <= 'F') {
 			value = static_cast<std::uint8_t>(character - 'A' + 10);
 			return true;
 		}
+
 		return false;
 	}
 
@@ -97,17 +101,21 @@ namespace {
 		if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
 			text.remove_prefix(2);
 		}
+
 		if (text.empty() || text.size() > 8) {
 			return false;
 		}
+
 		std::uint32_t result = 0;
 		for (char const character : text) {
 			std::uint8_t digit = 0;
 			if (!hexValue(character, digit) || result > ((std::numeric_limits<std::uint32_t>::max() - digit) >> 4U)) {
 				return false;
 			}
+
 			result = static_cast<std::uint32_t>((result << 4U) | digit);
 		}
+
 		value = result;
 		return true;
 	}
@@ -138,6 +146,7 @@ int IrProgram::run(
 		context.writeErrorLine("ir: transmitter is not registered");
 		return 1;
 	}
+
 	if (!ir->isReady()) {
 		context.writeErrorLine("ir: transmitter is not ready");
 		return 1;
@@ -147,6 +156,7 @@ int IrProgram::run(
 		writeIrInfo(context, *ir);
 		return 0;
 	}
+
 	if (action != "samsung-power" && action != "samsung-on" && action != "samsung-off" && action != "samsung-code") {
 		context.writeErrorLine("ir: supported actions are info, samsung-power, samsung-on, samsung-off and samsung-code");
 		return 1;
@@ -157,6 +167,7 @@ int IrProgram::run(
 		context.writeErrorLine("ir: invalid repeat count");
 		return 1;
 	}
+
 	std::uint32_t code = samsungTvPowerCode;
 	if (action == "samsung-on") {
 		code = samsungTvPowerOnCode;
@@ -184,6 +195,7 @@ int IrProgram::run(
 		context.writeErrorLine("ir: transmit failed");
 		return 1;
 	}
+
 	context.writeLine("ir: sent");
 	return 0;
 }

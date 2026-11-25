@@ -4,26 +4,38 @@
 #include <cstdint>
 #include <string_view>
 
+#include <lexxos/app/console_input_service.h>
+#include <lexxos/app/program_input_service.h>
+#include <lexxos/io/console_output_stream.h>
+#include <lexxos/io/input_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/program/program.h>
 #include <lexxos/runtime/capabilities.h>
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::program {
+
 class ProgramManager;
 class ProgramMemoryArena;
+
 } // namespace lexxos::program
 
 namespace lexxos::io {
+
 class InputStream;
+
 } // namespace lexxos::io
 
 namespace lexxos::devices {
+
 class DeviceManager;
+
 } // namespace lexxos::devices
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::shell {
@@ -33,6 +45,8 @@ class Shell;
 } // namespace lexxos::shell
 
 namespace lexxos::os {
+
+class StorageMountPolicy;
 
 class OperatingSystem;
 
@@ -75,6 +89,9 @@ public:
 	[[nodiscard]] lexxos::io::OutputStream& standardError();
 	[[nodiscard]] lexxos::devices::DeviceManager& devices();
 	[[nodiscard]] lexxos::vfs::Vfs& vfs();
+	[[nodiscard]] lexxos::lifecycle::EventBus& events();
+	[[nodiscard]] app::ProgramInputService& programInput();
+	[[nodiscard]] app::ConsoleInputService& consoleInput();
 	[[nodiscard]] lexxos::platform::PlatformServices const& platform() const;
 	[[nodiscard]] lexxos::runtime::CapabilitySet capabilities() const;
 	[[nodiscard]] lexxos::program::ProgramManager& programs();
@@ -93,6 +110,8 @@ public:
 
 	[[nodiscard]] lexxos::program::ProgramLaunchStatus canLaunch(std::string_view programName) const;
 	lexxos::program::ProgramExitResult launch(lexxos::program::ProgramStartRequest const& request);
+
+	[[nodiscard]] StorageMountPolicy* storageMountPolicy() const;
 
 private:
 	OperatingSystem* _os{nullptr};

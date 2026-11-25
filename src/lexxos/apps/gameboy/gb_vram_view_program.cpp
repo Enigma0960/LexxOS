@@ -30,10 +30,12 @@ int GbVramViewProgram::run(
 		context.writeErrorLine("gb-vram-view: display device is not registered");
 		return 1;
 	}
+
 	if (!display->isReady()) {
 		context.writeErrorLine("gb-vram-view: display device is not ready");
 		return 1;
 	}
+
 	if (display->nativeFormat() != lexxos::devices::PixelFormat::Rgb565) {
 		context.writeErrorLine("gb-vram-view: only rgb565 displays are supported");
 		return 1;
@@ -55,6 +57,7 @@ int GbVramViewProgram::run(
 		context.writeErrorLine("gb-vram-view: invalid tile number");
 		return 2;
 	}
+
 	firstTile %= 384U;
 
 	VramViewMode mode = VramViewMode::Tiles;
@@ -68,6 +71,7 @@ int GbVramViewProgram::run(
 		context.writeErrorLine("gb-vram-view: invalid target, expected auto, any, tile-data, map, map0 or map1");
 		return 2;
 	}
+
 	auto const warmupTarget = effectiveWarmupTarget(mode, requestedTarget);
 
 	std::uint32_t maxWarmupCycles = maxGbEmuWarmupCycles;
@@ -75,6 +79,7 @@ int GbVramViewProgram::run(
 		context.writeErrorLine("gb-vram-view: invalid max-cycles count");
 		return 2;
 	}
+
 	if (maxWarmupCycles > maxGbEmuWarmupCycles) {
 		maxWarmupCycles = maxGbEmuWarmupCycles;
 	}
@@ -90,6 +95,7 @@ int GbVramViewProgram::run(
 		context.writeErrorLine("gb-vram-view: invalid bg-map, expected auto, 9800 or 9c00");
 		return 2;
 	}
+
 	lexxos::gameboy::BackgroundTileDataMode bgTileMode = lexxos::gameboy::BackgroundTileDataMode::Auto;
 	if (!parseBackgroundTileDataMode(arguments.valueOr("bg-tiles", "auto"), bgTileMode)) {
 		context.writeErrorLine("gb-vram-view: invalid bg-tiles, expected auto, 8000 or 8800");
@@ -199,6 +205,7 @@ int GbVramViewProgram::run(
 		context.write(" view from ");
 		context.writeLine(path.data());
 	}
+
 	context.write("display: ");
 	writeUnsigned(context, static_cast<std::uint32_t>(display->width()));
 	context.write("x");
@@ -227,12 +234,14 @@ int GbVramViewProgram::run(
 		} else {
 			context.write(bgMapMode == lexxos::gameboy::BackgroundMapMode::Map9C00 ? "0x9C00" : "0x9800");
 		}
+
 		context.write(" tile-data=");
 		if (bgTileMode == lexxos::gameboy::BackgroundTileDataMode::Auto) {
 			context.write((bus.read8OrFF(0xFF40) & 0x10U) != 0 ? "0x8000" : "0x8800 signed");
 		} else {
 			context.write(bgTileMode == lexxos::gameboy::BackgroundTileDataMode::Unsigned8000 ? "0x8000" : "0x8800 signed");
 		}
+
 		context.write(" force-visible=");
 		context.write(arguments.has("force-visible") ? "1" : "0");
 		context.write(" bg-map=");
@@ -244,6 +253,7 @@ int GbVramViewProgram::run(
 	} else {
 		context.writeLine("heatmap: VRAM 0x8000-0x9FFF as 128x64 byte map");
 	}
+
 	if (firstTileDataByte.found) {
 		context.write("tile-data-first-nonzero: address=");
 		writeHex16(context, firstTileDataByte.address);
@@ -253,6 +263,7 @@ int GbVramViewProgram::run(
 		writeCode8(context, firstTileDataByte.value);
 		context.writeLine("");
 	}
+
 	context.write("vram-nonzero=");
 	writeUnsigned(context, bus.nonZeroVramBytes());
 	context.write("/");

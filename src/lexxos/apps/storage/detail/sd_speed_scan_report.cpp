@@ -5,6 +5,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs::detail {
+
 namespace {
 
 	[[nodiscard]] constexpr char const* scopeName(SpeedScanScope scope) {

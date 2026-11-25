@@ -34,6 +34,7 @@ int GbCpuStepProgram::run(
 		context.writeErrorLine("gb-cpu-step: invalid step count");
 		return 2;
 	}
+
 	if (steps > 200) {
 		steps = 200;
 	}
@@ -106,9 +107,11 @@ int GbCpuStepProgram::run(
 	if (lastStatus == lexxos::gameboy::CpuStepStatus::BusReadError) {
 		return 1;
 	}
+
 	if (lastStatus == lexxos::gameboy::CpuStepStatus::UnsupportedOpcode) {
 		return 2;
 	}
+
 	return 0;
 }
 

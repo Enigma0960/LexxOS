@@ -3,9 +3,11 @@
 #include <cstdint>
 
 namespace lexxos::devices {
+
 class GamepadDevice;
 class InputDevice;
 class PointingDevice;
+
 } // namespace lexxos::devices
 
 namespace lexxos::devices::espidf_usb_hid {

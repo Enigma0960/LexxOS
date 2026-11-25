@@ -25,6 +25,7 @@ void LcdConsoleHardwareScroll::reset(lexxos::devices::DisplayDevice* display, bo
 	if (!resetScroll || !_enabled || display == nullptr) {
 		return;
 	}
+
 	_startPixels = 0;
 	if (!display->setVerticalScrollStart(0)) {
 		_enabled = false;
@@ -35,10 +36,12 @@ bool LcdConsoleHardwareScroll::advance(lexxos::devices::DisplayDevice* display, 
 	if (!_enabled || display == nullptr || _areaPixels <= 0) {
 		return false;
 	}
+
 	_startPixels = (_startPixels + pixels) % _areaPixels;
 	if (display->setVerticalScrollStart(_startPixels)) {
 		return true;
 	}
+
 	_enabled = false;
 	_startPixels = 0;
 	return false;

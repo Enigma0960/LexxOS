@@ -10,6 +10,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs {
+
 namespace {
 
 	constexpr lexxos::apps::PrettyTableColumn i2cColumns[] = {

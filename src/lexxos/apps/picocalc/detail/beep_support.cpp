@@ -9,6 +9,7 @@
 #endif
 
 namespace lexxos::apps::picocalc_programs::detail {
+
 namespace {
 
 #if defined(LEXXOS_PLATFORM_PICO)
@@ -62,16 +63,19 @@ int runBeepSequenceOnPico(
 		(void) runBeepOnPico(context, config.left, frequencyHz, durationMs);
 		played = true;
 	}
+
 	if (config.hasRight()) {
 		if (played) {
 			sleepMs(context, 80);
 		}
+
 		context.write("beep: right pin=");
 		writePinValue(context, config.right);
 		context.writeLine("");
 		(void) runBeepOnPico(context, config.right, frequencyHz, durationMs);
 		played = true;
 	}
+
 	return played ? 0 : 1;
 #else
 	(void) context;

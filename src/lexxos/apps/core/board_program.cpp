@@ -21,7 +21,7 @@ namespace {
 		writeUnsigned(context, static_cast<std::uint32_t>(index));
 	}
 
-	void writeUserGpioSummary(lexxos::os::AppContext& context, lexxos::platform::BoardDescriptor const& board) {
+	void writeUserGpioSummary(lexxos::os::AppContext& context, lexxos::platform::LegacyBoardDescriptor const& board) {
 		context.write("user-gpio: count=");
 		writeUnsigned(context, board.userGpio.count);
 		context.writeLine("");
@@ -57,13 +57,16 @@ namespace {
 			if (!capabilities.has(descriptor.capability)) {
 				continue;
 			}
+
 			context.write(" ");
 			context.write(descriptor.name);
 			wroteAny = true;
 		}
+
 		if (!wroteAny) {
 			context.write(" none");
 		}
+
 		context.writeLine("");
 	}
 
@@ -73,6 +76,7 @@ namespace {
 			context.write("-");
 			return;
 		}
+
 		writeUnsigned(context, version.major);
 		context.write(".");
 		writeUnsigned(context, version.minor);
@@ -80,11 +84,12 @@ namespace {
 		writeUnsigned(context, version.patch);
 	}
 
-	void writeHostedSummary(lexxos::os::AppContext& context, lexxos::platform::BoardDescriptor const& board) {
+	void writeHostedSummary(lexxos::os::AppContext& context, lexxos::platform::LegacyBoardDescriptor const& board) {
 		auto const info = lexxos::devices::espidf_hosted::readInfo(board, false);
 		if (!info.supported) {
 			return;
 		}
+
 		context.write("hosted: host-version=");
 		writeHostedVersion(context, info.hostVersion);
 		context.write(" coprocessor-version=");

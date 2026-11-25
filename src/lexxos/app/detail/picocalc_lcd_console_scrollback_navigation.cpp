@@ -9,6 +9,7 @@ LcdConsoleScrollbackViewChange LcdConsoleScrollbackNavigation::moveVertical(
 	if (!viewport.move(deltaLines, maxTopLine(scrollback))) {
 		return {};
 	}
+
 	return {
 	    .changed = true,
 	    .resetHardwareScroll = true,
@@ -23,6 +24,7 @@ LcdConsoleScrollbackViewChange LcdConsoleScrollbackNavigation::setTop(
 	if (!viewport.setTop(topLine, maxTopLine(scrollback))) {
 		return {};
 	}
+
 	return {
 	    .changed = true,
 	    .resetHardwareScroll = true,
@@ -36,6 +38,7 @@ LcdConsoleScrollbackViewChange LcdConsoleScrollbackNavigation::moveHorizontal(
 	if (!viewport.moveLeft(deltaColumns, maxLeftColumn(layout))) {
 		return {};
 	}
+
 	return {
 	    .changed = true,
 	    .resetHardwareScroll = true,
@@ -49,6 +52,7 @@ LcdConsoleScrollbackViewChange LcdConsoleScrollbackNavigation::setLeft(
 	if (!viewport.setLeft(leftColumn, maxLeftColumn(layout))) {
 		return {};
 	}
+
 	return {
 	    .changed = true,
 	    .resetHardwareScroll = true,
@@ -64,6 +68,7 @@ LcdConsoleScrollbackViewChange LcdConsoleScrollbackNavigation::resetView(
 	if (!changedTop && !changedLeft) {
 		return {};
 	}
+
 	return {
 	    .changed = true,
 	    .resetHardwareScroll = true,

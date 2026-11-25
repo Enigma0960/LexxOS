@@ -34,6 +34,7 @@ int GbTestRunProgram::run(
 		context.writeErrorLine("gb-test-run: invalid cycles count");
 		return 2;
 	}
+
 	if (cycleLimit > maxGbTestCycles) {
 		cycleLimit = maxGbTestCycles;
 	}

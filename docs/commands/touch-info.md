@@ -1,6 +1,6 @@
 # `touch-info`
 
-show touch panel state.
+Показывает сведения о сенсорном экране.
 
 ## Справка shell
 

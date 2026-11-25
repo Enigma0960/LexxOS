@@ -1,6 +1,6 @@
 # `write`
 
-write text to a writable VFS file.
+Записывает текст в файл VFS.
 
 ## Справка shell
 

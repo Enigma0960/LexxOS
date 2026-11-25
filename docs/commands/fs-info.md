@@ -1,6 +1,6 @@
 # `fs-info`
 
-show VFS diagnostic information.
+Показывает диагностические сведения VFS.
 
 ## Справка shell
 

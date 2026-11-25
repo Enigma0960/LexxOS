@@ -12,6 +12,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::text_editor_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -23,12 +24,12 @@ namespace {
 
 	constexpr ProgramArgumentSpec editArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "VFS text file path",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "VFS text file path",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	};
 
@@ -87,6 +88,7 @@ int EditProgram::run(lexxos::os::AppContext& context,
 	if (!detail::EditorFileService::load(context, path.data(), session->buffer, createdNewFile)) {
 		return 1;
 	}
+
 	(void) createdNewFile;
 
 	return detail::EditorController::run(context, path.data(), session->buffer, session->state);

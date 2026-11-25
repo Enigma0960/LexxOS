@@ -4,53 +4,20 @@
 
 namespace lexxos::devices {
 
-DeviceResourceLock::DeviceResourceLock(DeviceManager& manager, Kind kind, std::size_t index)
-    : _manager(&manager)
-    , _kind(kind)
-    , _index(index) {
-}
-
-DeviceResourceLock::DeviceResourceLock(DeviceResourceLock&& other) noexcept
-    : _manager(std::exchange(other._manager, nullptr))
-    , _kind(std::exchange(other._kind, Kind::None))
-    , _index(std::exchange(other._index, 0)) {
-}
-
-DeviceResourceLock& DeviceResourceLock::operator=(DeviceResourceLock&& other) noexcept {
-	if (this != &other) {
-		release();
-		_manager = std::exchange(other._manager, nullptr);
-		_kind = std::exchange(other._kind, Kind::None);
-		_index = std::exchange(other._index, 0);
-	}
-	return *this;
-}
-
-DeviceResourceLock::~DeviceResourceLock() {
-	release();
-}
-
-bool DeviceResourceLock::valid() const {
-	return _manager != nullptr && _kind != Kind::None;
-}
-
-DeviceResourceLock::operator bool() const {
-	return valid();
-}
-
-void DeviceResourceLock::release() {
-	if (_manager == nullptr || _kind == Kind::None) {
-		return;
-	}
-
-	_manager->_release(_kind, _index);
-	_manager = nullptr;
-	_kind = Kind::None;
-	_index = 0;
-}
-
 void DeviceManager::initialize() {
+	_boardPwmOutputs = {};
+	_boardAnalogInputs = {};
+	_boardAnalogOutputs = {};
+	_i2cReservationCount = 0;
 	_i2cBuses.clear();
+	_boardI2c = {};
+	_spiBuses.clear();
+	_boardSpi = {};
+	_boardSpiControllers = {};
+	_uartBuses.clear();
+	_gpioPins.clear();
+	_boardDrivers.reset();
+	_boardDriverCount = 0;
 	_blockDevices.clear();
 	_displayDevices.clear();
 	_inputDevices.clear();
@@ -159,23 +126,236 @@ I2cBusDescriptor const& DeviceManager::i2cBusAt(std::size_t index) const {
 }
 
 bool DeviceManager::isI2cBusLocked(std::string_view name) const {
-	return _i2cBuses.isLocked(name);
+	auto const index = _canonicalI2cIndex(name);
+	return index != detail::invalidDeviceResourceIndex
+	    && _i2cBuses.isLockedAt(index);
 }
 
 bool DeviceManager::isI2cBusLockedAt(std::size_t index) const {
-	return _i2cBuses.isLockedAt(index);
+	return index < _i2cBuses.count()
+	    && isI2cBusLocked(_i2cBuses.at(index).name);
 }
 
 DeviceResourceStatus DeviceManager::i2cBusStatusAt(std::size_t index) const {
-	return _i2cBuses.statusAt(index);
+	if (index >= _i2cBuses.count()) {
+		return {};
+	}
+	auto const canonical = _canonicalI2cIndex(_i2cBuses.at(index).name);
+	return _i2cBuses.statusAt(canonical);
+}
+
+std::size_t DeviceManager::_canonicalI2cIndex(std::string_view name) const {
+	auto const index = _i2cBuses.findIndex(name);
+	if (index == detail::invalidDeviceResourceIndex) {
+		return index;
+	}
+
+	auto* const bus = _i2cBuses.at(index).bus;
+	for (std::size_t i = 0; i < index; ++i) {
+		if (_i2cBuses.at(i).bus == bus) {
+			return i;
+		}
+	}
+
+	return index;
 }
 
 DeviceResourceLock DeviceManager::lockI2cBus(std::string_view name, DeviceResourcePriority priority, std::string_view owner) {
-	auto const index = _i2cBuses.findIndex(name);
+	auto const index = _canonicalI2cIndex(name);
 	if (index == detail::invalidDeviceResourceIndex || !_i2cBuses.tryLock(index, priority, owner)) {
 		return {};
 	}
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::I2cBus, index};
+}
+
+bool DeviceManager::reserveI2cAddress(std::string_view busName,
+    std::uint8_t address, std::string_view owner) {
+	auto* const bus = i2cBus(busName);
+	if (bus == nullptr || address < 0x08U || address > 0x77U || owner.empty()) {
+		return false;
+	}
+
+	for (std::size_t i = 0; i < _i2cReservationCount; ++i) {
+		if (_i2cReservations[i].bus == bus && _i2cReservations[i].address == address) {
+			return _i2cReservations[i].owner == owner;
+		}
+	}
+
+	if (_i2cReservationCount == _i2cReservations.size()) {
+		return false;
+	}
+
+	_i2cReservations[_i2cReservationCount++] = {bus, address, owner};
+	return true;
+}
+
+bool DeviceManager::isI2cAddressReserved(I2cBus const& bus, std::uint8_t address) const {
+	for (std::size_t i = 0; i < _i2cReservationCount; ++i) {
+		if (_i2cReservations[i].bus == &bus && _i2cReservations[i].address == address) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeviceManager::registerSpiBus(std::string_view name,
+    std::string_view description, SpiBus& bus) {
+	return _spiBuses.add({.name = name, .description = description, .bus = &bus});
+}
+
+bool DeviceManager::registerUartBus(std::string_view name,
+    std::string_view description, UartBus& bus) {
+	return _uartBuses.add({.name = name, .description = description, .bus = &bus});
+}
+
+bool DeviceManager::registerGpioPin(std::string_view name,
+    std::string_view description, lexxos::platform::GpioPin pin,
+    bool inputAllowed, bool outputAllowed) {
+	if (!pin.isValid() || (!inputAllowed && !outputAllowed)) {
+		return false;
+	}
+
+	for (std::size_t i = 0; i < _gpioPins.count(); ++i) {
+		if (_gpioPins.at(i).pin.number == pin.number) {
+			return false;
+		}
+	}
+
+	return _gpioPins.add({
+	    .name = name,
+	    .description = description,
+	    .pin = pin,
+	    .inputAllowed = inputAllowed,
+	    .outputAllowed = outputAllowed,
+	});
+}
+
+SpiBus* DeviceManager::spiBus(std::string_view name) {
+	auto* entry = _spiBuses.find(name);
+	return entry ? entry->bus : nullptr;
+}
+
+std::size_t DeviceManager::spiBusCount() const {
+	return _spiBuses.count();
+}
+
+SpiBusDescriptor const& DeviceManager::spiBusAt(std::size_t index) const {
+	return _spiBuses.at(index);
+}
+
+DeviceResourceStatus DeviceManager::spiBusStatusAt(std::size_t index) const {
+	if (index >= _spiBuses.count()) {
+		return {};
+	}
+
+	auto* const bus = _spiBuses.at(index).bus;
+	for (std::size_t i = 0; i < index; ++i) {
+		if (_spiBuses.at(i).bus == bus) {
+			return _spiBuses.statusAt(i);
+		}
+	}
+
+	return _spiBuses.statusAt(index);
+}
+
+DeviceResourceLock DeviceManager::lockSpiBus(std::string_view name,
+    DeviceResourcePriority priority, std::string_view owner) {
+	auto index = _spiBuses.findIndex(name);
+	if (index == detail::invalidDeviceResourceIndex) {
+		return {};
+	}
+
+	auto* const bus = _spiBuses.at(index).bus;
+	for (std::size_t i = 0; i < index; ++i) {
+		if (_spiBuses.at(i).bus == bus) {
+			index = i;
+			break;
+		}
+	}
+
+	if (!_spiBuses.tryLock(index, priority, owner)) {
+		return {};
+	}
+
+	return DeviceResourceLock{*this, DeviceResourceLock::Kind::SpiBus, index};
+}
+
+UartBus* DeviceManager::uartBus(std::string_view name) {
+	auto* entry = _uartBuses.find(name);
+	return entry ? entry->bus : nullptr;
+}
+
+std::size_t DeviceManager::uartBusCount() const {
+	return _uartBuses.count();
+}
+
+UartBusDescriptor const& DeviceManager::uartBusAt(std::size_t index) const {
+	return _uartBuses.at(index);
+}
+
+DeviceResourceStatus DeviceManager::uartBusStatusAt(std::size_t index) const {
+	if (index >= _uartBuses.count()) {
+		return {};
+	}
+
+	auto* const bus = _uartBuses.at(index).bus;
+	for (std::size_t i = 0; i < index; ++i) {
+		if (_uartBuses.at(i).bus == bus) {
+			return _uartBuses.statusAt(i);
+		}
+	}
+
+	return _uartBuses.statusAt(index);
+}
+
+DeviceResourceLock DeviceManager::lockUartBus(std::string_view name,
+    DeviceResourcePriority priority, std::string_view owner) {
+	auto index = _uartBuses.findIndex(name);
+	if (index == detail::invalidDeviceResourceIndex) {
+		return {};
+	}
+
+	auto* const bus = _uartBuses.at(index).bus;
+	for (std::size_t i = 0; i < index; ++i) {
+		if (_uartBuses.at(i).bus == bus) {
+			index = i;
+			break;
+		}
+	}
+
+	if (!_uartBuses.tryLock(index, priority, owner)) {
+		return {};
+	}
+
+	return DeviceResourceLock{*this, DeviceResourceLock::Kind::UartBus, index};
+}
+
+GpioPinDescriptor const* DeviceManager::gpioPin(std::string_view name) const {
+	return _gpioPins.find(name);
+}
+
+std::size_t DeviceManager::gpioPinCount() const {
+	return _gpioPins.count();
+}
+
+GpioPinDescriptor const& DeviceManager::gpioPinAt(std::size_t index) const {
+	return _gpioPins.at(index);
+}
+
+DeviceResourceStatus DeviceManager::gpioPinStatusAt(std::size_t index) const {
+	return _gpioPins.statusAt(index);
+}
+
+DeviceResourceLock DeviceManager::lockGpioPin(std::string_view name,
+    DeviceResourcePriority priority, std::string_view owner) {
+	auto const index = _gpioPins.findIndex(name);
+	if (index == detail::invalidDeviceResourceIndex
+	    || !_gpioPins.tryLock(index, priority, owner)) {
+		return {};
+	}
+
+	return DeviceResourceLock{*this, DeviceResourceLock::Kind::GpioPin, index};
 }
 
 BlockDevice* DeviceManager::blockDevice(std::string_view name) {
@@ -213,6 +393,7 @@ DeviceResourceLock DeviceManager::lockBlockDevice(std::string_view name, DeviceR
 	if (index == detail::invalidDeviceResourceIndex || !_blockDevices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::BlockDevice, index};
 }
 
@@ -262,6 +443,7 @@ DeviceResourceLock DeviceManager::lockDisplayDevice(
 	if (index == detail::invalidDeviceResourceIndex || !_displayDevices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::DisplayDevice, index};
 }
 
@@ -311,6 +493,7 @@ DeviceResourceLock DeviceManager::lockInputDevice(
 	if (index == detail::invalidDeviceResourceIndex || !_inputDevices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::InputDevice, index};
 }
 
@@ -360,6 +543,7 @@ DeviceResourceLock DeviceManager::lockPointingDevice(
 	if (index == detail::invalidDeviceResourceIndex || !_pointingDevices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::PointingDevice, index};
 }
 
@@ -409,6 +593,7 @@ DeviceResourceLock DeviceManager::lockGamepadDevice(
 	if (index == detail::invalidDeviceResourceIndex || !_gamepadDevices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::GamepadDevice, index};
 }
 
@@ -458,6 +643,7 @@ DeviceResourceLock DeviceManager::lockSensorDevice(
 	if (index == detail::invalidDeviceResourceIndex || !_sensorDevices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::SensorDevice, index};
 }
 
@@ -507,6 +693,7 @@ DeviceResourceLock DeviceManager::lockInfraredDevice(
 	if (index == detail::invalidDeviceResourceIndex || !_infraredDevices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::InfraredDevice, index};
 }
 
@@ -548,6 +735,7 @@ DeviceResourceLock DeviceManager::lockPicoCalcSouthbridgeService(
 	if (index == detail::invalidDeviceResourceIndex || !_picoCalcSouthbridgeServices.tryLock(index, priority, owner)) {
 		return {};
 	}
+
 	return DeviceResourceLock{*this, DeviceResourceLock::Kind::PicoCalcSouthbridgeService, index};
 }
 
@@ -555,6 +743,15 @@ void DeviceManager::_release(DeviceResourceLock::Kind kind, std::size_t index) {
 	switch (kind) {
 		case DeviceResourceLock::Kind::I2cBus:
 			_i2cBuses.release(index);
+			break;
+		case DeviceResourceLock::Kind::SpiBus:
+			_spiBuses.release(index);
+			break;
+		case DeviceResourceLock::Kind::UartBus:
+			_uartBuses.release(index);
+			break;
+		case DeviceResourceLock::Kind::GpioPin:
+			_gpioPins.release(index);
 			break;
 		case DeviceResourceLock::Kind::BlockDevice:
 			_blockDevices.release(index);

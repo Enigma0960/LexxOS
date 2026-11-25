@@ -70,11 +70,13 @@ bool ensureSdReadyForAutoMount(lexxos::platform::PlatformServices const& platfor
 		if (sd_card::probe(platform, sdAutoMountProbeAttempts) && readSdBlock0ForAutoMount(devices)) {
 			return true;
 		}
+
 		if (round + 1U < sdAutoMountProbeRounds) {
 			writeConsoleLine(platform, "sd automount: probe failed, retrying");
 			sleepMs(platform, sdAutoMountProbeRetryDelayMs);
 		}
 	}
+
 	return false;
 }
 #endif
@@ -104,6 +106,7 @@ bool lexxos::app::SdAutomountService::mount(std::string_view reason) {
 	if (fat::isMounted(mountPath)) {
 		return true;
 	}
+
 	if (_operatingSystem.vfs().isMountTarget(mountPath)) {
 		writeConsole(platform, "sd automount: stale mount at ");
 		writeConsole(platform, mountPath);
@@ -116,6 +119,7 @@ bool lexxos::app::SdAutomountService::mount(std::string_view reason) {
 		writeConsoleLine(platform, "sd automount: sd0 is not registered in DeviceManager");
 		return false;
 	}
+
 	auto sdLock = devices.lockBlockDevice("sd0", lexxos::devices::DeviceResourcePriority::System, "sd-automount");
 	if (!sdLock) {
 		writeConsoleLine(platform, "sd automount: sd0 is busy");
@@ -152,6 +156,7 @@ bool lexxos::app::SdAutomountService::mount(std::string_view reason) {
 		if (_postMountHandler != nullptr) {
 			_postMountHandler(_operatingSystem, reason);
 		}
+
 		return true;
 	}
 
@@ -182,6 +187,7 @@ void lexxos::app::SdAutomountService::unmount(std::string_view reason) {
 			writeConsole(platform, ", ");
 			writeConsole(platform, lexxos::vfs::toString(status));
 		}
+
 		writeConsoleLine(platform, ")");
 		return;
 	}
@@ -193,10 +199,12 @@ void lexxos::app::SdAutomountService::unmount(std::string_view reason) {
 		writeConsole(platform, reason);
 		writeConsole(platform, ")");
 	}
+
 	if (status != lexxos::vfs::UnmountStatus::Ok) {
 		writeConsole(platform, ": ");
 		writeConsole(platform, lexxos::vfs::toString(status));
 	}
+
 	writeConsoleLine(platform, "");
 #endif
 }

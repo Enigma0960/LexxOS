@@ -1,0 +1,55 @@
+diff --git a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
+index ccad3da..f76d0e2 100644
+--- a/arch/arm/mach-rockchip/board.c
++++ b/arch/arm/mach-rockchip/board.c
+@@ -519,6 +519,10 @@ static void scan_run_cmd(void)
+ 	}
+ }
+ 
++#ifdef CONFIG_PICOCALC_LYRA_SPLASH
++int picocalc_splash_show(void);
++#endif
++
+ int board_late_init(void)
+ {
+ #ifdef CONFIG_ROCKCHIP_SET_ETHADDR
+@@ -554,6 +558,10 @@ int board_late_init(void)
+ 	env_fixup();
+ 	soc_clk_dump();
+ 	cmdline_handle();
++#ifdef CONFIG_PICOCALC_LYRA_SPLASH
++	if (rockchip_get_boot_mode() != BOOT_MODE_QUIESCENT)
++		picocalc_splash_show();
++#endif
+ 	scan_run_cmd();
+ #ifdef CONFIG_AMP
+ 	amp_cpus_on();
+diff --git a/board/rockchip/evb_rk3506/Kconfig b/board/rockchip/evb_rk3506/Kconfig
+index b037de8..b35ad48 100644
+--- a/board/rockchip/evb_rk3506/Kconfig
++++ b/board/rockchip/evb_rk3506/Kconfig
+@@ -12,4 +12,12 @@ config SYS_CONFIG_NAME
+ config BOARD_SPECIFIC_OPTIONS # dummy
+ 	def_bool y
+ 
++config PICOCALC_LYRA_SPLASH
++	bool "PicoCalc LCD splash on Luckfox Lyra"
++	default n
++	help
++	  Drive PicoCalc's 320x320 SPI LCD before normal boot commands.
++	  Uses SPI0 and GPIO0_A2/A3/A4/A6/A7 exclusively; enable only
++	  for a Lyra connected to a PicoCalc display with this wiring.
++
+ endif
+diff --git a/board/rockchip/evb_rk3506/Makefile b/board/rockchip/evb_rk3506/Makefile
+index 31f6069..8446bc6 100644
+--- a/board/rockchip/evb_rk3506/Makefile
++++ b/board/rockchip/evb_rk3506/Makefile
+@@ -5,3 +5,7 @@
+ #
+ 
+ obj-y	+= evb_rk3506.o
++
++ifndef CONFIG_SPL_BUILD
++obj-$(CONFIG_PICOCALC_LYRA_SPLASH) += picocalc_splash.o
++endif

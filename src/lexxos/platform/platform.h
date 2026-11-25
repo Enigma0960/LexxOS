@@ -17,7 +17,7 @@ enum class GpioInterruptEdge : std::uint8_t {
 using GpioInterruptHandler = void (*)(GpioPin pin, bool value, void* userData);
 
 void initialize();
-BoardDescriptor const& board();
+LegacyBoardDescriptor const& board();
 void writeConsole(std::string_view text);
 bool readConsoleChar(char& value);
 #if defined(LEXXOS_PLATFORM_HOST)

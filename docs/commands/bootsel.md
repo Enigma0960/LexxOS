@@ -1,6 +1,6 @@
 # `bootsel`
 
-reboot RP2040 into USB BOOTSEL loader.
+Перезагружает RP2040 в USB-загрузчик BOOTSEL.
 
 ## Справка shell
 

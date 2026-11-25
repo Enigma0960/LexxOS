@@ -1,6 +1,6 @@
 # Матрица команд и условий сборки
 
-Каталог [cmake/commands.json](../cmake/commands.json) управляет регистрацией и исходниками встроенных команд.
+Каталог [config/cmake/commands.json](../config/cmake/commands.json) управляет регистрацией и исходниками встроенных команд.
 Команда включается при `LEXXOS_COMMANDS_<группа>=ON` **и** выполнении всех её зависимостей.
 Группы не отключают драйверы и системные сервисы, которые могут использоваться ОС или другими командами.
 `shell` — обязательный bootstrap runtime и остаётся независимо от группы SYSTEM.
@@ -258,7 +258,7 @@ cmake --preset full-dev-sim -B build/headless -DLEXXOS_FEATURE_DISPLAY=OFF -DLEX
 ## Поддержание каталога
 
 При добавлении команды задавайте name, group, requires, type, header, sources и doc в
-[manifest](../cmake/commands.json). Источники регистрации больше не дублируются в групповых C++ файлах.
+[manifest](../config/cmake/commands.json). Источники регистрации больше не дублируются в групповых C++ файлах.
 Перечень аппаратных возможностей нужно обновлять вместе с board providers. Изменения manifest/генератора
 автоматически запускают CMake reconfigure. Проверки каталога находятся в
 [tests/python/test_command_catalog.py](../tests/python/test_command_catalog.py).

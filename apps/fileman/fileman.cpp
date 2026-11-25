@@ -1,7 +1,8 @@
+#include "input_reader.h"
+
 #include <lexx/lexx.h>
 
 #include "file_operations.h"
-#include "input_reader.h"
 
 namespace {
 
@@ -68,9 +69,11 @@ bool copy(char* destination, lexx::size_t capacity, char const* value) {
 	if (count >= capacity) {
 		return false;
 	}
+
 	for (lexx::size_t i = 0; i <= count; ++i) {
 		destination[i] = value[i];
 	}
+
 	return true;
 }
 
@@ -87,10 +90,12 @@ bool sameName(char const* left, char const* right) {
 		if (left[i] != right[i]) {
 			return false;
 		}
+
 		if (left[i] == 0) {
 			return true;
 		}
 	}
+
 	return true;
 }
 
@@ -98,19 +103,23 @@ bool comesBefore(lexx::DirectoryEntry const& a, lexx::DirectoryEntry const& b) {
 	if (a.type == lexx::node_directory && b.type != lexx::node_directory) {
 		return true;
 	}
+
 	if (a.type != lexx::node_directory && b.type == lexx::node_directory) {
 		return false;
 	}
+
 	for (int i = 0; i < kNameLength; ++i) {
 		auto const left = lower(a.name[i]);
 		auto const right = lower(b.name[i]);
 		if (left != right) {
 			return left < right;
 		}
+
 		if (left == 0) {
 			return false;
 		}
 	}
+
 	return false;
 }
 
@@ -122,6 +131,7 @@ void sort(Panel& panel) {
 			panel.items[pos] = panel.items[pos - 1];
 			--pos;
 		}
+
 		panel.items[pos] = key;
 	}
 }
@@ -148,15 +158,19 @@ void keepSelectionVisible(Panel& panel) {
 		panel.firstVisible = 0;
 		return;
 	}
+
 	if (panel.selected < 0) {
 		panel.selected = 0;
 	}
+
 	if (panel.selected >= panel.count) {
 		panel.selected = panel.count - 1;
 	}
+
 	if (panel.firstVisible > panel.selected) {
 		panel.firstVisible = panel.selected;
 	}
+
 	if (panel.selected >= panel.firstVisible + panelRows()) {
 		panel.firstVisible = panel.selected - panelRows() + 1;
 	}
@@ -183,6 +197,7 @@ bool load(Panel& panel) {
 			message("Cannot read directory");
 			return false;
 		}
+
 		if (result == 0) {
 			break;
 		}
@@ -192,16 +207,20 @@ bool load(Panel& panel) {
 			if (name[0] == 0) {
 				continue;
 			}
+
 			if (name[0] == '.' && (name[1] == 0 || (name[1] == '.' && name[2] == 0))) {
 				continue;
 			}
+
 			if (!g_settings.showHidden && name[0] == '.') {
 				continue;
 			}
+
 			if (panel.count >= kEntries) {
 				panel.truncated = true;
 				break;
 			}
+
 			panel.items[panel.count++] = g_page[i];
 		}
 
@@ -222,6 +241,7 @@ bool load(Panel& panel) {
 
 		lexx::yield();
 	}
+
 	sort(panel);
 	panel.valid = true;
 	return true;
@@ -258,15 +278,19 @@ bool join(char* output, char const* base, char const* name) {
 	if (count + (separator ? 1U : 0U) + nameCount >= kPathLength) {
 		return false;
 	}
+
 	for (lexx::size_t i = 0; i < count; ++i) {
 		output[i] = base[i];
 	}
+
 	if (separator) {
 		output[count++] = '/';
 	}
+
 	for (lexx::size_t i = 0; i <= nameCount; ++i) {
 		output[count + i] = name[i];
 	}
+
 	return true;
 }
 
@@ -275,12 +299,15 @@ void parent(Panel& panel) {
 	while (size > 1 && panel.path[size - 1] == '/') {
 		--size;
 	}
+
 	while (size > 1 && panel.path[size - 1] != '/') {
 		--size;
 	}
+
 	if (size > 1) {
 		--size;
 	}
+
 	panel.path[size] = 0;
 	if (load(panel)) {
 		message("Parent directory");
@@ -329,6 +356,7 @@ void field(char const* text, int width) {
 	while (index < width && text[index] != 0) {
 		character(text[index++]);
 	}
+
 	while (index++ < width) {
 		character(' ');
 	}
@@ -394,6 +422,7 @@ void drawPanel(int panelIndex) {
 					append(item.type == lexx::node_directory ? "\x1b[1;36;44m" : "\x1b[37;44m");
 				}
 			}
+
 			character(' ');
 			field(item.name, width - 9);
 			character(' ');
@@ -404,11 +433,13 @@ void drawPanel(int panelIndex) {
 			} else {
 				fieldNumber(item.size_low, 6);
 			}
+
 			character(' ');
 		} else {
 			field("", width);
 		}
 	}
+
 	cursor(g_settings.rows - 3, column);
 	append("\x1b[30;46m");
 	field(panel.truncated ? "List limited to 96 items" : "", width);
@@ -460,6 +491,7 @@ void drawSettings(int selected) {
 	for (int row = 2; row <= g_settings.rows; ++row) {
 		labelRow(row, "", "\x1b[37;44m");
 	}
+
 	for (int option = 0; option < 3; ++option) {
 		cursor(4 + option * 2, 3);
 		append(option == selected ? "\x1b[30;47m" : "\x1b[37;44m");
@@ -473,8 +505,10 @@ void drawSettings(int selected) {
 			append(" Hidden entries: ");
 			append(g_settings.showHidden ? "show" : "hide");
 		}
+
 		append("\x1b[0m");
 	}
+
 	labelRow(g_settings.rows - 2, " Up/Down select  Left/Right change", "\x1b[30;46m");
 	labelRow(g_settings.rows - 1, " Enter toggles hidden entries", "\x1b[30;47m");
 	labelRow(g_settings.rows, " Esc/Q return to panels", "\x1b[37;44m");
@@ -490,15 +524,19 @@ void options(fileman::InputReader& input) {
 			lexx::yield();
 			continue;
 		}
+
 		if (key == fileman::InputKey::Escape || key == fileman::InputKey::Quit || key == fileman::InputKey::Options) {
 			break;
 		}
+
 		if (key == fileman::InputKey::Up && selection > 0) {
 			--selection;
 		}
+
 		if (key == fileman::InputKey::Down && selection < 2) {
 			++selection;
 		}
+
 		if (key == fileman::InputKey::Left || key == fileman::InputKey::Right || key == fileman::InputKey::Enter) {
 			int const delta = key == fileman::InputKey::Left ? -2 : 2;
 			if (selection == 0 && key != fileman::InputKey::Enter) {
@@ -518,12 +556,15 @@ void options(fileman::InputReader& input) {
 				}
 			}
 		}
+
 		lexx::write("\x1b[2J\x1b[H");
 		drawSettings(selection);
 	}
+
 	for (auto& panel : g_panels) {
 		keepSelectionVisible(panel);
 	}
+
 	lexx::write("\x1b[2J\x1b[H");
 	message("Options updated (session only)");
 }
@@ -547,6 +588,7 @@ void resetViewLines() {
 		for (int column = 0; column < viewerWidth(); ++column) {
 			g_viewLines[row][column] = ' ';
 		}
+
 		g_viewLines[row][viewerWidth()] = 0;
 	}
 }
@@ -604,6 +646,7 @@ ViewerPage readViewerPage(lexx::uint32_t fd, Offset start) {
 						break;
 					}
 				} while ((column & 3) != 0);
+
 				continue;
 			}
 
@@ -613,6 +656,7 @@ ViewerPage readViewerPage(lexx::uint32_t fd, Offset start) {
 				++row;
 			}
 		}
+
 		lexx::yield();
 	}
 
@@ -695,11 +739,13 @@ void showFile(char const* path, fileman::InputReader& input) {
 				lexx::yield();
 				continue;
 			}
+
 			if (key == fileman::InputKey::Escape || key == fileman::InputKey::Quit || key == fileman::InputKey::View || key == fileman::InputKey::Backspace) {
 				(void) lexx::close(static_cast<lexx::uint32_t>(fd));
 				lexx::write("\x1b[2J\x1b[H");
 				return;
 			}
+
 			if (key == fileman::InputKey::PageDown || key == fileman::InputKey::Down || key == fileman::InputKey::Right) {
 				if (pageIndex + 1 < historyCount) {
 					++pageIndex;
@@ -714,6 +760,7 @@ void showFile(char const* path, fileman::InputReader& input) {
 					for (int i = 1; i < kViewerHistory; ++i) {
 						g_history[i - 1] = g_history[i];
 					}
+
 					g_history[kViewerHistory - 1] = data.next;
 					pageIndex = kViewerHistory - 1;
 				} else {
@@ -723,6 +770,7 @@ void showFile(char const* path, fileman::InputReader& input) {
 
 				break;
 			}
+
 			if (key == fileman::InputKey::PageUp || key == fileman::InputKey::Up || key == fileman::InputKey::Left) {
 				if (pageIndex > 0) {
 					--pageIndex;
@@ -768,6 +816,7 @@ void showDialog(char const* heading, char const* path, char const* details) {
 	for (int row = 2; row <= g_settings.rows; ++row) {
 		labelRow(row, "", "\x1b[37;44m");
 	}
+
 	labelRow(3, heading, "\x1b[1;37;44m");
 	labelRow(4, path, "\x1b[37;44m");
 	labelRow(g_settings.rows - 1, details, "\x1b[30;46m");
@@ -782,9 +831,11 @@ bool confirmDeletion(char const* path) {
 			lexx::yield();
 			continue;
 		}
+
 		if (value == lexx::cancelled) {
 			return false;
 		}
+
 		return value == 'y' || value == 'Y';
 	}
 }
@@ -793,6 +844,7 @@ bool renamePrompt(char* name, lexx::size_t capacity, char const* path, char cons
 	if (!copy(name, capacity, current)) {
 		return false;
 	}
+
 	lexx::size_t used = length(name);
 	for (;;) {
 		showDialog(" Rename selected item", path, " Enter=accept  Esc=cancel  Backspace=erase");
@@ -806,21 +858,27 @@ bool renamePrompt(char* name, lexx::size_t capacity, char const* path, char cons
 				lexx::yield();
 				continue;
 			}
-			if (value == lexx::cancelled || value == 0x1b) {
+
+			if (value == lexx::cancelled || value == 0x1B) {
 				return false;
 			}
+
 			if (value == '\r' || value == '\n') {
 				if (used == 0 || (used == 1 && name[0] == '.') || (used == 2 && name[0] == '.' && name[1] == '.')) {
 					return false;
 				}
+
 				return true;
 			}
-			if (value == 0x7f || value == '\b') {
+
+			if (value == 0x7F || value == '\b') {
 				if (used) {
 					name[--used] = 0;
 				}
+
 				break;
 			}
+
 			if (value >= 32 && value < 127 && value != '/' && value != '\\' && used + 1 < capacity) {
 				name[used++] = static_cast<char>(value);
 				name[used] = 0;
@@ -837,12 +895,14 @@ void performOperation(fileman::InputKey action) {
 		message("No source item selected");
 		return;
 	}
+
 	char const* name = sourcePanel.items[sourcePanel.selected].name;
 	char source[kPathLength]{};
 	if (!join(source, sourcePanel.path, name)) {
 		message("Source path too long");
 		return;
 	}
+
 	char target[kPathLength]{};
 	if (action == fileman::InputKey::Copy || action == fileman::InputKey::Move) {
 		if (!targetPanel.valid || !join(target, targetPanel.path, name)) {
@@ -856,11 +916,13 @@ void performOperation(fileman::InputKey action) {
 			message("Rename cancelled");
 			return;
 		}
+
 		if (!join(target, sourcePanel.path, newName)) {
 			message("New path too long");
 			return;
 		}
 	}
+
 	if (action == fileman::InputKey::Delete && !confirmDeletion(source)) {
 		lexx::write("\x1b[2J\x1b[H");
 		message("Delete cancelled");
@@ -877,6 +939,7 @@ void performOperation(fileman::InputKey action) {
 		case fileman::InputKey::Delete: result = fileman::deletePath(source); break;
 		default                       : return;
 	}
+
 	lexx::write("\x1b[2J\x1b[H");
 	reloadPreservingSelection(sourcePanel);
 	reloadPreservingSelection(targetPanel);
@@ -911,6 +974,7 @@ int appMain() {
 		if (key == fileman::InputKey::Quit || key == fileman::InputKey::Escape) {
 			break;
 		}
+
 		if (key == fileman::InputKey::Tab) {
 			g_active = 1 - g_active;
 		} else if (key == fileman::InputKey::Up) {
@@ -937,8 +1001,10 @@ int appMain() {
 		} else {
 			continue;
 		}
+
 		draw();
 	}
+
 	lexx::write("\x1b[0m\x1b[?25h\x1b[2J\x1b[H");
 	return 0;
 }

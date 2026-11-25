@@ -1,6 +1,6 @@
 # `touch-calibrate`
 
-calibrate touch panel.
+Калибрует сенсорный экран.
 
 ## Справка shell
 

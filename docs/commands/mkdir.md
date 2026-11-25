@@ -1,6 +1,6 @@
 # `mkdir`
 
-create a writable VFS directory.
+Создаёт каталог в доступной для записи VFS.
 
 ## Справка shell
 

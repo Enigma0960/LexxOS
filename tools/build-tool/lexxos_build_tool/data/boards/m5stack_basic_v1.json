@@ -1,0 +1,18 @@
+{
+  "id": "m5stack_basic_v1",
+  "name": "M5Stack Basic v1",
+  "platform": "espidf",
+  "preset": "debug-esp32",
+  "buildDir": "build/configurator/esp32",
+  "userPresetName": "user-espidf-m5stack_basic_v1",
+  "cmakeDefaults": {
+    "IDF_TARGET": "esp32"
+  },
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_ENABLE_GAMEBOY": "OFF"
+  }
+}

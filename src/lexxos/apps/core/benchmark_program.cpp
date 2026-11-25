@@ -8,15 +8,18 @@
 #include <cstring>
 #include <limits>
 #include <new>
+#include <optional>
 #include <string_view>
 
 #include <lexxos/app/console_mirror.h>
 #include <lexxos/app/detail/lcd_console_target.h>
 #include <lexxos/apps/common/core_programs_support.h>
-#include <lexxos/apps/common/pretty_table.h>
+#include <lexxos/apps/core/detail/benchmark_probes.h>
 #include <lexxos/apps/rtc/detail/rtc_program_support.h>
+#include <lexxos/build_info.h>
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/devices/display_device.h>
+#include <lexxos/external_program/external_program_runner.h>
 #include <lexxos/feature.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/kernel/scheduler.h>
@@ -36,6 +39,18 @@
 #if defined(LEXXOS_KERNEL_FREERTOS)
 	#include <FreeRTOS.h>
 	#include <semphr.h>
+
+	#include <lexxos/devices/bus/bus_transaction_queue.h>
+	#include <lexxos/kernel/synchronization.h>
+
+	#if defined(LEXXOS_PLATFORM_RK3506) && defined(LEXXOS_RK3506_FREERTOS)
+		#include <lexxos/platform/rockchip/rk3506/irq_tick_probe.h>
+	#endif
+#endif
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+extern "C" std::uint64_t rk3506_timer_counter();
+extern "C" std::uint32_t rk3506_timer_counter_frequency();
 #endif
 
 namespace lexxos::apps::system_programs {
@@ -80,57 +95,67 @@ namespace {
 	constexpr std::string_view yesText = "yes";
 	constexpr std::string_view noText = "no";
 	constexpr std::string_view displayBenchmarkOwner = "bench-display";
-	constexpr char defaultReportPath[] = "/mnt/sd/apps/bench/system-benchmark.txt";
-	constexpr char defaultReportDirectory[] = "/mnt/sd/apps/bench";
-	constexpr char fallbackReportDirectory[] = "/tmp";
+	constexpr char defaultReportPath[] = "/mnt/sd/system-benchmark.txt";
+	constexpr char defaultReportDirectory[] = "/mnt/sd";
 	constexpr char defaultIoPath[] = "/tmp/bench-io.tmp";
 
 	constexpr ProgramArgumentSpec benchmarkArguments[] = {
+	    {.name = "profile", .valueName = "quick|full|soak|sync|vm|vm-detail", .help = "system, RV32I VM or detailed opcode benchmark", .defaultValue = "quick"},
+	    {.name = "vm-case", .valueName = "substring", .help = "vm-detail only: select opcode cases by name substring"},
+	    {.name = "vm-repeat", .valueName = "count", .help = "vm-detail only: 1..9 measurements per opcode, default 1", .valueType = ProgramArgumentValueType::Unsigned},
+	    {.name = "duration", .valueName = "seconds", .help = "soak target duration, 1..86400 (default 300)", .valueType = ProgramArgumentValueType::Unsigned, .defaultValue = "300"},
+	    {.name = "device", .valueName = "name", .help = "block device to verify; default mounted /mnt/sd device"},
+	    {.name = "sd-blocks", .valueName = "count", .help = "blocks per raw comparison, 1..1024", .valueType = ProgramArgumentValueType::Unsigned},
+	    {.name = "sd-start", .valueName = "lba", .help = "first raw block (same range repeated during soak)", .valueType = ProgramArgumentValueType::Unsigned, .defaultValue = "0"},
+	    {.name = "write-dir", .valueName = "path", .help = "opt-in SD write/verify in a NEW directory; never raw writes", .valueType = ProgramArgumentValueType::Path},
+	    {.name = "file-bytes", .valueName = "count", .help = "file write size, 1..16777216 (default 1048576)", .valueType = ProgramArgumentValueType::Unsigned, .defaultValue = "1048576"},
+	    {.name = "no-display", .help = "skip graphics/console tests", .kind = ProgramArgumentKind::Flag},
+	    {.name = "no-mirror", .help = "suspend LCD text mirror; requires --no-display", .kind = ProgramArgumentKind::Flag},
 	    {
-         .name = "iterations",
-         .shortName = 'n',
-         .valueName = "count",
-         .help = "synthetic benchmark iterations, default: 200000",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "200000",
+	     .name = "iterations",
+	     .shortName = 'n',
+	     .valueName = "count",
+	     .help = "synthetic benchmark iterations, default: 200000",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "200000",
 	     },
 	    {
-         .name = "tasks",
-         .shortName = 't',
-         .valueName = "count",
-         .help = "worker task count for multitask benchmark, default: 2, max: 4",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "2",
+	     .name = "tasks",
+	     .shortName = 't',
+	     .valueName = "count",
+	     .help = "worker task count for multitask benchmark, default: 2, max: 4",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "2",
 	     },
 	    {
-         .name = "out",
-         .shortName = 'o',
-         .valueName = "path",
-         .help = "report file path, default: timestamped file in /mnt/sd/bench",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Path,
-         .required = false,
-         .defaultValue = defaultReportPath,
+	     .name = "out",
+	     .shortName = 'o',
+	     .valueName = "path",
+	     .help = "report file path, default: timestamped file in /mnt/sd",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Path,
+	     .required = false,
+	     .defaultValue = defaultReportPath,
 	     },
 	    {
-         .name = "io-path",
-         .valueName = "path",
-         .help = "temporary file used by the VFS I/O benchmark, default: /tmp/bench-io.tmp",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Path,
-         .required = false,
-         .defaultValue = defaultIoPath,
+	     .name = "io-path",
+	     .valueName = "path",
+	     .help = "temporary file used by the VFS I/O benchmark, default: /tmp/bench-io.tmp",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Path,
+	     .required = false,
+	     .defaultValue = defaultIoPath,
 	     },
 	    {
-         .name = "no-save",
-         .help = "print the report without saving it to VFS",
-         .kind = ProgramArgumentKind::Flag,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "no-save",
+	     .help = "print the report without saving it to VFS",
+	     .kind = ProgramArgumentKind::Flag,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -160,6 +185,8 @@ namespace {
 	std::string_view platformName() {
 #if defined(LEXXOS_PLATFORM_PICO)
 		return "pico";
+#elif defined(LEXXOS_PLATFORM_RK3506)
+		return "rk3506";
 #elif defined(LEXXOS_PLATFORM_SIM)
 		return "sim";
 #elif defined(LEXXOS_PLATFORM_HOST)
@@ -197,6 +224,7 @@ namespace {
 		for (std::size_t index = 0; index < count; ++index) {
 			output[index] = scratch[scratchSize - index - 1U];
 		}
+
 		output[count] = '\0';
 		return count;
 	}
@@ -215,8 +243,10 @@ namespace {
 				if (size + 1U >= data.size()) {
 					break;
 				}
+
 				data[size++] = character;
 			}
+
 			data[size] = '\0';
 		}
 
@@ -237,8 +267,10 @@ namespace {
 			if (size + 1U >= output.size()) {
 				break;
 			}
+
 			output[size++] = character;
 		}
+
 		output[size] = '\0';
 	}
 
@@ -251,6 +283,7 @@ namespace {
 			buffer[position] = static_cast<char>('0' + (value % 10U));
 			value /= 10U;
 		}
+
 		output.append(std::string_view{buffer, width});
 	}
 
@@ -306,19 +339,35 @@ namespace {
 	struct BenchmarkRow {
 		std::array<char, 20> section{};
 		std::array<char, 32> metric{};
-		std::array<char, 32> value{};
+		std::array<char, 96> value{};
 		std::array<char, 16> unit{};
-		std::array<char, 48> note{};
+		std::array<char, 96> note{};
 	};
 
-	struct BenchmarkReport {
+	struct BenchmarkReport final : detail::BenchmarkMetrics {
 		static constexpr std::size_t maxRows = 160;
 
-		std::array<BenchmarkRow, maxRows> rows{};
-		std::size_t rowCount{0};
+		BenchmarkReport(BenchmarkRow* buffer, std::size_t capacity)
+		    : rows(buffer)
+		    , capacity(capacity) {
+		}
 
-		void add(std::string_view section, std::string_view metric, std::string_view value, std::string_view unit, std::string_view note = {}) {
-			if (rowCount >= rows.size()) {
+		BenchmarkRow* rows;
+		std::size_t capacity;
+		std::size_t rowCount{0};
+		unsigned failures{}, skipped{}, dropped{};
+
+		void add(std::string_view section, std::string_view metric, std::string_view value, std::string_view unit, std::string_view note = {}) override {
+			if (value == "failed" || value == "lock-failed" || value == "invalid" || value == "not-ready") {
+				++failures;
+			}
+
+			if (value == "skipped" || value == "disabled" || value == "n/a" || value == "none") {
+				++skipped;
+			}
+
+			if (rowCount >= capacity) {
+				++dropped;
 				return;
 			}
 
@@ -340,7 +389,7 @@ namespace {
 
 	struct BenchmarkWorker {
 		std::atomic<bool>* start{nullptr};
-		std::atomic<std::uint32_t>* completed{nullptr};
+		std::atomic<bool> completed{false};
 		std::uint32_t iterations{0};
 		std::uint32_t checksum{0};
 	};
@@ -362,7 +411,9 @@ namespace {
 #endif
 
 	struct BenchmarkWorkspace {
-		BenchmarkReport report{};
+		std::array<BenchmarkRow, BenchmarkReport::maxRows> reportRows{};
+		BenchmarkReport report{reportRows.data(), reportRows.size()};
+		detail::BenchmarkProbeWorkspace probes{};
 		std::array<char, lexxos::vfs::maxPathLength> reportPath{};
 		std::array<char, lexxos::vfs::maxPathLength> ioPath{};
 		std::array<char, ioChunkBytes> ioBuffer{};
@@ -370,9 +421,49 @@ namespace {
 		std::array<std::uint16_t, displayBenchmarkMaxWidth> displayPixels{};
 		std::array<std::uint8_t, displayBenchmarkMaxWidth * rgb888BytesPerPixel> displayRgb888Row{};
 		std::atomic<bool> workersStart{false};
-		std::atomic<std::uint32_t> workersCompleted{0};
 		std::array<BenchmarkWorker, maxWorkers> workers{};
 	};
+
+	struct SyncBenchmarkWorkspace {
+		// Each sync report is flushed between phases; 64 rows cover the
+		// largest resource snapshot without allocating CPU/SD/LCD buffers.
+		std::array<BenchmarkRow, 64> reportRows{};
+		BenchmarkReport report{reportRows.data(), reportRows.size()};
+		std::array<char, lexxos::vfs::maxPathLength> reportPath{};
+	};
+
+	struct VmBenchmarkWorkspace {
+		std::array<BenchmarkRow, 64> reportRows{};
+		BenchmarkReport report{reportRows.data(), reportRows.size()};
+		std::array<char, lexxos::vfs::maxPathLength> reportPath{};
+		alignas(4) std::array<std::uint8_t, 128> vmMemory{};
+	};
+
+	std::uint64_t vmClockTicks() {
+#if defined(LEXXOS_PLATFORM_RK3506)
+		return rk3506_timer_counter(); // CNTVCT, not CPU cycles.
+#else
+		return 0;
+#endif
+	}
+
+	std::uint32_t vmClockFrequency() {
+#if defined(LEXXOS_PLATFORM_RK3506)
+		return rk3506_timer_counter_frequency();
+#else
+		return 0;
+#endif
+	}
+
+	std::uint64_t vmElapsedNs(std::uint64_t start, std::uint64_t end, std::uint32_t frequency) {
+		if (frequency == 0U) {
+			return 0;
+		}
+
+		auto const elapsed = end - start;
+		return (elapsed / frequency) * 1000000000ULL
+		    + ((elapsed % frequency) * 1000000000ULL) / frequency;
+	}
 
 	class ReportOutputStream final : public lexxos::io::OutputStream {
 	public:
@@ -383,6 +474,7 @@ namespace {
 
 		bool write(std::string_view text) override {
 			auto const consoleOk = _console.write(text);
+			_consoleFailed = _consoleFailed || !consoleOk;
 			if (_file != nullptr && _file->isOpen() && !_failed) {
 				auto const status = _file->write(text);
 				if (status != lexxos::vfs::WriteStatus::Ok) {
@@ -394,33 +486,15 @@ namespace {
 		}
 
 		[[nodiscard]] bool failed() const {
-			return _failed;
+			return _failed || _consoleFailed;
 		}
 
 	private:
 		lexxos::io::OutputStream& _console;
 		lexxos::vfs::FileHandle* _file{nullptr};
 		bool _failed{false};
+		bool _consoleFailed{};
 	};
-
-	struct BenchmarkTableContext {
-		BenchmarkReport const* report{nullptr};
-	};
-
-	bool provideBenchmarkRow(std::size_t rowIndex, PrettyTableRow& row, void* userData) {
-		auto const* tableContext = static_cast<BenchmarkTableContext const*>(userData);
-		if (tableContext == nullptr || tableContext->report == nullptr || rowIndex >= tableContext->report->rowCount) {
-			return false;
-		}
-
-		auto const& source = tableContext->report->rows[rowIndex];
-		row.set(0, textView(source.section));
-		row.set(1, textView(source.metric));
-		row.set(2, textView(source.value));
-		row.set(3, textView(source.unit));
-		row.set(4, textView(source.note));
-		return true;
-	}
 
 	std::uint32_t elapsedMs(std::uint32_t start, std::uint32_t end) {
 		if (end >= start) {
@@ -461,13 +535,13 @@ namespace {
 #endif
 	}
 
-	void appendCoreNote(FixedText& note, int coreAffinity) {
+	[[maybe_unused]] void appendCoreNote(FixedText& note, int coreAffinity) {
 		note.append("core=");
 		if (coreAffinity < 0) {
 			note.append("default");
-			return;
+		} else {
+			note.appendUnsigned(static_cast<std::uint32_t>(coreAffinity));
 		}
-		note.appendUnsigned(static_cast<std::uint32_t>(coreAffinity));
 	}
 
 	int multitaskWorkerCore(MultitaskPlacement placement, std::uint32_t workerIndex) {
@@ -479,6 +553,7 @@ namespace {
 			case MultitaskPlacement::Split:
 				return static_cast<int>(workerIndex % schedulerCoreCount());
 		}
+
 		return lexxos::kernel::anyTaskCore;
 	}
 
@@ -491,26 +566,8 @@ namespace {
 			case MultitaskPlacement::Split:
 				return "split";
 		}
-		return "default";
-	}
 
-	std::uint32_t parseBoundedUnsigned(lexxos::os::AppContext& context, lexxos::program::ParsedArguments const& arguments,
-	    std::string_view name, std::uint32_t fallback, std::uint32_t minimum, std::uint32_t maximum) {
-		std::uint32_t value = 0;
-		if (!parseUnsigned32(arguments.valueOr(name, {}), value)) {
-			return fallback;
-		}
-		if (value < minimum || value > maximum) {
-			context.write("bench ");
-			context.write(name);
-			context.write(": expected ");
-			writeUnsigned(context, minimum);
-			context.write("..");
-			writeUnsigned(context, maximum);
-			context.writeLine(", using default");
-			return fallback;
-		}
-		return value;
+		return "default";
 	}
 
 	std::uint32_t runIntegerLoop(std::uint32_t iterations) {
@@ -521,6 +578,7 @@ namespace {
 			value ^= value >> 16U;
 			sink ^= value + index;
 		}
+
 		return sink;
 	}
 
@@ -531,7 +589,7 @@ namespace {
 		}
 
 		worker.checksum = runIntegerLoop(worker.iterations);
-		worker.completed->fetch_add(1U, std::memory_order_release);
+		worker.completed.store(true, std::memory_order_release);
 	}
 
 	void addClockRate(BenchmarkReport& report, std::string_view metric, lexxos::platform::ClockRate rate) {
@@ -542,42 +600,37 @@ namespace {
 		report.addUnsigned("clock", metric, rate.hz, "Hz");
 	}
 
-	void addConfiguredBusRates(BenchmarkReport& report, lexxos::platform::BoardDescriptor const& board) {
+	void addConfiguredBusRates(BenchmarkReport& report, lexxos::platform::LegacyBoardDescriptor const& board) {
 		if (board.debugUart.isValid()) {
 			report.addUnsigned("bus", "debug-uart", board.debugUart.baudRate, "baud");
 		}
+
 		if (board.debugOledI2c.isValid()) {
 			report.addUnsigned("bus", "debug-oled-i2c", board.debugOledI2c.baudRate, "Hz");
 		}
+
 		if (board.interfaces.systemI2c.isValid()) {
 			report.addUnsigned("bus", "system-i2c", board.interfaces.systemI2c.baudRate, "Hz");
 		}
+
 		if (board.interfaces.storageSpi.isTxValid()) {
 			report.addUnsigned("bus", "storage-spi", board.interfaces.storageSpi.baudRate, "Hz");
 		} else if (board.sdSpi.isValid()) {
 			report.addUnsigned("bus", "sd-spi", board.sdSpi.baudRate, "Hz");
 		}
+
 		if (board.interfaces.displaySpi.isTxValid()) {
 			report.addUnsigned("bus", "display-spi", board.interfaces.displaySpi.baudRate, "Hz");
 		}
-		report.add("bus", "sd-interface", lexxos::platform::toString(board.sdInterface), "", "board descriptor");
-	}
 
-	void addSdRuntimeRows(BenchmarkReport& report) {
-#if FEATURE_ENABLED(SD_CARD)
-		report.add("sd", "backend", lexxos::devices::toString(lexxos::devices::sd_card::interfaceType()), "", "runtime");
-		report.add("sd", "state", lexxos::devices::toString(lexxos::devices::sd_card::state()), "", "runtime");
-		report.addUnsigned("sd", "active-baud", lexxos::devices::sd_card::activeBaudRate(), "Hz");
-		report.add("sd", "multi-read", lexxos::devices::sd_card::multiBlockReadEnabled() ? "on" : "off", "");
-		report.add("sd", "multi-write", lexxos::devices::sd_card::multiBlockWriteEnabled() ? "on" : "off", "");
-		report.add("sd", "dma", lexxos::devices::sd_card::dmaTransfersEnabled() ? "on" : "off", "");
-#else
-		report.add("sd", "support", "disabled", "");
-#endif
+		report.add("bus", "sd-interface", lexxos::platform::toString(board.sdInterface), "", "board descriptor");
 	}
 
 	void collectConfiguration(lexxos::os::AppContext& context, BenchmarkReport& report) {
 		auto const& board = activeBoard(context);
+		report.add("config", "version", lexxos::version, "");
+		report.add("config", "build-date", lexxos::buildDate, "");
+		report.add("config", "build-time", lexxos::buildTime, "");
 		report.add("config", "platform", platformName(), "");
 		report.add("config", "kernel", kernelName(), "");
 		report.add("config", "board", board.boardId != nullptr ? board.boardId : "unknown", "");
@@ -597,7 +650,6 @@ namespace {
 		addClockRate(report, "rtc", performance.rtcClock);
 
 		addConfiguredBusRates(report, board);
-		addSdRuntimeRows(report);
 
 		auto const memory = lexxos::kernel::memorySnapshot();
 		if (memory.available) {
@@ -606,6 +658,7 @@ namespace {
 		} else {
 			report.add("memory", "heap", "n/a", "", "backend does not expose heap stats");
 		}
+
 		report.addUnsigned("scheduler", "active-tasks", lexxos::kernel::taskCount(), "tasks");
 		report.addUnsigned("scheduler", "cores", schedulerCoreCount(), "cores");
 		report.add("scheduler", "core-affinity", schedulerHasCoreAffinity() ? "on" : "off", "");
@@ -630,6 +683,420 @@ namespace {
 		report.addUnsigned("sync", "iterations", iterations, "count", note.view());
 	}
 
+	void runVmBenchmark(lexxos::os::AppContext& context,
+	    BenchmarkReport& report,
+	    VmBenchmarkWorkspace& workspace,
+	    std::uint32_t iterations) {
+		using lexxos::external_program::Rv32iBenchmarkCase;
+		using lexxos::external_program::Rv32iHostBenchmarkCase;
+
+		struct Case {
+			char const* name;
+			Rv32iBenchmarkCase kind;
+			std::uint32_t perIteration;
+			std::uint32_t fixedInstructions;
+			bool returnsCounter;
+		};
+
+		constexpr Case cases[] = {
+		    {   "alu",          Rv32iBenchmarkCase::Alu, 5, 5,  true},
+		    {"branch",       Rv32iBenchmarkCase::Branch, 4, 5,  true},
+		    {"memory",       Rv32iBenchmarkCase::Memory, 5, 6,  true},
+		    {  "zero", Rv32iBenchmarkCase::ZeroRegister, 3, 6,  true},
+		    { "ecall",        Rv32iBenchmarkCase::Ecall, 3, 6, false},
+		};
+
+		report.addUnsigned("rv32i", "loop-iterations",
+		    iterations, "count");
+		report.add("rv32i", "backend", "interpreter", "",
+		    "production RV32I VM; no VFS or display calls");
+
+#if defined(LEXXOS_RK3506_VM_ALIGNED_ACCESS)
+		report.add("rv32i", "aligned-access", "on", "", "native 16/32-bit load/store");
+#else
+		report.add("rv32i", "aligned-access", "off", "", "bytewise little-endian load/store");
+#endif
+
+#if defined(LEXXOS_VM_FAST_LOOP)
+		report.add("rv32i", "fast-loop", "on", "", "batched checks; x0 bypass");
+#else
+		report.add("rv32i", "fast-loop", "off", "", "legacy loop");
+#endif
+
+#if defined(LEXXOS_VM_LOCAL_PC)
+		report.add("rv32i", "local-pc", "on", "",
+		    "PC committed on ECALL, trace and VM exit");
+#else
+		report.add("rv32i", "local-pc", "off", "",
+		    "PC stored in VM state");
+#endif
+
+#if defined(LEXXOS_VM_EXECUTION_PROFILE)
+	#if LEXXOS_VM_EXECUTION_PROFILE == 0
+		report.add("rv32i", "execution-profile", "compact", "");
+	#elif LEXXOS_VM_EXECUTION_PROFILE == 1
+		report.add("rv32i", "execution-profile", "fast", "");
+	#else
+		report.add("rv32i", "execution-profile", "cached", "");
+	#endif
+		report.addUnsigned("rv32i", "decode-cache-entries",
+		    LEXXOS_VM_DECODE_CACHE_ENTRIES, "entries");
+#endif
+
+#if defined(LEXXOS_RK3506_VM_OPTIMIZATION_LEVEL)
+		report.addUnsigned("rv32i", "compiler-optimization",
+		    LEXXOS_RK3506_VM_OPTIMIZATION_LEVEL, "level");
+#else
+		report.add("rv32i", "compiler-optimization",
+		    "project-default", "");
+#endif
+
+		struct HostCase {
+			char const* name;
+			Rv32iHostBenchmarkCase kind;
+		};
+
+		constexpr HostCase hostCases[] = {
+		    {    "host-reg",  Rv32iHostBenchmarkCase::RegisterAlu},
+		    {"host-ddr-rmw", Rv32iHostBenchmarkCase::DdrReadWrite},
+		};
+
+		for (auto const& test : hostCases) {
+			if (context.cancellationRequested()) {
+				break;
+			}
+
+			auto const start = uptimeMs(context);
+
+			// Scale the CPU-only case above the 1 ms timer resolution.
+			auto const hostIterations = test.kind == Rv32iHostBenchmarkCase::RegisterAlu
+			    ? iterations * 64U
+			    : iterations;
+
+			auto const checksum =
+			    lexxos::external_program::benchmarkRv32iHost(
+			        test.kind, hostIterations);
+			auto const elapsed = elapsedMs(start, uptimeMs(context));
+
+			FixedText elapsedName;
+			elapsedName.append(test.name);
+			elapsedName.append("-elapsed");
+			report.addUnsigned("rv32i", elapsedName.view(),
+			    elapsed, "ms");
+
+			FixedText rateName;
+			rateName.append(test.name);
+			rateName.append("-rate");
+
+			FixedText note;
+			note.append("checksum=");
+			note.appendUnsigned(checksum);
+
+			if (elapsed != 0U) {
+				report.addUnsigned("rv32i", rateName.view(),
+				    perSecond(hostIterations, elapsed),
+				    "iter/s", note.view());
+			} else {
+				report.add("rv32i", rateName.view(),
+				    "n/a", "iter/s", "increase --iterations");
+			}
+		}
+
+		for (auto const& test : cases) {
+			if (context.cancellationRequested()) {
+				break;
+			}
+
+			auto const start = uptimeMs(context);
+			auto const result = lexxos::external_program::benchmarkRv32i(
+			    context, test.kind, iterations,
+			    workspace.vmMemory.data(), workspace.vmMemory.size());
+			auto const elapsed = elapsedMs(start, uptimeMs(context));
+
+			auto const expectedInstructions =
+			    static_cast<std::uint64_t>(iterations) * test.perIteration
+			    + test.fixedInstructions;
+			auto const expectedExit =
+			    test.returnsCounter ? static_cast<int>(iterations) : 0;
+
+			if (result.status != lexxos::external_program::ExternalProgramStatus::Ok
+			    || result.exitCode != expectedExit
+			    || result.instructionsExecuted != expectedInstructions) {
+				report.add("rv32i", test.name, "failed", "",
+				    result.status == lexxos::external_program::ExternalProgramStatus::Ok
+				        ? "checksum or instruction count mismatch"
+				        : lexxos::external_program::toString(result.status));
+				continue;
+			}
+
+			auto add = [&](std::string_view suffix,
+			               std::uint64_t value,
+			               std::string_view unit) {
+				FixedText metric;
+				metric.append(test.name);
+				metric.append(suffix);
+				report.addUnsigned("rv32i", metric.view(), value, unit);
+			};
+
+			add("-instructions", result.instructionsExecuted, "inst");
+			add("-elapsed", elapsed, "ms");
+
+			if (elapsed != 0) {
+				add("-rate",
+				    perSecond(result.instructionsExecuted, elapsed),
+				    "inst/s");
+				add("-ns-per-inst",
+				    static_cast<std::uint64_t>(elapsed) * 1000000ULL / result.instructionsExecuted,
+				    "ns/inst");
+			} else {
+				FixedText metric;
+				metric.append(test.name);
+				metric.append("-rate");
+				report.add("rv32i", metric.view(), "n/a", "inst/s",
+				    "elapsed below 1ms; increase --iterations");
+			}
+		}
+	}
+
+	template <typename Flush>
+	void runVmDetailedBenchmark(
+	    lexxos::os::AppContext& context,
+	    BenchmarkReport& report,
+	    VmBenchmarkWorkspace& workspace,
+	    std::uint32_t iterations,
+	    std::string_view caseFilter,
+	    std::uint32_t repeats,
+	    Flush&& flush) {
+		using Form = lexxos::external_program::Rv32iOpcodeForm;
+		using Probe = lexxos::external_program::Rv32iOpcodeProbe;
+
+		struct Case {
+			char const* name;
+			Probe probe;
+		};
+
+		constexpr Case cases[] = {
+		    // Baseline VM dispatch: only decrement and conditional branch.
+		    {     "control.loop",{Form::LoopControl, 0, 0, 0, 0, 0, 0}                                 },
+		    // OP: register-register arithmetic.
+		    {           "op.add",        {Form::Register, 0, 0, 1, 0, 0, 1}},
+		    {           "op.sub",     {Form::Register, 0, 0x20, 2, 1, 0, 1}},
+		    {           "op.sll",        {Form::Register, 1, 0, 1, 1, 0, 2}},
+		    {           "op.slt",       {Form::Register, 2, 0, -1, 0, 0, 1}},
+		    {          "op.sltu",        {Form::Register, 3, 0, 0, 1, 0, 1}},
+		    {           "op.xor",        {Form::Register, 4, 0, 0, 1, 0, 1}},
+		    {           "op.srl",        {Form::Register, 5, 0, 2, 1, 0, 1}},
+		    {           "op.sra",   {Form::Register, 5, 0x20, -2, 1, 0, -1}},
+		    {            "op.or",        {Form::Register, 6, 0, 0, 1, 0, 1}},
+		    {           "op.and",        {Form::Register, 7, 0, 1, 1, 0, 1}},
+
+		    // OP-IMM: arithmetic with immediate operands.
+		    {         "imm.addi",       {Form::Immediate, 0, 0, 0, 0, 1, 1}},
+		    {         "imm.slti",       {Form::Immediate, 2, 0, 0, 0, 1, 1}},
+		    {        "imm.sltiu",       {Form::Immediate, 3, 0, 0, 0, 1, 1}},
+		    {         "imm.xori",       {Form::Immediate, 4, 0, 0, 0, 1, 1}},
+		    {          "imm.ori",       {Form::Immediate, 6, 0, 0, 0, 1, 1}},
+		    {         "imm.andi",       {Form::Immediate, 7, 0, 1, 0, 1, 1}},
+		    {         "imm.slli",       {Form::Immediate, 1, 0, 1, 0, 1, 2}},
+		    {         "imm.srli",       {Form::Immediate, 5, 0, 2, 0, 1, 1}},
+		    {         "imm.srai", {Form::Immediate, 5, 0, -2, 0, 0x401, -1}},
+
+		    // LOAD: signed and unsigned memory access.
+		    {          "load.lb",      {Form::Load, 0, 0, 100, 0, 0xFF, -1}},
+		    {          "load.lh",    {Form::Load, 1, 0, 100, 0, 0xFFFF, -1}},
+		    {          "load.lw",          {Form::Load, 2, 0, 100, 0, 1, 1}},
+		    {         "load.lbu",     {Form::Load, 4, 0, 100, 0, 0xFF, 255}},
+		    {         "load.lhu", {Form::Load, 5, 0, 100, 0, 0xFFFF, 65535}},
+
+		    // STORE, followed by a validating read.
+		    {         "store.sb",         {Form::Store, 0, 0, 100, 1, 0, 1}},
+		    {         "store.sh",         {Form::Store, 1, 0, 100, 1, 0, 1}},
+		    {         "store.sw",         {Form::Store, 2, 0, 100, 1, 0, 1}},
+
+		    // BRANCH: both taken and not-taken paths.
+		    {        "beq.taken",          {Form::Branch, 0, 0, 0, 0, 0, 1}},
+		    {          "beq.not",          {Form::Branch, 0, 0, 0, 1, 0, 2}},
+		    {        "bne.taken",          {Form::Branch, 1, 0, 0, 1, 0, 1}},
+		    {          "bne.not",          {Form::Branch, 1, 0, 0, 0, 0, 2}},
+		    {        "blt.taken",         {Form::Branch, 4, 0, -1, 0, 0, 1}},
+		    {          "blt.not",          {Form::Branch, 4, 0, 0, 0, 0, 2}},
+		    {        "bge.taken",          {Form::Branch, 5, 0, 0, 0, 0, 1}},
+		    {          "bge.not",         {Form::Branch, 5, 0, -1, 0, 0, 2}},
+		    {       "bltu.taken",          {Form::Branch, 6, 0, 0, 1, 0, 1}},
+		    {         "bltu.not",          {Form::Branch, 6, 0, 1, 0, 0, 2}},
+		    {       "bgeu.taken",          {Form::Branch, 7, 0, 1, 0, 0, 1}},
+		    {         "bgeu.not",          {Form::Branch, 7, 0, 0, 1, 0, 2}},
+
+		    // Control flow and remaining RV32I opcode families.
+		    {         "jump.jal",            {Form::Jump, 0, 0, 0, 0, 0, 1}},
+		    {        "jump.jalr",   {Form::JumpRegister, 0, 0, 24, 0, 0, 1}},
+		    {        "upper.lui",       {Form::LoadUpper, 0, 0, 0, 0, 0, 1}},
+		    {      "upper.auipc",      {Form::AddUpperPc, 0, 0, 0, 0, 0, 1}},
+		    {       "sync.fence",           {Form::Fence, 0, 0, 0, 0, 0, 1}},
+
+		    // Mixed workloads.
+		    {   "mix.alu-memory",
+		     {Form::MixedAluMemory, 0, 0, 100, 0, 0, 1}                    },
+		    {"mix.branch-memory",
+		     {Form::MixedBranchMemory, 0, 0, 100, 1, 0, 1}                 },
+		    {    "mix.ecall-alu",
+		     {Form::MixedSyscall, 0, 0, 0, 0, 0, 1}                        },
+		};
+
+		report.addUnsigned("rv32i-detail", "cases",
+		    sizeof(cases) / sizeof(cases[0]), "count");
+		report.add("rv32i-detail", "case-filter",
+		    caseFilter.empty() ? "all" : caseFilter, "");
+		report.addUnsigned("rv32i-detail", "repeats", repeats, "count");
+
+		auto const counterFrequency = vmClockFrequency();
+		report.addUnsigned("rv32i-detail", "timer-frequency", counterFrequency, "Hz",
+		    counterFrequency ? "CNTVCT; not CPU core cycles" : "millisecond fallback");
+
+		std::uint32_t processed = 0;
+		std::uint32_t selected = 0;
+		constexpr std::uint32_t maxRepeats = 9;
+		std::array<std::uint32_t, maxRepeats> elapsedSamples{};
+		std::array<std::uint64_t, maxRepeats> elapsedNsSamples{};
+
+		for (auto const& test : cases) {
+			if (context.cancellationRequested()) {
+				break;
+			}
+
+			if (!caseFilter.empty()
+			    && std::string_view{test.name}.find(caseFilter) == std::string_view::npos) {
+				continue;
+			}
+			++selected;
+
+			std::uint32_t completed = 0;
+			std::uint32_t instructionCount = 0;
+			std::string_view errorNote = "";
+			bool valid = true;
+			for (std::uint32_t repetition = 0; repetition < repeats; ++repetition) {
+				if (context.cancellationRequested()) {
+					valid = false;
+					errorNote = "cancelled";
+					break;
+				}
+
+				auto const start = uptimeMs(context);
+				auto const startTicks = vmClockTicks();
+				auto const result =
+				    lexxos::external_program::benchmarkRv32iOpcode(
+				        context, test.probe, iterations,
+				        workspace.vmMemory.data(), workspace.vmMemory.size());
+				auto const endTicks = vmClockTicks();
+
+				elapsedSamples[repetition] = elapsedMs(start, uptimeMs(context));
+				elapsedNsSamples[repetition] = vmElapsedNs(startTicks, endTicks, counterFrequency);
+
+				auto const expectedInstructions =
+				    static_cast<std::uint64_t>(iterations)
+				        * result.instructionsPerIteration
+				    + result.fixedInstructions;
+				auto const& program = result.program;
+				valid =
+				    program.status == lexxos::external_program::ExternalProgramStatus::Ok
+				    && program.exitCode == result.expectedExit
+				    && program.instructionsExecuted == expectedInstructions;
+				if (!valid) {
+					errorNote = program.status == lexxos::external_program::ExternalProgramStatus::Ok
+					    ? "exit code or instruction count mismatch"
+					    : lexxos::external_program::toString(program.status);
+					break;
+				}
+
+				instructionCount = program.instructionsExecuted;
+				++completed;
+			}
+
+			if (!valid) {
+				if (context.cancellationRequested()) {
+					break;
+				}
+
+				report.add("rv32i-detail", test.name, "failed", "", errorNote);
+			} else {
+				std::sort(elapsedSamples.begin(), elapsedSamples.begin() + completed);
+				std::sort(elapsedNsSamples.begin(), elapsedNsSamples.begin() + completed);
+				auto const median = static_cast<std::uint32_t>(
+				    (static_cast<std::uint64_t>(elapsedSamples[(completed - 1U) / 2U])
+				        + elapsedSamples[completed / 2U])
+				    / 2U);
+				auto const medianNs = (elapsedNsSamples[(completed - 1U) / 2U]
+				                          + elapsedNsSamples[completed / 2U])
+				    / 2U;
+
+				FixedText name;
+
+				name.append(test.name);
+				name.append(".instructions");
+				report.addUnsigned("rv32i-detail", name.view(),
+				    instructionCount, "inst");
+
+				name.clear();
+				name.append(test.name);
+				name.append(".inst-rate");
+				report.addUnsigned("rv32i-detail", name.view(),
+				    medianNs ? (static_cast<std::uint64_t>(instructionCount) * 1000000000ULL) / medianNs
+				             : perSecond(instructionCount, median),
+				    "inst/s");
+
+				if (medianNs != 0U && instructionCount != 0U) {
+					name.clear();
+					name.append(test.name);
+					name.append(".ns-per-inst");
+					report.addUnsigned("rv32i-detail", name.view(), medianNs / instructionCount, "ns/inst");
+				}
+
+				name.clear();
+				name.append(test.name);
+				name.append(".loop-rate");
+				report.addUnsigned("rv32i-detail", name.view(),
+				    perSecond(iterations, median), "loops/s");
+
+				name.clear();
+				name.append(test.name);
+				name.append(".ms-min");
+				report.addUnsigned("rv32i-detail", name.view(), elapsedSamples[0], "ms");
+
+				name.clear();
+				name.append(test.name);
+				name.append(".ms-median");
+				report.addUnsigned("rv32i-detail", name.view(), median, "ms");
+
+				name.clear();
+				name.append(test.name);
+				name.append(".ms-max");
+				report.addUnsigned("rv32i-detail", name.view(),
+				    elapsedSamples[completed - 1U], "ms");
+
+				if (medianNs != 0U) {
+					name.clear();
+					name.append(test.name);
+					name.append(".ns-median");
+					report.addUnsigned("rv32i-detail", name.view(), medianNs, "ns");
+				}
+			}
+
+			// Up to eight metric rows per case; five cases fit VM report buffer.
+			if (++processed % 5U == 0U) {
+				flush();
+			}
+		}
+
+		if (selected == 0U) {
+			report.add("rv32i-detail", "case-selection", "failed", "",
+			    "no cases match --vm-case");
+		}
+
+		report.addUnsigned("rv32i-detail", "cases-selected", selected, "count");
+
+		flush();
+	}
+
 	void runMemoryBenchmark(lexxos::os::AppContext& context, BenchmarkReport& report, BenchmarkWorkspace& workspace, std::uint32_t iterations) {
 		std::uint32_t const passes = std::max<std::uint32_t>(iterations / 16U, 1U);
 		std::array<char, ioChunkBytes> target{};
@@ -640,8 +1107,10 @@ namespace {
 		auto const start = uptimeMs(context);
 		for (std::uint32_t pass = 0; pass < passes; ++pass) {
 			std::memcpy(target.data(), workspace.ioBuffer.data(), target.size());
+			std::atomic_signal_fence(std::memory_order_seq_cst);
 			target[pass % target.size()] ^= static_cast<char>(pass & 0x7FU);
 		}
+
 		auto const elapsed = elapsedMs(start, uptimeMs(context));
 
 		auto const bytes = static_cast<std::uint64_t>(passes) * target.size();
@@ -655,10 +1124,34 @@ namespace {
 		for (std::uint32_t index = 0; index < yields; ++index) {
 			lexxos::kernel::yield();
 		}
+
 		auto const elapsed = elapsedMs(start, uptimeMs(context));
 
 		report.addUnsigned("scheduler", "yield-loop", elapsed, "ms");
 		report.addUnsigned("scheduler", "yield-rate", perSecond(yields, elapsed), "yield/s");
+	}
+
+	void runLatencyBenchmark(lexxos::os::AppContext& context, BenchmarkReport& report, unsigned samples) {
+		std::uint32_t minimum = UINT32_MAX, maximum = 0, over10ms = 0, measured = 0;
+		std::uint64_t total = 0;
+		for (unsigned i = 0; i < samples && !context.cancellationRequested(); ++i) {
+			auto const start = uptimeMs(context);
+			sleepMs(context, 1);
+			auto const elapsed = elapsedMs(start, uptimeMs(context));
+			minimum = std::min(minimum, elapsed);
+			maximum = std::max(maximum, elapsed);
+			total += elapsed;
+			over10ms += elapsed > 10;
+			++measured;
+		}
+
+		report.addUnsigned("latency", "samples", measured, "count", "sleep requested=1ms");
+		if (measured) {
+			report.addUnsigned("latency", "min", minimum, "ms");
+			report.addUnsigned("latency", "max", maximum, "ms");
+			report.addUnsigned("latency", "mean", total * 1000U / measured, "us", "quantized by 1ms clock");
+			report.addUnsigned("latency", "over-10ms", over10ms, "count");
+		}
 	}
 
 	void runSleepBenchmark(lexxos::os::AppContext& context, BenchmarkReport& report) {
@@ -677,8 +1170,10 @@ namespace {
 			for (std::uint32_t index = 0; index < microOperationCount; ++index) {
 				value += index + batch + 17U;
 			}
+
 			sink ^= value;
 		}
+
 		return sink;
 	}
 
@@ -689,8 +1184,10 @@ namespace {
 			for (std::uint32_t index = 0; index < microOperationCount; ++index) {
 				value -= index + batch + 23U;
 			}
+
 			sink ^= value;
 		}
+
 		return sink;
 	}
 
@@ -701,8 +1198,10 @@ namespace {
 			for (std::uint32_t index = 0; index < microOperationCount; ++index) {
 				value = value * 1664525U + index + batch + 1013904223U;
 			}
+
 			sink ^= value;
 		}
+
 		return sink;
 	}
 
@@ -715,8 +1214,10 @@ namespace {
 				value = (value + index + batch + 0x9E3779B9U) / divisor;
 				value ^= divisor * 2654435761U;
 			}
+
 			sink ^= value;
 		}
+
 		return sink;
 	}
 
@@ -762,6 +1263,7 @@ namespace {
 				while (nines-- != 0U) {
 					checksum = checksum * 33U;
 				}
+
 				predigit = 0;
 				nines = 0;
 			} else {
@@ -770,9 +1272,11 @@ namespace {
 				while (nines-- != 0U) {
 					checksum = checksum * 33U + 9U;
 				}
+
 				nines = 0;
 			}
 		}
+
 		return checksum ^ predigit ^ (nines << 16U);
 	}
 
@@ -839,6 +1343,7 @@ namespace {
 			checksum = checksum * 33U + round;
 			(void) xSemaphoreGive(state.toMain);
 		}
+
 		state.checksum = checksum;
 		state.completed.store(1U, std::memory_order_release);
 	}
@@ -849,6 +1354,7 @@ namespace {
 		for (std::uint32_t pass = 0; pass < state.passes; ++pass) {
 			lexxos::kernel::sleepMs(state.sleepMs);
 		}
+
 		auto const end = state.uptimeMs != nullptr ? state.uptimeMs() : start;
 		state.elapsed = elapsedMs(start, end);
 		state.completed.store(true, std::memory_order_release);
@@ -913,6 +1419,351 @@ namespace {
 		}
 	}
 
+#if defined(LEXXOS_KERNEL_FREERTOS)
+	struct SyncSmokeState {
+		lexxos::devices::BusTransactionQueue queue;
+		lexxos::kernel::Event completed;
+		bool acquired{false};
+		bool poisoned{false};
+	};
+
+	// Lazy placement construction avoids function-local static guard atomics
+	// on MMU-off RK3506 while keeping the task context alive after timeout.
+	alignas(SyncSmokeState) std::byte g_syncSmokeStorage[sizeof(SyncSmokeState)]{};
+	SyncSmokeState* g_syncSmokeState{nullptr};
+
+	void syncSmokeWorker(void* userData) {
+		auto& state = *static_cast<SyncSmokeState*>(userData);
+		state.acquired = state.queue.acquire(lexxos::devices::DeviceResourcePriority::System, 2000);
+		if (state.acquired) {
+			state.queue.release();
+		}
+
+		(void) state.completed.signal();
+	}
+
+	struct QueuePriorityState;
+
+	struct QueuePriorityWorker {
+		QueuePriorityState* state{nullptr};
+		lexxos::devices::DeviceResourcePriority priority{lexxos::devices::DeviceResourcePriority::Normal};
+		std::uint8_t id{0};
+		std::uint32_t timeoutMs{2000};
+		bool acquired{false};
+	};
+
+	struct QueuePriorityState {
+		lexxos::devices::BusTransactionQueue queue;
+		lexxos::kernel::Semaphore completed{3, 0};
+		std::array<QueuePriorityWorker, 3> workers{};
+		std::array<std::uint8_t, 3> order{};
+		std::uint32_t orderCount{0};
+		bool poisoned{false};
+	};
+
+	// Keep worker contexts alive even when a timed-out probe is broken.
+	alignas(QueuePriorityState) std::byte g_queuePriorityStorage[sizeof(QueuePriorityState)]{};
+	QueuePriorityState* g_queuePriorityState{nullptr};
+
+	void queuePriorityWorker(void* userData) {
+		auto& worker = *static_cast<QueuePriorityWorker*>(userData);
+		auto& state = *worker.state;
+		worker.acquired = state.queue.acquire(worker.priority, worker.timeoutMs);
+		if (worker.acquired) {
+			// Only the current bus owner writes to the order array.
+			if (state.orderCount < state.order.size()) {
+				state.order[state.orderCount++] = worker.id;
+			}
+
+			state.queue.release();
+		}
+
+		(void) state.completed.release();
+	}
+
+	void runQueuePrioritySmoke(BenchmarkReport& report) {
+		using lexxos::devices::DeviceResourcePriority;
+		if (g_queuePriorityState == nullptr) {
+			g_queuePriorityState = new (g_queuePriorityStorage) QueuePriorityState{};
+		}
+
+		auto& state = *g_queuePriorityState;
+		if (state.poisoned || !state.completed.valid() || state.queue.busy() || state.queue.pending() != 0) {
+			report.add("sync", "bus-priority", "failed", "", "probe unavailable");
+			return;
+		}
+
+		state.orderCount = 0;
+		for (auto& worker : state.workers) {
+			worker.acquired = false;
+		}
+
+		if (!state.queue.acquire(DeviceResourcePriority::Normal, 0)) {
+			report.add("sync", "bus-priority", "failed", "", "initial owner");
+			return;
+		}
+
+		// Enqueue deterministically: System A, Background, System B.
+		// The expected grant order is A, B, Background (priority + FIFO).
+		constexpr std::array priorities{
+		    DeviceResourcePriority::System,
+		    DeviceResourcePriority::Background,
+		    DeviceResourcePriority::System,
+		};
+		std::uint32_t created = 0;
+		bool enqueued = true;
+		for (std::uint32_t index = 0; index < state.workers.size(); ++index) {
+			auto& worker = state.workers[index];
+			worker.state = &state;
+			worker.priority = priorities[index];
+			worker.timeoutMs = 2000;
+			worker.id = static_cast<std::uint8_t>(index);
+			if (!lexxos::kernel::createTask(queuePriorityWorker, &worker,
+			        {
+			            .name = "bench-qwait",
+			            .stackSizeBytes = 4096,
+			            .priority = 2,
+			            .executionClass = lexxos::kernel::TaskExecutionClass::Background,
+			        })) {
+				enqueued = false;
+				break;
+			}
+			++created;
+			bool queued = false;
+			for (std::uint32_t elapsed = 0; elapsed < 500; ++elapsed) {
+				if (state.queue.pending() == created) {
+					queued = true;
+					break;
+				}
+
+				lexxos::kernel::sleepMs(1);
+			}
+
+			if (!queued) {
+				enqueued = false;
+				break;
+			}
+		}
+
+		state.queue.release();
+		bool completed = true;
+		for (std::uint32_t index = 0; index < created; ++index) {
+			if (!state.completed.acquire(2500)) {
+				completed = false;
+				break;
+			}
+		}
+
+		state.poisoned = !completed;
+		bool const priorityOk = enqueued && completed && created == 3 && state.orderCount == 3 && state.order[0] == 0 && state.order[1] == 2 && state.order[2] == 1 && state.workers[0].acquired && state.workers[1].acquired && state.workers[2].acquired && !state.queue.busy() && state.queue.pending() == 0;
+		FixedText note;
+		note.append("expected=0,2,1 actual=");
+		for (std::uint32_t index = 0; index < state.orderCount; ++index) {
+			if (index != 0) {
+				note.append(",");
+			}
+
+			note.appendUnsigned(state.order[index]);
+		}
+
+		report.add("sync", "bus-priority", priorityOk ? "passed" : "failed", "", note.view());
+	}
+
+	void runQueueTimeoutRaceSmoke(BenchmarkReport& report) {
+		using lexxos::devices::DeviceResourcePriority;
+		if (g_queuePriorityState == nullptr) {
+			report.add("sync", "bus-race", "failed", "", "priority probe not initialized");
+			return;
+		}
+
+		auto& state = *g_queuePriorityState;
+		if (state.poisoned || !state.completed.valid() || state.queue.busy() || state.queue.pending() != 0) {
+			report.add("sync", "bus-race", "failed", "", "probe unavailable");
+			return;
+		}
+
+		// Release just before, during and after the waiter's timeout.
+		// The queue must always end empty regardless of which side wins.
+		constexpr std::array<std::uint32_t, 8> releaseDelaysMs{0, 10, 18, 19, 20, 21, 25, 35};
+		constexpr std::uint32_t timeoutMs = 20;
+		std::uint32_t completedRounds = 0;
+		std::uint32_t granted = 0;
+		std::uint32_t timedOut = 0;
+		bool healthy = true;
+		for (auto const delayMs : releaseDelaysMs) {
+			// The previous worker may have posted completion but not yet
+			// reached the trampoline's final suspension point.
+			lexxos::kernel::sleepMs(1);
+			(void) lexxos::kernel::reapFinishedTasks();
+
+			auto& worker = state.workers[0];
+			worker.state = &state;
+			worker.priority = DeviceResourcePriority::System;
+			worker.timeoutMs = timeoutMs;
+			worker.id = 0;
+			worker.acquired = false;
+			if (!state.queue.acquire(DeviceResourcePriority::Normal, 0)) {
+				healthy = false;
+				break;
+			}
+
+			if (!lexxos::kernel::createTask(queuePriorityWorker, &worker,
+			        {
+			            .name = "bench-qrace",
+			            .stackSizeBytes = 4096,
+			            .priority = 2,
+			            .executionClass = lexxos::kernel::TaskExecutionClass::Background,
+			        })) {
+				state.queue.release();
+				healthy = false;
+				break;
+			}
+
+			bool queued = false;
+			for (std::uint32_t attempt = 0; attempt < 100; ++attempt) {
+				if (state.queue.pending() == 1) {
+					queued = true;
+					break;
+				}
+
+				lexxos::kernel::sleepMs(1);
+			}
+
+			if (queued && delayMs != 0) {
+				lexxos::kernel::sleepMs(delayMs);
+			}
+
+			state.queue.release();
+
+			if (!state.completed.acquire(2500)) {
+				// Worker might still hold its pointer into persistent state.
+				state.poisoned = true;
+				healthy = false;
+				break;
+			}
+
+			if (worker.acquired) {
+				++granted;
+			} else {
+				++timedOut;
+			}
+
+			++completedRounds;
+
+			if (!queued || state.queue.busy() || state.queue.pending() != 0) {
+				healthy = false;
+				break;
+			}
+		}
+
+		FixedText note;
+		note.append("rounds=");
+		note.appendUnsigned(completedRounds);
+		note.append(" granted=");
+		note.appendUnsigned(granted);
+		note.append(" timedout=");
+		note.appendUnsigned(timedOut);
+		bool const passed = healthy && completedRounds == releaseDelaysMs.size() && granted != 0 && timedOut != 0;
+		report.add("sync", "bus-race", passed ? "passed" : "failed", "", note.view());
+	}
+
+	#if defined(LEXXOS_PLATFORM_RK3506) && defined(LEXXOS_RK3506_FREERTOS)
+	void runTickIrqSmoke(BenchmarkReport& report) {
+		lexxos::kernel::Event event;
+		if (!event.valid() || !lexxos::platform::rk3506::armTickEventProbe(event)) {
+			report.add("irq", "tick-from-isr", "failed", "", "probe arm");
+			return;
+		}
+
+		// PPI27 is already owned by the FreeRTOS tick. No new IRQ line or DMA.
+		bool const awakened = event.wait(100);
+		auto const notifications = lexxos::platform::rk3506::disarmTickEventProbe(event);
+		FixedText note;
+		note.append("PPI27 give-from-isr=");
+		note.appendUnsigned(notifications);
+		report.add("irq", "tick-from-isr", awakened && notifications != 0 ? "passed" : "failed", "", note.view());
+	}
+	#endif
+#endif
+
+	void runKernelSyncSmoke(BenchmarkReport& report) {
+#if defined(LEXXOS_KERNEL_FREERTOS)
+		lexxos::kernel::Event event;
+		bool const eventOk = event.valid() && !event.wait(0) && event.signal() && !event.signal() && event.wait(0) && !event.wait(0) && !event.wait(2);
+		report.add("sync", "event", eventOk ? "passed" : "failed", "", "binary, auto-reset, timeout");
+
+		lexxos::kernel::Mutex mutex;
+		bool const mutexOk = mutex.valid() && mutex.lock(0);
+		if (mutexOk) {
+			mutex.unlock();
+		}
+
+		report.add("sync", "mutex", mutexOk ? "passed" : "failed", "", "lock/unlock");
+
+		lexxos::kernel::Semaphore semaphore{2, 1};
+		bool const semaphoreOk = semaphore.valid() && semaphore.acquire(0) && !semaphore.acquire(0) && semaphore.release() && semaphore.release() && !semaphore.release() && semaphore.acquire(0) && semaphore.acquire(0) && !semaphore.acquire(0);
+		report.add("sync", "semaphore", semaphoreOk ? "passed" : "failed", "", "count, bounds");
+
+		// Persistent state prevents stack-use-after-free if a broken backend
+		// fails to wake the worker before the deadline. A failed run is not
+		// restarted until reboot; the old task may still reference the state.
+		if (g_syncSmokeState == nullptr) {
+			g_syncSmokeState = new (g_syncSmokeStorage) SyncSmokeState{};
+		}
+
+		auto& state = *g_syncSmokeState;
+		if (state.poisoned || !state.completed.valid() || state.queue.busy() || state.queue.pending() != 0) {
+			report.add("sync", "bus-event", "failed", "", "probe unavailable");
+			return;
+		}
+
+		(void) state.completed.wait(0);
+
+		state.acquired = false;
+		if (!state.queue.acquire(lexxos::devices::DeviceResourcePriority::Normal, 0)) {
+			report.add("sync", "bus-event", "failed", "", "initial owner");
+			return;
+		}
+
+		if (!lexxos::kernel::createTask(syncSmokeWorker, &state,
+		        {
+		            .name = "bench-sync",
+		            .stackSizeBytes = 4096,
+		            .priority = 2,
+		            .executionClass = lexxos::kernel::TaskExecutionClass::Background,
+		        })) {
+			state.queue.release();
+			report.add("sync", "bus-event", "failed", "", "createTask");
+			return;
+		}
+
+		bool queued = false;
+		for (std::uint32_t elapsed = 0; elapsed < 500; ++elapsed) {
+			if (state.queue.pending() == 1) {
+				queued = true;
+				break;
+			}
+
+			lexxos::kernel::sleepMs(1);
+		}
+
+		state.queue.release();
+		bool const completed = state.completed.wait(2500);
+		state.poisoned = !completed;
+		bool const busOk = completed && queued && state.acquired && !state.queue.busy() && state.queue.pending() == 0;
+		report.add("sync", "bus-event", busOk ? "passed" : "failed", "",
+		    "task wakeup, queue handoff, bounded wait");
+		runQueuePrioritySmoke(report);
+		runQueueTimeoutRaceSmoke(report);
+
+	#if defined(LEXXOS_PLATFORM_RK3506) && defined(LEXXOS_RK3506_FREERTOS)
+		runTickIrqSmoke(report);
+	#endif
+#else
+		report.add("sync", "primitives", "n/a", "", "requires FreeRTOS backend");
+#endif
+	}
+
 	void runRtosPrimitiveBenchmark(lexxos::os::AppContext& context, BenchmarkReport& report) {
 #if defined(LEXXOS_KERNEL_FREERTOS)
 		auto* mutex = xSemaphoreCreateMutex();
@@ -926,6 +1777,7 @@ namespace {
 				checksum = checksum * 33U + index;
 				(void) xSemaphoreGive(mutex);
 			}
+
 			auto const elapsed = elapsedMs(start, uptimeMs(context));
 			vSemaphoreDelete(mutex);
 			FixedText note;
@@ -957,9 +1809,11 @@ namespace {
 				(void) xSemaphoreGive(state.toWorker);
 				(void) xSemaphoreTake(state.toMain, portMAX_DELAY);
 			}
+
 			while (state.completed.load(std::memory_order_acquire) == 0U) {
 				sleepMs(context, 1);
 			}
+
 			auto const elapsed = elapsedMs(start, uptimeMs(context));
 			FixedText note;
 			note.append("rounds=");
@@ -969,9 +1823,11 @@ namespace {
 			report.addUnsigned("rtos", "sem-pingpong", elapsed, "ms", note.view());
 			report.addUnsigned("rtos", "sem-switch-rate", perSecond(pingPongRounds * 2ULL, elapsed), "ops/s");
 		}
+
 		if (state.toWorker != nullptr) {
 			vSemaphoreDelete(state.toWorker);
 		}
+
 		if (state.toMain != nullptr) {
 			vSemaphoreDelete(state.toMain);
 		}
@@ -997,9 +1853,11 @@ namespace {
 			text.append(" abcdefghijklmnopqrstuvwxyz 0123456789\r\n");
 			lexxos::app::console_mirror::write(text.view());
 		}
+
 		for (std::uint32_t pass = 0; pass < 8U; ++pass) {
 			lexxos::app::console_mirror::flush();
 		}
+
 		auto const elapsed = elapsedMs(start, uptimeMs(context));
 		auto const stats = lexxos::app::picocalc_lcd_console::renderStats();
 		auto const info = lexxos::app::picocalc_lcd_console::info();
@@ -1030,14 +1888,13 @@ namespace {
 	void runMultitaskBenchmark(lexxos::os::AppContext& context, BenchmarkReport& report, BenchmarkWorkspace& workspace,
 	    std::uint32_t iterations, std::uint32_t requestedWorkers, std::string_view metricPrefix, MultitaskPlacement placement) {
 		workspace.workersStart.store(false, std::memory_order_release);
-		workspace.workersCompleted.store(0, std::memory_order_release);
 
 		std::uint32_t createdWorkers = 0;
 		std::uint32_t const workerIterations = std::max<std::uint32_t>(iterations / requestedWorkers, minIterations);
 		for (std::uint32_t index = 0; index < requestedWorkers; ++index) {
 			auto& worker = workspace.workers[index];
 			worker.start = &workspace.workersStart;
-			worker.completed = &workspace.workersCompleted;
+			worker.completed.store(false, std::memory_order_release);
 			worker.iterations = workerIterations;
 			worker.checksum = 0;
 			auto const coreAffinity = multitaskWorkerCore(placement, index);
@@ -1063,9 +1920,12 @@ namespace {
 
 		auto const start = uptimeMs(context);
 		workspace.workersStart.store(true, std::memory_order_release);
-		while (workspace.workersCompleted.load(std::memory_order_acquire) < createdWorkers) {
-			sleepMs(context, 1);
+		for (std::uint32_t index = 0; index < createdWorkers; ++index) {
+			while (!workspace.workers[index].completed.load(std::memory_order_acquire)) {
+				sleepMs(context, 1);
+			}
 		}
+
 		// Let task trampolines release their scheduler slots before the next placement run reuses them.
 		sleepMs(context, 1);
 		auto const elapsed = elapsedMs(start, uptimeMs(context));
@@ -1089,6 +1949,7 @@ namespace {
 			rateMetric.append(metricPrefix);
 			rateMetric.append("-rate");
 		}
+
 		report.addUnsigned("multitask", loopMetric.view(), elapsed, "ms", note.view());
 		report.addUnsigned("multitask", rateMetric.view(), perSecond(static_cast<std::uint64_t>(createdWorkers) * workerIterations, elapsed), "iter/s");
 	}
@@ -1114,6 +1975,15 @@ namespace {
 	    lexxos::program::ParsedArguments const& arguments) {
 		copyText(workspace.ioPath, arguments.valueOr("io-path", defaultIoPath));
 
+		lexxos::vfs::Stat existing{};
+		if (lexxos::vfs::stat(textView(workspace.ioPath), existing)) {
+			report.add("vfs", "write-open", "failed", "", "temporary path already exists");
+			return;
+		}
+
+		auto const bytesToTest = textView(workspace.ioPath).starts_with("/tmp/")
+		    ? std::min<std::uint32_t>(ioBenchmarkBytes, lexxos::runtime::standardRuntimeProfile.vfs.maxTmpFileSizeBytes)
+		    : ioBenchmarkBytes;
 		lexxos::vfs::FileHandle output;
 		auto openStatus = lexxos::vfs::open(textView(workspace.ioPath), lexxos::vfs::OpenMode::CreateTruncateWrite, output);
 		if (openStatus != lexxos::vfs::OpenStatus::Ok) {
@@ -1122,21 +1992,28 @@ namespace {
 		}
 
 		auto const writeStart = uptimeMs(context);
-		for (std::uint32_t offset = 0; offset < ioBenchmarkBytes; offset += ioChunkBytes) {
+		for (std::uint32_t offset = 0; offset < bytesToTest; offset += ioChunkBytes) {
 			fillIoPattern(workspace.ioBuffer, offset / ioChunkBytes);
-			auto const status = output.write(std::string_view{workspace.ioBuffer.data(), workspace.ioBuffer.size()});
+			auto const status = output.write(std::string_view{workspace.ioBuffer.data(), std::min<std::size_t>(workspace.ioBuffer.size(), bytesToTest - offset)});
 			if (status != lexxos::vfs::WriteStatus::Ok) {
 				output.close();
 				report.add("vfs", "write", "failed", "", lexxos::vfs::toString(status));
 				return;
 			}
 		}
-		output.close();
+
+		auto const finishStatus = output.finish();
+		if (finishStatus != lexxos::vfs::WriteStatus::Ok) {
+			report.add("vfs", "write-close", "failed", "", lexxos::vfs::toString(finishStatus));
+			return;
+		}
+
 		auto const syncStatus = lexxos::vfs::sync();
 		if (syncStatus != lexxos::vfs::SyncStatus::Ok) {
 			report.add("vfs", "sync", "failed", "", lexxos::vfs::toString(syncStatus));
 			return;
 		}
+
 		auto const writeElapsed = elapsedMs(writeStart, uptimeMs(context));
 
 		lexxos::vfs::FileHandle input;
@@ -1148,7 +2025,7 @@ namespace {
 
 		std::uint32_t readBytes = 0;
 		auto const readStart = uptimeMs(context);
-		while (readBytes < ioBenchmarkBytes) {
+		while (readBytes < bytesToTest) {
 			std::size_t bytesRead = 0;
 			auto const status = input.read(workspace.ioBuffer.data(), workspace.ioBuffer.size(), bytesRead);
 			if (status != lexxos::vfs::ReadStatus::Ok || bytesRead == 0) {
@@ -1157,15 +2034,27 @@ namespace {
 				report.add("vfs", "read", "failed", "", note);
 				return;
 			}
+
+			for (std::size_t i = 0; i < bytesRead; ++i) {
+				auto const offset = readBytes + i;
+				auto const expected = static_cast<char>(((offset % ioChunkBytes) + (offset / ioChunkBytes) * 31U) & 0x7FU);
+				if (workspace.ioBuffer[i] != expected) {
+					report.add("vfs", "verify", "failed", "", "pattern mismatch");
+					return;
+				}
+			}
+
 			readBytes += static_cast<std::uint32_t>(bytesRead);
 		}
+
 		input.close();
 		auto const readElapsed = elapsedMs(readStart, uptimeMs(context));
 		(void) lexxos::vfs::remove(textView(workspace.ioPath));
 
-		report.addUnsigned("vfs", "write-4k", writeElapsed, "ms", textView(workspace.ioPath));
-		report.addUnsigned("vfs", "write-rate", perSecond(ioBenchmarkBytes / 1024U, writeElapsed), "KiB/s");
-		report.addUnsigned("vfs", "read-4k", readElapsed, "ms", textView(workspace.ioPath));
+		report.addUnsigned("vfs", "bytes", bytesToTest, "bytes");
+		report.addUnsigned("vfs", "write", writeElapsed, "ms", textView(workspace.ioPath));
+		report.addUnsigned("vfs", "write-rate", kibPerSecond(bytesToTest, writeElapsed), "KiB/s");
+		report.addUnsigned("vfs", "read", readElapsed, "ms", textView(workspace.ioPath));
 		report.addUnsigned("vfs", "read-rate", perSecond(readBytes / 1024U, readElapsed), "KiB/s");
 	}
 
@@ -1183,12 +2072,14 @@ namespace {
 		for (std::uint32_t index = 0; index < consoleBenchmarkLines; ++index) {
 			lexxos::app::console_mirror::write(line);
 		}
+
 		auto const writeElapsed = elapsedMs(writeStart, uptimeMs(context));
 
 		auto const flushStart = uptimeMs(context);
 		for (std::uint32_t index = 0; index < consoleBenchmarkFlushPasses; ++index) {
 			lexxos::app::console_mirror::flush();
 		}
+
 		auto const flushElapsed = elapsedMs(flushStart, uptimeMs(context));
 
 		auto const refreshStart = uptimeMs(context);
@@ -1223,6 +2114,7 @@ namespace {
 		for (std::uint32_t index = 0; index < consoleClearBenchmarkFillLines; ++index) {
 			lexxos::app::console_mirror::write(line);
 		}
+
 		for (std::uint32_t pass = 0; pass < consoleClearBenchmarkFlushPasses; ++pass) {
 			lexxos::app::console_mirror::flush();
 		}
@@ -1236,6 +2128,7 @@ namespace {
 		for (std::uint32_t pass = 0; pass < consoleClearBenchmarkFlushPasses; ++pass) {
 			lexxos::app::console_mirror::flush();
 		}
+
 		auto const flushElapsed = elapsedMs(flushStart, uptimeMs(context));
 		auto const stats = lexxos::app::picocalc_lcd_console::renderStats();
 
@@ -1274,8 +2167,10 @@ namespace {
 			if (lock) {
 				return lock;
 			}
+
 			sleepMs(context, 1);
 		}
+
 		return {};
 	}
 
@@ -1304,6 +2199,7 @@ namespace {
 			report.add("display", "device", "none", "");
 			return;
 		}
+
 		if (!display->isReady()) {
 			report.add("display", "device", "not-ready", "", display->name());
 			return;
@@ -1346,6 +2242,7 @@ namespace {
 			                         },
 			    workspace.displayPixels.data(), static_cast<int>(width));
 		}
+
 		display->endFrame();
 		auto const elapsed = elapsedMs(start, uptimeMs(context));
 		auto const bytes = static_cast<std::uint64_t>(width) * rows * 2ULL;
@@ -1374,6 +2271,7 @@ namespace {
 			report.add("display", "fill-text", "none", "");
 			return;
 		}
+
 		if (!display->isReady()) {
 			report.add("display", "fill-text", "not-ready", "", display->name());
 			return;
@@ -1436,8 +2334,10 @@ namespace {
 						break;
 					}
 				}
+
 				display->endRgb565Stream();
 			}
+
 			if (!ok && display->beginRgb565Stream(rect)) {
 				ok = true;
 				for (std::uint32_t row = 0; row < rows; ++row) {
@@ -1446,10 +2346,13 @@ namespace {
 						break;
 					}
 				}
+
 				display->endRgb565Stream();
 			}
+
 			display->endFrame();
 		}
+
 		auto const elapsed = elapsedMs(start, uptimeMs(context));
 
 		mirrorMode.restore();
@@ -1486,28 +2389,26 @@ namespace {
 
 	bool openReportFile(lexxos::os::AppContext& context,
 	    lexxos::program::ParsedArguments const& arguments,
-	    BenchmarkWorkspace& workspace,
+	    std::array<char, lexxos::vfs::maxPathLength>& reportPath,
 	    lexxos::vfs::FileHandle& file) {
 		auto const requestedPath = arguments.valueOr("out", defaultReportPath);
 		auto const defaultPathRequested = requestedPath.empty() || !arguments.has("out");
 		if (defaultPathRequested) {
-			buildTimestampedReportPath(context, arguments, defaultReportDirectory, workspace.reportPath);
+			buildTimestampedReportPath(context, arguments, defaultReportDirectory, reportPath);
 			(void) lexxos::vfs::createDirectory(defaultReportDirectory);
 		} else {
-			copyText(workspace.reportPath, requestedPath);
+			copyText(reportPath, requestedPath);
 		}
 
-		auto status = lexxos::vfs::open(textView(workspace.reportPath), lexxos::vfs::OpenMode::CreateTruncateWrite, file);
+		lexxos::vfs::Stat existing{};
+		if (lexxos::vfs::stat(textView(reportPath), existing)) {
+			context.writeLine("bench: report path already exists; choose a new --out");
+			return false;
+		}
+
+		auto status = lexxos::vfs::open(textView(reportPath), lexxos::vfs::OpenMode::CreateTruncateWrite, file);
 		if (status == lexxos::vfs::OpenStatus::Ok) {
 			return true;
-		}
-
-		if (defaultPathRequested) {
-			buildTimestampedReportPath(context, arguments, fallbackReportDirectory, workspace.reportPath);
-			status = lexxos::vfs::open(textView(workspace.reportPath), lexxos::vfs::OpenMode::CreateTruncateWrite, file);
-			if (status == lexxos::vfs::OpenStatus::Ok) {
-				return true;
-			}
 		}
 
 		context.write("bench: report save disabled, open failed: ");
@@ -1515,35 +2416,20 @@ namespace {
 		return false;
 	}
 
-	void emitReport(lexxos::os::AppContext& context, BenchmarkReport const& report, lexxos::vfs::FileHandle* file) {
-		constexpr PrettyTableColumn columns[] = {
-		    {.name = "section",  .align = PrettyTableAlign::Left, .minWidth = 7, .maxWidth = 14},
-		    { .name = "metric",  .align = PrettyTableAlign::Left, .minWidth = 8, .maxWidth = 22},
-		    {  .name = "value", .align = PrettyTableAlign::Right, .minWidth = 6, .maxWidth = 18},
-		    {   .name = "unit",  .align = PrettyTableAlign::Left, .minWidth = 4, .maxWidth = 10},
-		    {   .name = "note",  .align = PrettyTableAlign::Left, .minWidth = 4, .maxWidth = 32},
-		};
+	void emitReport(lexxos::os::AppContext& context, BenchmarkReport const& report, lexxos::vfs::FileHandle*) {
+		for (std::size_t i = 0; i < report.rowCount; ++i) {
+			auto const& row = report.rows[i];
+			std::array<char, 320> line{};
+			std::size_t used = 0;
+			for (auto field : {textView(row.section), textView(row.metric), textView(row.value), textView(row.unit), textView(row.note)}) {
+				if (used) {
+					appendToArray(line, used, "\t");
+				}
 
-		ReportOutputStream output{context.standardOutput(), file};
-		auto reportContext = context.createChild({
-		    .standardOutput = &output,
-		    .standardError = &output,
-		});
-
-		reportContext.writeLine("LexxOS benchmark report");
-		BenchmarkTableContext tableContext{.report = &report};
-		PrettyTable table{columns, sizeof(columns) / sizeof(columns[0])};
-		table.setStyle({
-		    .border = true,
-		    .header = true,
-		    .horizontalRules = PrettyTableRules::Header,
-		    .leftPadding = 1,
-		    .rightPadding = 1,
-		    .maxTableWidth = 120,
-		});
-		table.print(reportContext, provideBenchmarkRow, &tableContext);
-		if (output.failed()) {
-			context.writeLine("bench: report file write failed");
+				appendToArray(line, used, field);
+			}
+			appendToArray(line, used, "\n");
+			context.write(std::string_view{line.data(), used});
 		}
 	}
 
@@ -1552,19 +2438,45 @@ namespace {
 		context.writeLine(step);
 	}
 
-	BenchmarkWorkspace* allocateWorkspace(lexxos::os::AppContext& context) {
+	// Profile-specific workspaces retain the same ProgramMemoryArena ownership.
+	// Neither profile requires a second heap allocation after task creation.
+	template <typename Workspace>
+	Workspace* allocateWorkspace(lexxos::os::AppContext& context) {
 		auto* arena = context.memoryArena();
 		if (arena == nullptr) {
 			context.writeLine("bench: program memory arena is unavailable");
 			return nullptr;
 		}
 
-		auto* memory = arena->allocate(sizeof(BenchmarkWorkspace), alignof(BenchmarkWorkspace));
+		auto* memory = arena->allocate(sizeof(Workspace), alignof(Workspace));
 		if (memory == nullptr) {
 			context.writeLine("bench: not enough program workspace memory");
 			return nullptr;
 		}
-		return new (memory) BenchmarkWorkspace{};
+
+		return new (memory) Workspace{};
+	}
+
+	std::uint32_t benchmarkInternalMemoryQuota(lexxos::program::ProgramInvocation const& invocation) {
+		std::string_view profile;
+		for (int index = 1; index < invocation.argc; ++index) {
+			std::string_view const argument{invocation.argv[index]};
+			if (argument == "--profile" && index + 1 < invocation.argc) {
+				profile = invocation.argv[++index];
+			} else if (argument.starts_with("--profile=")) {
+				profile = argument.substr(sizeof("--profile=") - 1U);
+			}
+		}
+
+		if (profile == "sync") {
+			return static_cast<std::uint32_t>(sizeof(SyncBenchmarkWorkspace));
+		}
+
+		if (profile == "vm" || profile == "vm-detail") {
+			return static_cast<std::uint32_t>(sizeof(VmBenchmarkWorkspace));
+		}
+
+		return static_cast<std::uint32_t>(sizeof(BenchmarkWorkspace));
 	}
 
 } // namespace
@@ -1573,20 +2485,21 @@ ProgramDescriptor BenchmarkProgram::descriptor() {
 	return {
 	    .name = "bench",
 	    .help = "run portable LexxOS system benchmark",
-	    .description = "Collects board/runtime settings, runs CPU, memory, scheduler, multitask and VFS synthetic tests, then prints and saves a table report.",
-	    .usage = "bench [--iterations count] [--tasks count] [--out path] [--io-path path] [--no-save]",
+	    .description = "Quick, full, soak, sync and RV32I VM tests with incremental TSV reports, resource snapshots, display and verified SD reads. File writes require a new --write-dir.",
+	    .usage = "bench [--profile quick|full|soak|sync|vm|vm-detail] [--vm-case substring] [--vm-repeat 1..9] [--duration seconds] [--device name] [--sd-start lba] [--sd-blocks count] [--write-dir NEW-path] [--file-bytes count] [--iterations count] [--tasks count] [--out path] [--io-path path] [--no-display] [--no-mirror] [--no-save]",
 	    .arguments = argumentList(benchmarkArguments),
 	    .handler = run,
 	    .runtime = {
 	                .launchMode = ProgramLaunchMode::ForegroundTask,
-	                .stackSizeBytes = 5120,
+	                .stackSizeBytes = 16384,
 	                .priority = 1,
 	                .memoryClass = ProgramMemoryClass::InternalOnly,
 	                .externalMemoryQuotaBytes = 0,
 	                .internalMemoryQuotaBytes = static_cast<std::uint32_t>(sizeof(BenchmarkWorkspace)),
 	                .cancellable = true,
-	                .allowBackground = true,
+	                .allowBackground = false,
 	                },
+	    .internalMemoryQuotaResolver = benchmarkInternalMemoryQuota,
 	};
 }
 
@@ -1594,66 +2507,261 @@ int BenchmarkProgram::run(
     lexxos::os::AppContext& context,
     lexxos::program::ProgramInvocation const&,
     lexxos::program::ParsedArguments const& arguments) {
-	context.writeLine("bench: collecting configuration and running synthetic tests");
+	auto const profile = arguments.valueOr("profile", "quick");
+	if (profile != "quick" && profile != "full" && profile != "soak" && profile != "sync" && profile != "vm" && profile != "vm-detail") {
+		context.writeErrorLine("bench: profile must be quick, full, soak, sync, vm or vm-detail");
+		return 2;
+	}
 
-	auto* workspace = allocateWorkspace(context);
-	if (workspace == nullptr) {
+	auto number = [&](std::string_view name, std::uint32_t fallback, std::uint32_t min, std::uint32_t max, std::uint32_t& output) {
+		output = fallback;
+		if (!arguments.has(name)) {
+			return true;
+		}
+
+		if (!parseUnsigned32(arguments.valueOr(name, {}), output) || output < min || output > max) {
+			context.write("bench: invalid ");
+			context.writeLine(name);
+			return false;
+		}
+		return true;
+	};
+
+	std::uint32_t iterations{}, workers{}, duration{}, blocks{}, firstBlock{}, fileBytes{}, vmRepeats{};
+	if (!number("iterations", profile == "quick" ? 20000U : (profile == "vm" || profile == "vm-detail") ? 2000U
+	                                                                                                    : defaultIterations,
+	        minIterations, maxIterations, iterations)
+	    || !number("vm-repeat", 1, 1, 9, vmRepeats)
+	    || !number("vm-repeat", 1, 1, 9, vmRepeats)
+	    || !number("tasks", defaultWorkers, 1, maxWorkers, workers)
+	    || !number("duration", 300, 1, 86400, duration)
+	    || !number("sd-blocks", profile == "quick" ? 16 : 128, 1, 1024, blocks)
+	    || !number("sd-start", 0, 0, UINT32_MAX, firstBlock)
+	    || !number("file-bytes", 1048576, 1, 16777216, fileBytes)) {
+		return 2;
+	}
+
+	if (profile != "vm-detail"
+	    && (arguments.has("vm-case") || arguments.has("vm-repeat"))) {
+		context.writeErrorLine("bench: --vm-case and --vm-repeat require --profile vm-detail");
+		return 2;
+	}
+
+	if ((arguments.has("duration") && profile != "soak")
+	    || (arguments.has("file-bytes") && !arguments.has("write-dir"))) {
+		context.writeErrorLine("bench: --duration requires soak; --file-bytes requires --write-dir");
+		return 2;
+	}
+
+	for (auto name : {"out", "io-path", "write-dir"}) {
+		if (arguments.has(name)) {
+			auto const path = arguments.valueOr(name, {});
+			if (path.empty() || path.size() >= lexxos::vfs::maxPathLength || path.front() != '/') {
+				context.writeErrorLine("bench: paths must be absolute and fit VFS maxPathLength");
+				return 2;
+			}
+		}
+	}
+
+	if (arguments.has("no-mirror") && !arguments.has("no-display")) {
+		context.writeErrorLine("bench: --no-mirror requires --no-display");
+		return 2;
+	}
+
+	std::optional<lexxos::app::ScopedConsoleMirrorSuspension> mirrorSuspension;
+	if (arguments.has("no-mirror")) {
+		mirrorSuspension.emplace();
+	}
+
+	auto const vmProfile = profile == "vm" || profile == "vm-detail";
+	auto* workspace = profile != "sync" && !vmProfile ? allocateWorkspace<BenchmarkWorkspace>(context) : nullptr;
+	auto* syncWorkspace = profile == "sync" ? allocateWorkspace<SyncBenchmarkWorkspace>(context) : nullptr;
+	auto* vmWorkspace = vmProfile ? allocateWorkspace<VmBenchmarkWorkspace>(context) : nullptr;
+	if (workspace == nullptr && syncWorkspace == nullptr && vmWorkspace == nullptr) {
 		return 1;
 	}
 
-	auto iterations = parseBoundedUnsigned(context, arguments, "iterations", defaultIterations, minIterations, maxIterations);
-	auto workers = parseBoundedUnsigned(context, arguments, "tasks", defaultWorkers, 1U, maxWorkers);
-
-	announceStep(context, "configuration");
-	collectConfiguration(context, workspace->report);
-	announceStep(context, "cpu");
-	runCpuBenchmark(context, workspace->report, iterations);
-	announceStep(context, "memory");
-	runMemoryBenchmark(context, workspace->report, *workspace, iterations);
-	announceStep(context, "yield");
-	runYieldBenchmark(context, workspace->report, iterations);
-	announceStep(context, "platform sleep");
-	runSleepBenchmark(context, workspace->report);
-	announceStep(context, "math");
-	runArithmeticMicroBenchmark(context, workspace->report, *workspace, iterations);
-	announceStep(context, "rtos tick");
-	runRtosTickBenchmark(context, workspace->report);
-	announceStep(context, "rtos primitives");
-	runRtosPrimitiveBenchmark(context, workspace->report);
-	announceStep(context, "multitask");
-	runMultitaskBenchmarks(context, workspace->report, *workspace, iterations, workers);
-	announceStep(context, "vfs");
-	runVfsIoBenchmark(context, workspace->report, *workspace, arguments);
-	announceStep(context, "console");
-	runConsoleMirrorBenchmark(context, workspace->report);
-	announceStep(context, "display");
-	runDirectDisplayBenchmark(context, workspace->report, *workspace);
-	runDirectTextAreaFillBenchmark(context, workspace->report, *workspace);
-	announceStep(context, "render");
-	runConsoleRendererStatsBenchmark(context, workspace->report);
-	runConsoleClearBenchmark(context, workspace->report);
-
+	auto& report = vmWorkspace != nullptr ? vmWorkspace->report : syncWorkspace != nullptr ? syncWorkspace->report
+	                                                                                       : workspace->report;
+	auto& reportPath = vmWorkspace != nullptr ? vmWorkspace->reportPath : syncWorkspace != nullptr ? syncWorkspace->reportPath
+	                                                                                               : workspace->reportPath;
 	lexxos::vfs::FileHandle reportFile;
-	lexxos::vfs::FileHandle* reportFilePtr = nullptr;
-	if (!arguments.has("no-save") && openReportFile(context, arguments, *workspace, reportFile)) {
-		reportFilePtr = &reportFile;
-		workspace->report.add("output", "report", textView(workspace->reportPath), "", "saved");
-	} else if (arguments.has("no-save")) {
-		workspace->report.add("output", "report", "disabled", "", "--no-save");
+	bool const saveRequested = !arguments.has("no-save");
+	bool const saveOpened = saveRequested && openReportFile(context, arguments, reportPath, reportFile);
+	ReportOutputStream output{context.standardOutput(), saveOpened ? &reportFile : nullptr};
+	auto runContext = context.createChild({.standardOutput = &output, .standardError = &output});
+	runContext.writeLine("LexxOS benchmark report v2");
+	runContext.writeLine("section\tmetric\tvalue\tunit\tnote");
+	runContext.write("report-path\t");
+	runContext.writeLine(saveOpened ? textView(reportPath) : "console-only");
+	unsigned failures = saveRequested && !saveOpened && arguments.has("out") ? 1 : 0;
+	unsigned skipped{}, rounds{}, phases{};
+	std::uint32_t reportOutputMs{}, phaseWorkMs{}, reportRows{};
+	bool deadlineReached{};
+	auto const started = uptimeMs(context);
+	auto flush = [&] {
+		auto const outputStarted = uptimeMs(context);
+		reportRows += static_cast<std::uint32_t>(report.rowCount);
+		emitReport(runContext, report, nullptr);
+		failures += report.failures + report.dropped;
+		skipped += report.skipped;
+		if (report.dropped) {
+			runContext.writeLine("bench: report-overflow");
+		}
+
+		report.rowCount = 0;
+		report.failures = 0;
+		report.skipped = 0;
+		report.dropped = 0;
+		if (reportFile.isOpen() && lexxos::vfs::sync() != lexxos::vfs::SyncStatus::Ok) {
+			++failures;
+		}
+
+		reportOutputMs += elapsedMs(outputStarted, uptimeMs(context));
+	};
+
+	auto canRun = [&] {
+		deadlineReached = profile == "soak" && elapsedMs(started, uptimeMs(context)) >= duration * 1000U;
+		return !context.cancellationRequested() && !deadlineReached;
+	};
+
+	auto phase = [&](std::string_view name, auto work) {
+		if (!canRun()) {
+			return;
+		}
+
+		announceStep(runContext, name);
+		report.add("phase", "name", name, "");
+		detail::sampleBenchmarkResources(runContext, report);
+		flush();
+		auto const start = uptimeMs(context);
+		work();
+		++phases;
+		auto const workMs = elapsedMs(start, uptimeMs(context));
+		phaseWorkMs += workMs;
+		report.add("phase", "name", name, "", "after");
+		report.addUnsigned("phase", "elapsed", workMs, "ms", "excludes report output");
+		detail::sampleBenchmarkResources(runContext, report);
+		flush();
+	};
+
+	report.add("suite", "profile", profile, "");
+	report.add("output", "lcd-mirror", arguments.has("no-mirror") ? "suspended" : "enabled", "", "--no-display only skips active display tests");
+	report.add("output", "save", saveOpened ? "enabled" : "skipped", "", saveOpened ? "incremental report" : "console-only; no writable report target");
+	report.add("suite", "clock-resolution", "1", "ms", "legacy rates clamp sub-ms elapsed to 1ms");
+	report.addUnsigned("suite", "workspace",
+	    profile == "sync" ? sizeof(SyncBenchmarkWorkspace)
+	        : vmProfile   ? sizeof(VmBenchmarkWorkspace)
+	                      : sizeof(BenchmarkWorkspace),
+	    "bytes");
+	report.addUnsigned("suite", "start-uptime", started, "ms");
+	collectConfiguration(runContext, report);
+	flush();
+	do {
+		++rounds;
+		report.addUnsigned("suite", "round", rounds, "count");
+		flush();
+
+		if (profile == "sync") {
+			phase("sync", [&] { runKernelSyncSmoke(report); });
+			break;
+		}
+
+		if (vmProfile) {
+			phase("cpu-native", [&] { runCpuBenchmark(runContext, report, iterations); });
+			phase("rv32i", [&] { runVmBenchmark(runContext, report, *vmWorkspace, iterations); });
+
+			if (profile == "vm-detail") {
+				phase("rv32i-detail", [&] {
+					runVmDetailedBenchmark(
+					    runContext, report, *vmWorkspace, iterations,
+					    arguments.valueOr("vm-case", {}), vmRepeats, flush);
+				});
+			}
+
+			break;
+		}
+
+		phase("native-before", [&] { detail::sampleBenchmarkNative(report); });
+		phase("devices-before", [&] { detail::sampleBenchmarkDevices(runContext, report); });
+		phase("cpu", [&] { runCpuBenchmark(runContext, report, iterations); });
+		phase("memory", [&] { runMemoryBenchmark(runContext, report, *workspace, iterations); });
+		phase("scheduler", [&] {
+			runYieldBenchmark(runContext, report, iterations);
+			runSleepBenchmark(runContext, report);
+			runLatencyBenchmark(runContext, report, profile == "quick" ? 16 : 128);
+		});
+
+		if (profile != "quick") {
+			phase("math", [&] { runArithmeticMicroBenchmark(runContext, report, *workspace, iterations); });
+			phase("rtos", [&] { runRtosTickBenchmark(runContext, report); runRtosPrimitiveBenchmark(runContext, report); });
+			phase("multitask", [&] { runMultitaskBenchmarks(runContext, report, *workspace, iterations, workers); });
+		}
+
+		phase("vfs", [&] { runVfsIoBenchmark(runContext, report, *workspace, arguments); });
+		phase("storage", [&] {
+			detail::runBenchmarkStorage(runContext, report, workspace->probes, arguments.valueOr("device", {}),
+			    firstBlock, blocks, arguments.valueOr("write-dir", {}), fileBytes);
+		});
+
+		if (!arguments.has("no-display")) {
+			phase("console", [&] { runConsoleMirrorBenchmark(runContext, report); });
+			phase("display", [&] {
+				runDirectDisplayBenchmark(runContext, report, *workspace);
+				if (profile != "quick") {
+					runDirectTextAreaFillBenchmark(runContext, report, *workspace);
+				}
+			});
+
+			phase("render", [&] {
+				runConsoleRendererStatsBenchmark(runContext, report);
+				if (profile != "quick") {
+					runConsoleClearBenchmark(runContext, report);
+				}
+			});
+		} else {
+			report.add("display", "tests", "skipped", "", "--no-display");
+			flush();
+		}
+
+		phase("native-after", [&] { detail::sampleBenchmarkNative(report); });
+		phase("devices-after", [&] { detail::sampleBenchmarkDevices(runContext, report); });
+
+		if (profile != "soak" || !canRun()) {
+			break;
+		}
+
+		sleepMs(runContext, 10);
+	} while (canRun());
+
+	report.addUnsigned("summary", "phase-work", phaseWorkMs, "ms", "sum of phase wall times");
+	report.addUnsigned("summary", "report-output", reportOutputMs, "ms", "writes + sync before summary; includes scheduling");
+	report.addUnsigned("summary", "report-rows", reportRows, "count", "before summary");
+	report.addUnsigned("summary", "rounds-started", rounds, "count");
+	report.addUnsigned("summary", "phases-completed", phases, "count");
+	report.add("summary", "duration-target-reached", deadlineReached ? "yes" : "no", "");
+	report.addUnsigned("summary", "elapsed", elapsedMs(started, uptimeMs(context)), "ms", "includes output and report sync");
+	report.addUnsigned("summary", "failures", failures, "count");
+	report.addUnsigned("summary", "unavailable-or-skipped", skipped, "rows", "not passed tests");
+	report.add("summary", "result", context.cancellationRequested() ? "cancelled" : failures || output.failed() ? "failed"
+	                                                                                                            : "completed",
+	    "");
+	report.add("summary", "coverage", "see skipped rows", "", "completion is not full hardware acceptance");
+	flush();
+
+	auto const reportFinishStatus = reportFile.finish();
+	if (reportFinishStatus != lexxos::vfs::WriteStatus::Ok) {
+		context.writeError("bench: report close failed: ");
+		context.writeErrorLine(lexxos::vfs::toString(reportFinishStatus));
+		++failures;
 	}
 
-	emitReport(context, workspace->report, reportFilePtr);
-	if (reportFile.isOpen()) {
-		reportFile.close();
+	if (output.failed()) {
+		context.writeErrorLine("bench: report output failed");
 	}
 
-	auto const memory = lexxos::kernel::memorySnapshot();
-	if (memory.available) {
-		context.write("bench: free heap after benchmark: ");
-		writeUnsigned(context, memory.freeHeapBytes);
-		context.writeLine(" bytes");
-	}
-	return 0;
+	return context.cancellationRequested() ? 130 : failures || output.failed() ? 1
+	                                                                           : 0;
 }
 
 } // namespace lexxos::apps::system_programs

@@ -16,11 +16,15 @@
 #include <lexxos/devices/picocalc/picocalc_southbridge_service.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices {
+
 class I2cBus;
+
 } // namespace lexxos::devices
 
 namespace lexxos::devices::input_detail {

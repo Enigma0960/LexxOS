@@ -10,12 +10,13 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_ldo_regulator.h>
 #include <esp_log.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <hal/mipi_dsi_hal.h>
 #include <hal/mipi_dsi_host_ll.h>
 #include <hal/mipi_dsi_ll.h>
 #include <hal/mipi_dsi_types.h>
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 namespace {
 
@@ -74,6 +75,7 @@ lcd_color_format_t toLcdColorFormat(lexxos::platform::MipiDsiColorFormat format)
 		case lexxos::platform::MipiDsiColorFormat::Rgb565:
 			return LCD_COLOR_FMT_RGB565;
 	}
+
 	return LCD_COLOR_FMT_RGB565;
 }
 
@@ -84,6 +86,7 @@ lexxos::devices::DisplayWireFormat toWireFormat(lexxos::platform::MipiDsiColorFo
 		case lexxos::platform::MipiDsiColorFormat::Rgb565:
 			return lexxos::devices::DisplayWireFormat::Rgb565;
 	}
+
 	return lexxos::devices::DisplayWireFormat::Unknown;
 }
 
@@ -95,6 +98,7 @@ std::uint16_t rgb565ForElementOrder(std::uint16_t rgb565, lexxos::platform::Mipi
 	if (order == lexxos::platform::MipiDsiRgbElementOrder::Rgb) {
 		return rgb565;
 	}
+
 	auto const red = static_cast<std::uint16_t>((rgb565 >> 11U) & 0x001FU);
 	auto const green = static_cast<std::uint16_t>(rgb565 & 0x07E0U);
 	auto const blue = static_cast<std::uint16_t>(rgb565 & 0x001FU);
@@ -200,6 +204,7 @@ bool EspIdfMipiDsiDisplay::setPowerMode(DisplayPowerMode mode) {
 	if (!_ready || _frameActive || _streamActive) {
 		return false;
 	}
+
 	if (mode == _powerMode) {
 		return true;
 	}
@@ -209,6 +214,7 @@ bool EspIdfMipiDsiDisplay::setPowerMode(DisplayPowerMode mode) {
 			if (_backlight == 0 && !setBacklight(_config.defaultBrightness)) {
 				return false;
 			}
+
 			_powerMode = DisplayPowerMode::On;
 			return true;
 		case DisplayPowerMode::Off:
@@ -216,9 +222,11 @@ bool EspIdfMipiDsiDisplay::setPowerMode(DisplayPowerMode mode) {
 			if (!setBacklight(0)) {
 				return false;
 			}
+
 			_powerMode = mode;
 			return true;
 	}
+
 	return false;
 }
 
@@ -234,9 +242,11 @@ bool EspIdfMipiDsiDisplay::setBacklight(std::uint8_t value) {
 	if (!_ready && !_powerControlReady) {
 		return false;
 	}
+
 	if (!_setBrightness(value)) {
 		return false;
 	}
+
 	_backlight = value;
 	return true;
 }
@@ -245,6 +255,7 @@ bool EspIdfMipiDsiDisplay::clear(std::uint16_t rgb565) {
 	if (!_ready || _powerMode != DisplayPowerMode::On || _frameBuffer == nullptr) {
 		return false;
 	}
+
 	if (_config.inputColor == lexxos::platform::MipiDsiColorFormat::Rgb565) {
 		auto const storedColor = rgb565ForElementOrder(rgb565, _config.rgbElementOrder);
 		auto* fb565 = reinterpret_cast<std::uint16_t*>(_frameBuffer);
@@ -256,6 +267,7 @@ bool EspIdfMipiDsiDisplay::clear(std::uint16_t rgb565) {
 			}
 		}
 	}
+
 	return _flush({.x = 0, .y = 0, .width = _config.width, .height = _config.height});
 }
 
@@ -278,6 +290,7 @@ bool EspIdfMipiDsiDisplay::fillRgb565(Rect const& rect, std::uint16_t rgb565) {
 	if (!_ready || _powerMode != DisplayPowerMode::On || !_isRectValid(rect) || _frameBuffer == nullptr) {
 		return false;
 	}
+
 	if (_config.inputColor == lexxos::platform::MipiDsiColorFormat::Rgb565) {
 		auto const storedColor = rgb565ForElementOrder(rgb565, _config.rgbElementOrder);
 		auto* fb565 = reinterpret_cast<std::uint16_t*>(_frameBuffer);
@@ -292,6 +305,7 @@ bool EspIdfMipiDsiDisplay::fillRgb565(Rect const& rect, std::uint16_t rgb565) {
 			}
 		}
 	}
+
 	return _flush(rect);
 }
 
@@ -299,6 +313,7 @@ bool EspIdfMipiDsiDisplay::beginRgb565Stream(Rect const& rect) {
 	if (!_ready || _powerMode != DisplayPowerMode::On || !_frameActive || _streamActive || !_isRectValid(rect) || _frameBuffer == nullptr) {
 		return false;
 	}
+
 	_streamRect = rect;
 	_streamOffsetPixels = 0;
 	_streamActive = true;
@@ -319,9 +334,11 @@ bool EspIdfMipiDsiDisplay::writeRgb565Stream(std::uint16_t const* pixels, int co
 		if (!_copyToFrameBuffer(chunkRect, pixels + consumed, chunk)) {
 			return false;
 		}
+
 		_streamOffsetPixels += chunk;
 		consumed += chunk;
 	}
+
 	return true;
 }
 
@@ -339,9 +356,11 @@ bool EspIdfMipiDsiDisplay::writeRgb565BytesStream(std::uint8_t const* bytes, int
 		if (!_copyBytesToFrameBuffer(chunkRect, bytes + static_cast<std::size_t>(consumed) * 2U, chunk)) {
 			return false;
 		}
+
 		_streamOffsetPixels += chunk;
 		consumed += chunk;
 	}
+
 	return true;
 }
 
@@ -349,6 +368,7 @@ bool EspIdfMipiDsiDisplay::endRgb565Stream() {
 	if (!_ready || _powerMode != DisplayPowerMode::On || !_streamActive) {
 		return false;
 	}
+
 	auto const complete = _streamOffsetPixels == _streamRect.width * _streamRect.height;
 	auto const flushed = complete && _flush(_streamRect);
 	_streamActive = false;
@@ -360,10 +380,12 @@ bool EspIdfMipiDsiDisplay::endFrame() {
 	if (!_ready || _powerMode != DisplayPowerMode::On || !_frameActive) {
 		return false;
 	}
+
 	if (_streamActive && !endRgb565Stream()) {
 		_frameActive = false;
 		return false;
 	}
+
 	_frameActive = false;
 	return true;
 }
@@ -383,6 +405,7 @@ bool EspIdfMipiDsiDisplay::_initializeDsi() {
 		ESP_LOGE(tag, "failed to create MIPI DSI bus");
 		return false;
 	}
+
 	_dsiBus = dsiBus;
 
 	esp_lcd_panel_io_handle_t dbiIo = nullptr;
@@ -394,6 +417,7 @@ bool EspIdfMipiDsiDisplay::_initializeDsi() {
 		ESP_LOGE(tag, "failed to create MIPI DBI control IO");
 		return false;
 	}
+
 	_dbiIo = dbiIo;
 	(void) esp_lcd_panel_io_del(dbiIo);
 	_dbiIo = nullptr;
@@ -420,12 +444,14 @@ bool EspIdfMipiDsiDisplay::_initializeDsi() {
 		ESP_LOGE(tag, "failed to create MIPI DPI panel");
 		return false;
 	}
+
 	_panel = panel;
 
 	auto* privateBus = static_cast<DsiBusPrivatePrefix*>(_dsiBus);
 	if (_config.nonBurstSyncPulses) {
 		mipi_dsi_host_ll_dpi_set_video_burst_type(privateBus->hal.host, MIPI_DSI_LL_VIDEO_NON_BURST_WITH_SYNC_PULSES);
 	}
+
 	mipi_dsi_host_ll_dpi_enable_frame_ack(privateBus->hal.host, _config.frameAck);
 
 	if (esp_lcd_panel_init(panel) != ESP_OK) {
@@ -436,11 +462,13 @@ bool EspIdfMipiDsiDisplay::_initializeDsi() {
 	if (_config.forceClockLaneHs) {
 		mipi_dsi_host_ll_set_clock_lane_state(privateBus->hal.host, MIPI_DSI_LL_CLOCK_LANE_STATE_HS);
 	}
+
 	mipi_dsi_host_ll_enable_cmd_ack(privateBus->hal.host, _config.commandAck);
 
 	if (!_releaseBridgeResetAndWake()) {
 		return false;
 	}
+
 	if (!_initializeTc358762Bridge()) {
 		return false;
 	}
@@ -450,6 +478,7 @@ bool EspIdfMipiDsiDisplay::_initializeDsi() {
 		ESP_LOGE(tag, "failed to get MIPI DPI frame buffer");
 		return false;
 	}
+
 	_frameBuffer = static_cast<std::uint8_t*>(fb0);
 	return true;
 }
@@ -481,6 +510,7 @@ bool EspIdfMipiDsiDisplay::_initializePowerControl() {
 		_powerControlReady = false;
 		return true;
 	}
+
 	if (!_controlBus.isReady()) {
 		ESP_LOGW(tag, "MIPI DSI power-control I2C bus is not ready");
 		return !_config.powerControlRequired;
@@ -504,6 +534,7 @@ bool EspIdfMipiDsiDisplay::_initializePowerControl() {
 	if (!ok) {
 		ESP_LOGW(tag, "MIPI DSI power-control init failed");
 	}
+
 	return ok || !_config.powerControlRequired;
 }
 
@@ -531,6 +562,7 @@ bool EspIdfMipiDsiDisplay::_releaseBridgeResetAndWake() {
 	if (!ok) {
 		ESP_LOGW(tag, "MIPI DSI bridge reset/wake command failed");
 	}
+
 	return ok || !_config.powerControlRequired;
 }
 
@@ -545,6 +577,7 @@ bool EspIdfMipiDsiDisplay::_initializeTc358762Bridge() {
 	if (!_config.tc358762BridgeInit) {
 		return true;
 	}
+
 	if (_dsiBus == nullptr) {
 		return false;
 	}
@@ -588,6 +621,7 @@ bool EspIdfMipiDsiDisplay::_flush(Rect const& rect) {
 	if (_panel == nullptr || _frameBuffer == nullptr || !_isRectValid(rect)) {
 		return false;
 	}
+
 	auto const result = esp_lcd_panel_draw_bitmap_2d(static_cast<esp_lcd_panel_handle_t>(_panel),
 	    rect.x,
 	    rect.y,
@@ -607,6 +641,7 @@ bool EspIdfMipiDsiDisplay::_copyToFrameBuffer(Rect const& rect, std::uint16_t co
 	if (!_isRectValid(rect) || pixels == nullptr || stridePixels < rect.width || _frameBuffer == nullptr) {
 		return false;
 	}
+
 	if (_config.inputColor == lexxos::platform::MipiDsiColorFormat::Rgb565) {
 		auto* fb565 = reinterpret_cast<std::uint16_t*>(_frameBuffer);
 		for (int y = 0; y < rect.height; ++y) {
@@ -628,6 +663,7 @@ bool EspIdfMipiDsiDisplay::_copyToFrameBuffer(Rect const& rect, std::uint16_t co
 			}
 		}
 	}
+
 	return true;
 }
 
@@ -635,6 +671,7 @@ bool EspIdfMipiDsiDisplay::_copyBytesToFrameBuffer(Rect const& rect, std::uint8_
 	if (!_isRectValid(rect) || bytes == nullptr || stridePixels < rect.width || _frameBuffer == nullptr) {
 		return false;
 	}
+
 	if (_config.inputColor == lexxos::platform::MipiDsiColorFormat::Rgb565) {
 		auto* fb565 = reinterpret_cast<std::uint16_t*>(_frameBuffer);
 		for (int y = 0; y < rect.height; ++y) {
@@ -655,6 +692,7 @@ bool EspIdfMipiDsiDisplay::_copyBytesToFrameBuffer(Rect const& rect, std::uint8_
 			}
 		}
 	}
+
 	return true;
 }
 
@@ -666,6 +704,7 @@ std::uint8_t* EspIdfMipiDsiDisplay::_frameBufferPixel(int x, int y) {
 	if (_frameBuffer == nullptr) {
 		return nullptr;
 	}
+
 	auto const offset = (static_cast<std::size_t>(y) * static_cast<std::size_t>(_config.width) + static_cast<std::size_t>(x))
 	    * static_cast<std::size_t>(_frameBufferBytesPerPixel());
 	return _frameBuffer + offset;
@@ -676,6 +715,7 @@ void EspIdfMipiDsiDisplay::_writeFrameBufferPixel(int x, int y, std::uint16_t rg
 	if (pixel == nullptr) {
 		return;
 	}
+
 	if (_config.inputColor == lexxos::platform::MipiDsiColorFormat::Rgb565) {
 		auto* destination = reinterpret_cast<std::uint16_t*>(pixel);
 		*destination = rgb565ForElementOrder(rgb565, _config.rgbElementOrder);

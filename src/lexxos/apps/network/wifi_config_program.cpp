@@ -7,6 +7,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -18,49 +19,49 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec wifiConfigArguments[] = {
 	    {
-         .name = "auth",
-         .shortName = 'a',
-         .valueName = "auto|open|wpa|wpa2|mixed",
-         .help = "authentication mode to save",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "auto",
+	     .name = "auth",
+	     .shortName = 'a',
+	     .valueName = "auto|open|wpa|wpa2|mixed",
+	     .help = "authentication mode to save",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "auto",
 	     },
 	    {
-         .name = "timeout",
-         .shortName = 't',
-         .valueName = "ms",
-         .help = "connection timeout to save",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "30000",
+	     .name = "timeout",
+	     .shortName = 't',
+	     .valueName = "ms",
+	     .help = "connection timeout to save",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "30000",
 	     },
 	    {
-         .name = "action",
-         .valueName = "set|show|clear",
-         .help = "configuration action",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = true,
+	     .name = "action",
+	     .valueName = "set|show|clear",
+	     .help = "configuration action",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = true,
 	     },
 	    {
-         .name = "ssid",
-         .valueName = "ssid",
-         .help = "Wi-Fi network SSID for set",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "ssid",
+	     .valueName = "ssid",
+	     .help = "Wi-Fi network SSID for set",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "password",
-         .valueName = "password",
-         .help = "Wi-Fi password for set",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .sensitive = true,
+	     .name = "password",
+	     .valueName = "password",
+	     .help = "Wi-Fi password for set",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .sensitive = true,
 	     },
 	};
 
@@ -78,6 +79,7 @@ namespace {
 			context.writeErrorLine("wifi-config: invalid --timeout");
 			return false;
 		}
+
 		output = timeoutMs;
 		return true;
 	}
@@ -90,6 +92,7 @@ namespace {
 			context.writeLine(detail::wifiCredentialsPath());
 			return 0;
 		}
+
 		if (status != detail::WifiCredentialsStatus::Ok && status != detail::WifiCredentialsStatus::Disabled) {
 			context.write("wifi-config: failed to read config: ");
 			writeStatus(context, status);
@@ -128,6 +131,7 @@ namespace {
 		if (!parseTimeout(context, arguments, timeoutMs)) {
 			return 2;
 		}
+
 		credentials.timeoutMs = timeoutMs;
 
 		auto const auth = arguments.valueOr("auth", "auto");
@@ -135,10 +139,12 @@ namespace {
 			context.writeErrorLine("wifi-config: SSID is too long");
 			return 2;
 		}
+
 		if (!detail::setWifiCredentialsPassword(credentials, password)) {
 			context.writeErrorLine("wifi-config: password is too long");
 			return 2;
 		}
+
 		if (!detail::setWifiCredentialsAuth(credentials, auth)) {
 			context.writeErrorLine("wifi-config: auth value is too long");
 			return 2;
@@ -173,6 +179,7 @@ namespace {
 			context.writeErrorLine(detail::toString(status));
 			return 1;
 		}
+
 		context.writeLine("wifi-config: cleared");
 		return 0;
 	}
@@ -208,9 +215,11 @@ int WifiConfigProgram::run(lexxos::os::AppContext& context,
 	if (action == "set" || action == "save") {
 		return setConfig(context, arguments);
 	}
+
 	if (action == "show" || action == "status") {
 		return showConfig(context);
 	}
+
 	if (action == "clear" || action == "remove" || action == "forget") {
 		return clearConfig(context);
 	}

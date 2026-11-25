@@ -21,6 +21,7 @@
 #endif
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::devices::rtc::DateTime;
@@ -34,9 +35,11 @@ namespace {
 		if (output == nullptr || outputSize == 0U || text.size() >= outputSize) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < text.size(); ++index) {
 			output[index] = text[index];
 		}
+
 		output[text.size()] = '\0';
 		return true;
 	}
@@ -94,6 +97,7 @@ namespace {
 			context.writeErrorLine("rtc-sync: empty NTP server name");
 			return false;
 		}
+
 		if (timeoutMs == 0U || timeoutMs > 60000U) {
 			context.writeErrorLine("rtc-sync: invalid timeout");
 			return false;
@@ -159,6 +163,7 @@ namespace {
 			} else {
 				context.writeErrorLine("rtc-sync: NTP timeout or invalid response");
 			}
+
 			close(socketHandle);
 			return false;
 		}
@@ -168,6 +173,7 @@ namespace {
 			context.writeErrorLine("rtc-sync: failed to decode NTP response");
 			return false;
 		}
+
 		return true;
 	}
 #endif

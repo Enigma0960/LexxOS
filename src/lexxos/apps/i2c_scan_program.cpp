@@ -28,49 +28,49 @@ namespace {
 
 	constexpr ProgramArgumentSpec i2cScanArguments[] = {
 	    {
-         .name = "bus-name",
-         .valueName = "name",
-         .help = "optional I2C bus name positional alias",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "bus-name",
+	     .valueName = "name",
+	     .help = "optional I2C bus name positional alias",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "bus",
-         .shortName = 'b',
-         .valueName = "name",
-         .help = "I2C bus name",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "debug",
+	     .name = "bus",
+	     .shortName = 'b',
+	     .valueName = "name",
+	     .help = "I2C bus name",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "debug",
 	     },
 	    {
-         .name = "from",
-         .valueName = "addr",
-         .help = "first 7-bit address, decimal or hex",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0x08",
+	     .name = "from",
+	     .valueName = "addr",
+	     .help = "first 7-bit address, decimal or hex",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0x08",
 	     },
 	    {
-         .name = "to",
-         .valueName = "addr",
-         .help = "last 7-bit address, decimal or hex",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0x77",
+	     .name = "to",
+	     .valueName = "addr",
+	     .help = "last 7-bit address, decimal or hex",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0x77",
 	     },
 	    {
-         .name = "quiet",
-         .shortName = 'q',
-         .valueName = "",
-         .help = "print detected addresses as a plain list",
-         .kind = ProgramArgumentKind::Flag,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "quiet",
+	     .shortName = 'q',
+	     .valueName = "",
+	     .help = "print detected addresses as a plain list",
+	     .kind = ProgramArgumentKind::Flag,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -99,10 +99,12 @@ int I2cScanProgram::run(lexxos::os::AppContext& context,
 		context.writeErrorLine("i2c-scan: invalid --from address");
 		return 2;
 	}
+
 	if (!detail::parseUnsigned(arguments.valueOr("to", "0x77"), to) || to > 0x7F) {
 		context.writeErrorLine("i2c-scan: invalid --to address");
 		return 2;
 	}
+
 	if (from > to) {
 		context.writeErrorLine("i2c-scan: --from must be less than or equal to --to");
 		return 2;
@@ -117,22 +119,8 @@ int I2cScanProgram::run(lexxos::os::AppContext& context,
 		return 1;
 	}
 
-	auto busLock = context.devices().lockI2cBus(busName, lexxos::devices::DeviceResourcePriority::Interactive, "i2c-scan");
-	if (!busLock) {
-		context.writeError("i2c-scan: I2C bus is busy: ");
-		context.writeErrorLine(busName);
-		return 1;
-	}
-
 	if (!bus->isReady()) {
 		context.writeError("i2c-scan: I2C bus is not ready: ");
-		context.writeErrorLine(busName);
-		return 1;
-	}
-
-	lexxos::devices::I2cBusTransaction transaction{*bus};
-	if (!transaction) {
-		context.writeError("i2c-scan: failed to start I2C transaction: ");
 		context.writeErrorLine(busName);
 		return 1;
 	}
@@ -141,9 +129,20 @@ int I2cScanProgram::run(lexxos::os::AppContext& context,
 	std::uint32_t found = 0;
 	if (quiet) {
 		for (std::uint32_t address = from; address <= to; ++address) {
+			if (context.devices().isI2cAddressReserved(*bus, static_cast<std::uint8_t>(address))) {
+				continue;
+			}
+
+			lexxos::devices::I2cBusTransaction transaction{
+			    *bus, lexxos::devices::DeviceResourcePriority::Interactive, 50};
+			if (!transaction) {
+				continue;
+			}
+
 			if (!bus->probe(static_cast<std::uint8_t>(address))) {
 				continue;
 			}
+
 			++found;
 			detail::writeHex8(context, static_cast<std::uint8_t>(address));
 			context.writeLine("");
@@ -158,6 +157,7 @@ int I2cScanProgram::run(lexxos::os::AppContext& context,
 		context.writeLine("");
 
 		found = detail::writeI2cAddressTable(context,
+		    context.devices(),
 		    *bus,
 		    static_cast<std::uint8_t>(from),
 		    static_cast<std::uint8_t>(to));
@@ -166,6 +166,7 @@ int I2cScanProgram::run(lexxos::os::AppContext& context,
 		detail::writeUnsigned(context, found);
 		context.writeLine("");
 	}
+
 	return 0;
 }
 

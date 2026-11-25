@@ -1,6 +1,6 @@
 # `pwd`
 
-show current VFS directory.
+Показывает текущий каталог VFS.
 
 ## Справка shell
 

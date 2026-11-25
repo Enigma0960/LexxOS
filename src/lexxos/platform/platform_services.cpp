@@ -1,5 +1,11 @@
 #include <lexxos/platform/platform_services.h>
 
+#if defined(LEXXOS_PLATFORM_RK3506)
+namespace lexxos::platform {
+void writeRawConsole(std::string_view bytes);
+}
+#endif
+
 namespace {
 
 constexpr std::string_view kGameBoyRomCacheRegionName{"gameboy-rom-cache"};
@@ -57,6 +63,9 @@ lexxos::platform::PlatformServices const& lexxos::platform::services() {
 	                  .write = writeConsole,
 	                  .readChar = readConsoleChar,
 	                  .readAvailable = readConsoleAvailable,
+#if defined(LEXXOS_PLATFORM_RK3506)
+	                  .writeRaw = writeRawConsole,
+#endif
 	                  },
 	    .clock = {
 	                  .sleepMs = sleepMs,

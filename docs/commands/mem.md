@@ -1,6 +1,6 @@
 # `mem`
 
-show kernel memory statistics.
+Показывает статистику памяти ядра.
 
 ## Справка shell
 

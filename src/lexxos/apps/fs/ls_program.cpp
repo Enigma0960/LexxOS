@@ -31,12 +31,12 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec lsArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "optional VFS path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = false,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "optional VFS path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = false,
 	     },
 	};
 
@@ -74,6 +74,7 @@ namespace {
 			lookup.found = true;
 			return false;
 		}
+
 		++lookup.current;
 		return true;
 	}
@@ -133,6 +134,7 @@ int LsProgram::run(
 		context.writeLine(path->data());
 		return 1;
 	}
+
 	if (stat.type != lexxos::vfs::NodeType::Directory) {
 		context.write(lexxos::vfs::toString(stat.type));
 		context.write(" ");
@@ -147,6 +149,7 @@ int LsProgram::run(
 		lexxos::apps::PrettyTable table{lsColumns, sizeof(lsColumns) / sizeof(lsColumns[0])};
 		table.print(context, directoryTableRow, path->data());
 	}
+
 	return 0;
 }
 

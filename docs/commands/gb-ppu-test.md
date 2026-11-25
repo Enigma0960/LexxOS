@@ -1,6 +1,6 @@
 # `gb-ppu-test`
 
-render Game Boy PPU background test.
+Рисует тестовый фон PPU Game Boy.
 
 ## Справка shell
 

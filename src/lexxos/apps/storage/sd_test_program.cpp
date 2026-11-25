@@ -33,12 +33,12 @@ namespace {
 
 	constexpr ProgramArgumentSpec sdTestArguments[] = {
 	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "optional writable FAT test file path, default: /mnt/sd/LEXTEST.TXT",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Path,
-         .required = false,
+	     .name = "path",
+	     .valueName = "path",
+	     .help = "optional writable FAT test file path, default: /mnt/sd/LEXTEST.TXT",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Path,
+	     .required = false,
 	     },
 	};
 

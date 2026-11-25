@@ -1,5 +1,6 @@
 #include <lexxos/app/console_output.h>
 
+#include <array>
 #include <cstdint>
 
 #include <lexxos/app/console_mirror.h>
@@ -70,9 +71,11 @@ std::uint32_t clampBellFrequency(lexxos::devices::AudioDevice const& device) {
 	if (frequency < device.minToneFrequencyHz()) {
 		frequency = device.minToneFrequencyHz();
 	}
+
 	if (frequency > device.maxToneFrequencyHz()) {
 		frequency = device.maxToneFrequencyHz();
 	}
+
 	return frequency;
 }
 
@@ -82,6 +85,7 @@ std::uint32_t clampBellDuration(lexxos::devices::AudioDevice const& device) {
 	if (maxDuration != 0 && duration > maxDuration) {
 		duration = maxDuration;
 	}
+
 	return duration == 0 ? 1 : duration;
 }
 
@@ -90,14 +94,17 @@ bool bellChannel(lexxos::devices::AudioDevice const& device, lexxos::devices::Au
 		channel = lexxos::devices::AudioChannel::Stereo;
 		return true;
 	}
+
 	if (device.supportsChannel(lexxos::devices::AudioChannel::Left)) {
 		channel = lexxos::devices::AudioChannel::Left;
 		return true;
 	}
+
 	if (device.supportsChannel(lexxos::devices::AudioChannel::Right)) {
 		channel = lexxos::devices::AudioChannel::Right;
 		return true;
 	}
+
 	return false;
 }
 
@@ -176,29 +183,30 @@ bool writeNormalized(
     lexxos::platform::PlatformServices const& platform,
     std::string_view text,
     bool& lastWasCarriageReturn) {
-	std::size_t segmentStart = 0;
-	for (std::size_t index = 0; index < text.size(); ++index) {
-		char const value = text[index];
-		if (value != '\n') {
-			lastWasCarriageReturn = value == '\r';
-			continue;
+	// Preserve a short complete record through the platform's serialized write.
+	// In particular, don't release UART ownership between a TSV row and CR/LF.
+	std::array<char, 384> buffer{};
+	std::size_t used = 0;
+
+	auto append = [&](char value) {
+		if (used == buffer.size()) {
+			write(platform, {buffer.data(), used});
+			used = 0;
+		}
+		buffer[used++] = value;
+	};
+
+	for (char value : text) {
+		if (value == '\n' && !lastWasCarriageReturn) {
+			append('\r');
 		}
 
-		if (index > segmentStart) {
-			write(platform, text.substr(segmentStart, index - segmentStart));
-		}
-
-		if (!lastWasCarriageReturn) {
-			write(platform, "\r");
-		}
-		write(platform, "\n");
-
-		lastWasCarriageReturn = false;
-		segmentStart = index + 1;
+		append(value);
+		lastWasCarriageReturn = value == '\r';
 	}
 
-	if (segmentStart < text.size()) {
-		write(platform, text.substr(segmentStart));
+	if (used != 0) {
+		write(platform, {buffer.data(), used});
 	}
 
 	return true;

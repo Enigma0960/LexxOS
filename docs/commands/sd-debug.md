@@ -1,6 +1,6 @@
 # `sd-debug`
 
-show or control SD driver diagnostics.
+Показывает или настраивает диагностику драйвера SD.
 
 ## Справка shell
 

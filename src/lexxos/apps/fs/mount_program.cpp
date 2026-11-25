@@ -9,6 +9,7 @@
 #include <lexxos/apps/common/pretty_table.h>
 #include <lexxos/fs/fat/fat_volume.h>
 #include <lexxos/os/app_context.h>
+#include <lexxos/os/storage_mount_policy.h>
 #include <lexxos/program/program_memory_arena.h>
 #include <lexxos/vfs/vfs.h>
 
@@ -34,28 +35,28 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec mountArguments[] = {
 	    {
-         .name = "source",
-         .valueName = "source",
-         .help = "block device or VFS source path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = false,
+	     .name = "source",
+	     .valueName = "source",
+	     .help = "block device or VFS source path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = false,
 	     },
 	    {
-         .name = "target",
-         .valueName = "target",
-         .help = "VFS mount target path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = false,
+	     .name = "target",
+	     .valueName = "target",
+	     .help = "VFS mount target path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = false,
 	     },
 	    {
-         .name = "type",
-         .valueName = "type",
-         .help = "filesystem type, default: fat",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "type",
+	     .valueName = "type",
+	     .help = "filesystem type, default: fat",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -77,6 +78,7 @@ namespace {
 			lookup.found = true;
 			return false;
 		}
+
 		++lookup.current;
 		return true;
 	}
@@ -167,8 +169,10 @@ int MountProgram::run(
 		if (!resolvePath(context, sourceView, *source)) {
 			return 1;
 		}
+
 		sourceView = source->data();
 	}
+
 	if (!resolvePath(context, arguments.positional("target"), *target)) {
 		return 1;
 	}
@@ -180,6 +184,7 @@ int MountProgram::run(
 		if (!sdMountLock) {
 			return 1;
 		}
+
 		if (!prepareSdCardForMount(context)) {
 			context.write("mount: ");
 			context.write(sourceView);
@@ -190,8 +195,21 @@ int MountProgram::run(
 		}
 	}
 
+	// Применяем политику носителя до передачи устройства FatFs.
+	auto* const policy = context.storageMountPolicy();
+	if (policy != nullptr && !policy->prepareMount(sourceView, target->data())) {
+		context.write("mount: ");
+		context.writeLine(policy->rejectionReason());
+		return 1;
+	}
+
 	// Mount the FAT volume and print the resulting association.
 	auto const status = lexxos::fs::fat::mount(context.vfs(), sourceView, target->data());
+
+	if (policy != nullptr) {
+		policy->mountFinished(sourceView, target->data(), status == lexxos::fs::fat::FatMountStatus::Ok);
+	}
+
 	if (status != lexxos::fs::fat::FatMountStatus::Ok) {
 		context.write("mount: ");
 		context.write(sourceView);

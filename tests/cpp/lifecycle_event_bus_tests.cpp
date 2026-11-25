@@ -1,8 +1,8 @@
-#include <lexxos/app/program_input.h>
-#include <lexxos/lifecycle/event_bus.h>
-
 #include <cstdlib>
 #include <iostream>
+
+#include <lexxos/app/program_input.h>
+#include <lexxos/lifecycle/event_bus.h>
 
 namespace {
 

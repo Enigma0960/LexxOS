@@ -6,7 +6,7 @@
 Текущий проект уже содержит рабочую настройку OpenOCD для Pico. Для STM32F407 добавлены аналогичные файлы:
 
 ```text
-debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
+tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
 .run/LexxOS STM32F407.run.xml
 ```
 
@@ -79,33 +79,17 @@ which arm-none-eabi-gdb
 which openocd
 ```
 
-Типичные пути на Apple Silicon:
-
-```text
-/opt/homebrew/bin/openocd
-/opt/homebrew/bin/arm-none-eabi-gcc
-/opt/homebrew/bin/arm-none-eabi-gdb
-```
-
-Типичные пути на Intel Mac:
-
-```text
-/usr/local/bin/openocd
-/usr/local/bin/arm-none-eabi-gcc
-/usr/local/bin/arm-none-eabi-gdb
-```
-
 ## 3. Проверка Debug Probe и SWD без CLion
 
 Подключите SWD-линии и выполните из корня проекта:
 
 ```bash
-openocd -f debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
+openocd -f tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
 ```
 
 Нормальный результат: OpenOCD находит CMSIS-DAP adapter, видит Cortex-M target и открывает GDB server на `3333`.
 
-Если соединение нестабильно, сначала уменьшите скорость в `debug/openocd/lexxos-stm32f407-cmsis-dap.cfg`:
+Если соединение нестабильно, сначала уменьшите скорость в `tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg`:
 
 ```text
 adapter speed 500
@@ -151,7 +135,7 @@ baud      = 115200
 
 ## 6. Настройка CLion
 
-### Toolchain
+### Инструменты компиляции
 
 Откройте:
 
@@ -163,14 +147,14 @@ Settings | Build, Execution, Deployment | Toolchains
 
 ```text
 Name:       ARM
-CMake:      Bundled или /opt/homebrew/bin/cmake
-Build Tool: /opt/homebrew/bin/ninja
-C Compiler: /opt/homebrew/bin/arm-none-eabi-gcc
-C++ Compiler: /opt/homebrew/bin/arm-none-eabi-g++
-Debugger:   /opt/homebrew/bin/arm-none-eabi-gdb
+CMake:      Bundled или cmake
+Build Tool: ninja
+C Compiler: arm-none-eabi-gcc
+C++ Compiler: arm-none-eabi-g++
+Debugger:   arm-none-eabi-gdb
 ```
 
-Для Intel Mac замените `/opt/homebrew/bin` на `/usr/local/bin`, если Homebrew установлен туда.
+Если CLion запрашивает полный путь, используйте вывод `command -v` для соответствующего инструмента.
 
 ### OpenOCD
 
@@ -180,22 +164,12 @@ Debugger:   /opt/homebrew/bin/arm-none-eabi-gdb
 Settings | Build, Execution, Deployment | Embedded Development
 ```
 
-В поле `OpenOCD location` укажите:
-
-```text
-/opt/homebrew/bin/openocd
-```
-
-или для Intel Mac:
-
-```text
-/usr/local/bin/openocd
-```
+В поле `OpenOCD location` укажите путь из `command -v openocd`.
 
 Также можно использовать уже существующий wrapper проекта `tools/openocd-lexxos`, но для STM32F407 проще начать с
 обычного Homebrew OpenOCD, потому что ему не нужен локальный Pico-specific patch.
 
-### CMake configure/build
+### Конфигурация и сборка CMake
 
 Из корня проекта:
 
@@ -213,7 +187,7 @@ build/stm32f407/src/lexxos.hex
 build/stm32f407/src/lexxos.map
 ```
 
-### Run configuration
+### Конфигурация запуска
 
 В проект добавлена конфигурация:
 
@@ -227,7 +201,7 @@ Run | Edit Configurations... | LexxOS STM32F407
 Type:              OpenOCD Download & Run
 Target:            lexxos
 Executable binary: $PROJECT_DIR$/build/stm32f407/src/lexxos.elf
-Board config file: $PROJECT_DIR$/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
+Board config file: $PROJECT_DIR$/tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
 GDB port:          3333
 Telnet port:       4444
 Download:          Always
@@ -245,14 +219,14 @@ build/stm32f407/src/lexxos.elf
 
 ```bash
 openocd \
-  -f debug/openocd/lexxos-stm32f407-cmsis-dap.cfg \
+  -f tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg \
   -c "program build/stm32f407/src/lexxos.elf verify reset exit"
 ```
 
 Ручной GDB-сеанс:
 
 ```bash
-openocd -f debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
+openocd -f tools/debug/openocd/lexxos-stm32f407-cmsis-dap.cfg
 ```
 
 Во втором терминале:

@@ -7,6 +7,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs::detail {
+
 namespace {
 
 	constexpr lexxos::devices::KeyCode observedKeys[] = {
@@ -91,6 +92,7 @@ namespace {
 			if ((modifiers & mask) == 0) {
 				return;
 			}
+
 			context.write(any ? "," : "");
 			context.write(name);
 			any = true;
@@ -119,6 +121,7 @@ std::uint32_t pressedKeyMask(lexxos::devices::InputDevice& input) {
 			mask |= keyMask(key);
 		}
 	}
+
 	return mask;
 }
 
@@ -132,9 +135,11 @@ lexxos::devices::DeviceResourceLock lockInputDeviceForInteractiveProgram(
 		if (lock) {
 			return lock;
 		}
+
 		if (uptimeMs(context) - startedMs >= interactiveInputLockRetryMs) {
 			return {};
 		}
+
 		lexxos::kernel::sleepMs(interactiveInputLockRetrySleepMs);
 	}
 }
@@ -150,9 +155,11 @@ void writePressedKeys(lexxos::os::AppContext& context, std::uint32_t mask) {
 			any = true;
 		}
 	}
+
 	if (!any) {
 		context.write(" <none>");
 	}
+
 	context.write(" mask=");
 	writeHex32(context, mask);
 	context.writeLine("");
@@ -191,6 +198,7 @@ void writeRawKeyboardState(lexxos::os::AppContext& context, lexxos::devices::Inp
 			context.write("c");
 			writeUnsigned(context, index % columns);
 		}
+
 		context.write("]");
 		any = true;
 	}
@@ -198,6 +206,7 @@ void writeRawKeyboardState(lexxos::os::AppContext& context, lexxos::devices::Inp
 	if (!any) {
 		context.write(" active=<none>");
 	}
+
 	context.writeLine("");
 }
 
@@ -240,6 +249,7 @@ std::uint32_t drainInputEvents(lexxos::os::AppContext& context, lexxos::devices:
 		context.writeLine(" ms");
 		++count;
 	}
+
 	return count;
 }
 

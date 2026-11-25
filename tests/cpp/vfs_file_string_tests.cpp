@@ -1,14 +1,69 @@
-#include <lexxos/text/string_utils.h>
-#include <lexxos/vfs/file_number.h>
-#include <lexxos/vfs/file_string.h>
-#include <lexxos/vfs/vfs.h>
-
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <string_view>
 
+#include <lexxos/text/string_utils.h>
+#include <lexxos/vfs/file_number.h>
+#include <lexxos/vfs/file_string.h>
+#include <lexxos/vfs/vfs.h>
+
 namespace {
+
+// A checked-close failure must be visible to applications, not swallowed by
+// FileHandle's destructor. No FAT image or hardware is required for this test.
+class FakeBlockDevice final : public lexxos::devices::BlockDevice {
+public:
+	bool initialize() override { return true; }
+
+	bool isReady() const override { return true; }
+
+	std::uint32_t blockSizeBytes() const override { return 512; }
+
+	std::uint64_t blockCount() const override { return 16; }
+
+	bool readBlocks(std::uint64_t, void*, std::size_t) override { return false; }
+
+	bool writeBlocks(std::uint64_t, void const*, std::size_t) override { return false; }
+};
+
+class FailingFinishFilesystem final : public lexxos::vfs::ReadOnlyFilesystem {
+public:
+	lexxos::vfs::WriteStatus finishResult{lexxos::vfs::WriteStatus::NoSpace};
+	unsigned finishCalls{0};
+
+	bool isReady() const override { return true; }
+
+	std::string_view typeName() const override { return "fake"; }
+
+	bool isReadOnly() const override { return false; }
+
+	bool stat(std::string_view, lexxos::vfs::Stat&) override { return false; }
+
+	bool list(std::string_view, lexxos::vfs::DirectoryVisitor, void*) override { return false; }
+
+	lexxos::vfs::ReadStatus read(std::string_view, std::uint64_t, void*, std::size_t, std::size_t& bytesRead) override {
+		bytesRead = 0;
+		return lexxos::vfs::ReadStatus::NotReadable;
+	}
+
+	lexxos::vfs::ReadStatus readText(std::string_view, lexxos::vfs::TextWriter, void*) override {
+		return lexxos::vfs::ReadStatus::NotReadable;
+	}
+
+	lexxos::vfs::WriteStatus beginWrite(std::string_view, lexxos::vfs::WriteMode) override {
+		return lexxos::vfs::WriteStatus::Ok;
+	}
+
+	lexxos::vfs::WriteStatus write(std::string_view, std::uint64_t, std::string_view) override {
+		return lexxos::vfs::WriteStatus::Ok;
+	}
+
+	lexxos::vfs::WriteStatus finishWrite(std::string_view) override {
+		++finishCalls;
+		return finishResult;
+	}
+};
 
 void expect(bool condition, char const* message) {
 	if (!condition) {
@@ -258,9 +313,50 @@ void checkStringHelpers() {
 	expect(!lexxos::text::copy(output, 4, "LexxOS"), "copy rejects small buffer");
 }
 
+void checkCheckedFinishPropagatesFailure() {
+	lexxos::vfs::Vfs vfs;
+	vfs.initialize();
+	FakeBlockDevice device;
+	FailingFinishFilesystem filesystem;
+
+	expect(vfs.registerBlockDevice("sdtest", &device), "register fake SD device");
+	expect(vfs.mountFilesystem("sdtest", "/mnt/test", &filesystem) == lexxos::vfs::MountStatus::Ok,
+	    "mount fake writable filesystem");
+
+	lexxos::vfs::FileHandle file;
+	expect(vfs.open("/mnt/test/copy.txt", lexxos::vfs::OpenMode::CreateTruncateWrite, file)
+	        == lexxos::vfs::OpenStatus::Ok,
+	    "open fake destination");
+	expect(file.write("payload") == lexxos::vfs::WriteStatus::Ok, "write reports success before flush");
+	expect(file.finish() == lexxos::vfs::WriteStatus::NoSpace, "finish reports deferred flush error");
+	expect(!file.isOpen() && filesystem.finishCalls == 1, "finish closes exactly once");
+	expect(file.finish() == lexxos::vfs::WriteStatus::Ok && filesystem.finishCalls == 1,
+	    "repeated finish does not touch backend");
+
+	filesystem.finishResult = lexxos::vfs::WriteStatus::Ok;
+
+	expect(vfs.open("/mnt/test/copy.txt", lexxos::vfs::OpenMode::CreateTruncateWrite, file)
+	        == lexxos::vfs::OpenStatus::Ok,
+	    "reopen destination");
+	expect(file.finish() == lexxos::vfs::WriteStatus::Ok && filesystem.finishCalls == 2,
+	    "successful close reported");
+	// An old caller of close() still finalizes the file exactly once.
+	expect(vfs.open("/mnt/test/copy.txt", lexxos::vfs::OpenMode::CreateTruncateWrite, file)
+	        == lexxos::vfs::OpenStatus::Ok,
+	    "reopen for legacy close");
+
+	file.close();
+
+	expect(filesystem.finishCalls == 3, "legacy close invokes checked backend finish");
+}
+
 } // namespace
 
+void checkResourceParser();
+
 int main() {
+	checkResourceParser();
+	checkCheckedFinishPropagatesFailure();
 	checkNumberReadSupportsFixedWidthIntegers();
 	checkNumberReadSupportsFloatingPoint();
 	checkNumberReadFromPathAndOffset();

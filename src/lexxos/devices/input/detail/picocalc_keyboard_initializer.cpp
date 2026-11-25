@@ -24,9 +24,11 @@ PicoCalcKeyboardInitializeResult PicoCalcKeyboardInitializer::initialize(
 	if (drainEvents > drainEventLimit) {
 		drainEvents = drainEventLimit;
 	}
+
 	if (drainEvents != 0) {
 		result.drainOk = transport.drainFifo(drainEvents);
 	}
+
 	return result;
 }
 

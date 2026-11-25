@@ -1,6 +1,6 @@
 # `sd-multiwrite`
 
-show or set experimental SD CMD25 multi-block writes.
+Показывает или включает экспериментальную многоблочную запись SD через CMD25.
 
 ## Справка shell
 

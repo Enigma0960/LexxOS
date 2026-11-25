@@ -1,19 +1,21 @@
 # `gbemu`
 
-run Game Boy ROMs or open the ROM launcher.
+Запускает ROM Game Boy или открывает меню выбора ROM.
 
 ## Cardputer-Adv
 
-The local `user-espidf-m5stack_cardputer` preset enables `gbemu` on Cardputer-Adv without PSRAM. The ESP-IDF component
-propagates `LEXXOS_GAMEBOY_ROM_CACHE_BANKS=3`, `LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES=8192` and dynamic ROM cache
-allocation; a correct runtime diagnostic prints `rom-cache=8Kx6=48K`.
+Локальный preset `user-espidf-m5stack_cardputer` включает `gbemu` на Cardputer-Adv
+без PSRAM. Компонент ESP-IDF получает `LEXXOS_GAMEBOY_ROM_CACHE_BANKS=3`,
+`LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES=8192` и динамическое выделение кеша ROM;
+правильная диагностика выводит `rom-cache=8Kx6=48K`.
 
-For playable runs Cardputer-Adv defaults to mapped flash ROM staging, so SD/FAT reads stay out of the emulator hot
-path. The staging area is the ESP-IDF `storage` data partition at `0x300000` with 1 MiB capacity; first use copies and
-verifies the ROM, and later runs print `reused mapped flash ROM ... rom-storage=flash`. This partition is treated as raw
-Game Boy staging data by `gbemu`.
+Для игры по умолчанию ROM копируется во flash с отображением в память,
+что убирает SD/FAT из основного цикла эмулятора. Область — раздел ESP-IDF
+`storage` по адресу `0x300000`, 1 МиБ. Первый запуск копирует и проверяет
+ROM, последующие выводят `reused mapped flash ROM ... rom-storage=flash`.
+`gbemu` использует раздел как сырые данные ROM.
 
-Quick smoke commands:
+Команды быстрой проверки:
 
 ```text
 lexx:/> gb-info /mnt/sd/gb/test-rom-2.gb
@@ -22,7 +24,7 @@ lexx:/> gbemu --audio --profile --frames 600 --display none /mnt/sd/gb/test-rom-
 lexx:/> gbemu --frames 60 --display crop /mnt/sd/gb/test-rom-2.gb
 ```
 
-The Cardputer keyboard is exposed as `cardputer-gamepad` for emulator input:
+Клавиатура Cardputer предоставляется эмулятору как `cardputer-gamepad`:
 
 ```text
 e up, z down, a left, d right
@@ -30,7 +32,7 @@ e up, z down, a left, d right
 Enter Start, Backspace Select
 ```
 
-## TUI launcher
+## Текстовое меню запуска
 
 `gbemu` без аргументов сканирует `[general] rom_dir` из `/mnt/sd/apps/gbemu/settings.ini` (по умолчанию
 `/mnt/sd/gb`), показывает `.gb`/`.gbc` файлы и сохраняет последний выбранный ROM в `last_rom`.

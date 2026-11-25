@@ -1,6 +1,6 @@
 # `stat`
 
-show VFS node metadata.
+Показывает метаданные узла VFS.
 
 ## Справка shell
 

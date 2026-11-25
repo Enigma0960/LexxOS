@@ -1,11 +1,30 @@
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <string_view>
+
+#include <lexxos/apps/fs/detail/raw_console_mode_guard.h>
+#include <lexxos/apps/fs/detail/ymodem_program_support.h>
 #include <lexxos/os/operating_system.h>
 #include <lexxos/platform/platform_services.h>
 #include <lexxos/program/program_memory_arena.h>
 #include <lexxos/program/program_supervisor.h>
 
-#include <cstdlib>
-#include <iostream>
-#include <string_view>
+namespace lexxos::apps {
+
+std::uint32_t uptimeMs(lexxos::os::AppContext const& context) {
+	auto const& clock = context.platform().clock;
+	return clock.uptimeMs != nullptr ? clock.uptimeMs() : 0U;
+}
+
+void sleepMs(lexxos::os::AppContext const& context, std::uint32_t milliseconds) {
+	auto const& clock = context.platform().clock;
+	if (clock.sleepMs != nullptr) {
+		clock.sleepMs(milliseconds);
+	}
+}
+
+} // namespace lexxos::apps
 
 namespace {
 
@@ -18,7 +37,9 @@ void expect(bool condition, char const* message) {
 
 int g_leftConsoleWrites = 0;
 int g_rightConsoleWrites = 0;
+std::string g_leftConsoleRawBytes;
 int g_supervisedProgramRuns = 0;
+std::uint32_t g_supervisedProcessId = 0;
 int g_backgroundProgramRuns = 0;
 
 void writeLeftConsole(std::string_view) {
@@ -27,6 +48,10 @@ void writeLeftConsole(std::string_view) {
 
 void writeRightConsole(std::string_view) {
 	++g_rightConsoleWrites;
+}
+
+void writeLeftRawConsole(std::string_view bytes) {
+	g_leftConsoleRawBytes.append(bytes);
 }
 
 int leftOnlyProgram(
@@ -54,6 +79,8 @@ int supervisedProgram(
     lexxos::program::ProgramInvocation const&,
     lexxos::program::ParsedArguments const&) {
 	expect(context.owner() == lexxos::os::AppContextOwner::Program, "task-profile program runs in a program context");
+	g_supervisedProcessId = context.processId();
+	expect(context.programInput().setInputMode(g_supervisedProcessId, lexxos::app::program_input::InputMode::Events), "program claims events mode");
 	++g_supervisedProgramRuns;
 	return 31;
 }
@@ -154,7 +181,7 @@ void checkTaskProfileLaunchesThroughSupervisor() {
 	           .runtime = {
 	                       .launchMode = lexxos::program::ProgramLaunchMode::ForegroundTask,
 	                       },
-    }),
+	}),
 	    "register supervised program");
 
 	auto context = os.createAppContext({
@@ -170,6 +197,7 @@ void checkTaskProfileLaunchesThroughSupervisor() {
 	expect(result.launchStatus == lexxos::program::ProgramLaunchStatus::Available, "supervised launch is available");
 	expect(result.exitCode == 31, "supervised launch returns handler exit code");
 	expect(g_supervisedProgramRuns == 1, "supervised handler ran once");
+	expect(context.programInput().inputMode(g_supervisedProcessId) == lexxos::app::program_input::InputMode::Terminal, "task completion releases input mode");
 }
 
 void checkGraphicalTaskProfilePreservesFocusInterface() {
@@ -183,7 +211,7 @@ void checkGraphicalTaskProfilePreservesFocusInterface() {
 	                       .launchMode = lexxos::program::ProgramLaunchMode::ForegroundTask,
 	                       .interfaceKind = lexxos::program::ProgramInterfaceKind::Graphical,
 	                       },
-    }),
+	}),
 	    "register graphical program");
 
 	auto context = os.createAppContext({
@@ -212,7 +240,7 @@ void checkBackgroundTaskDoesNotTakeFocus() {
 	                       .allowBackground = true,
 	                       .interfaceKind = lexxos::program::ProgramInterfaceKind::Graphical,
 	                       },
-    }),
+	}),
 	    "register background program");
 
 	auto context = os.createAppContext({
@@ -242,7 +270,7 @@ void checkTaskProfileReceivesMemoryArena() {
 	                       .launchMode = lexxos::program::ProgramLaunchMode::ForegroundTask,
 	                       .internalMemoryQuotaBytes = 64,
 	                       },
-    }),
+	}),
 	    "register arena program");
 
 	auto context = os.createAppContext({
@@ -287,6 +315,7 @@ void checkPlatformServicesAreInstanceScoped() {
 	static constexpr lexxos::platform::PlatformServices leftServices{
 	    .console = {
 	                .write = writeLeftConsole,
+	                .writeRaw = writeLeftRawConsole,
 	                },
 	};
 	static constexpr lexxos::platform::PlatformServices rightServices{
@@ -323,11 +352,112 @@ void checkPlatformServicesAreInstanceScoped() {
 	rightContext.write("right");
 	expect(g_leftConsoleWrites == 2, "right context does not write to left console service");
 	expect(g_rightConsoleWrites == 1, "right context writes to right console service");
+
+	namespace ymodem = lexxos::apps::filesystem_programs::detail::ymodem;
+	std::uint8_t const payload[] = {0x00U, 0x0AU, 0x0DU, 0xFFU};
+	g_leftConsoleRawBytes.clear();
+	expect(ymodem::writeRaw(leftContext, payload, sizeof(payload)), "YMODEM can write via the binary console");
+	expect(g_leftConsoleRawBytes == std::string_view{"\x00\x0a\x0d\xff", 4}, "YMODEM forwards every byte unchanged");
+	expect(g_leftConsoleWrites == 2, "YMODEM bypasses the text console when a raw writer is available");
+	expect(ymodem::writeRaw(rightContext, payload, sizeof(payload)), "YMODEM supports consoles with one writer");
+	expect(g_rightConsoleWrites == 2, "YMODEM falls back to the existing console writer");
+}
+
+void checkSharedCoreState() {
+	lexxos::os::OperatingSystem system;
+	system.initialize();
+	auto context = system.core().createContext();
+	expect(&system.devices() == &context.devices(), "Standard and core must share devices");
+	expect(&system.platform() == &context.platform(), "Standard and core must share platform");
+	expect(&context.events() == &lexxos::lifecycle::defaultEventBus(), "Standard lifecycle bus changed");
+	expect(context.devices().registerGpioPin("core-output", "mock", {7}, false, true), "core GPIO registration");
+	expect(system.devices().gpioPin("core-output") != nullptr, "Standard missed core registration");
+	system.refreshCapabilities();
+	expect(system.capabilities().bits() == context.capabilities().bits(), "Standard and core capabilities diverged");
+	system.initialize();
+	expect(context.devices().gpioPinCount() == 0, "Standard reset not reflected in core");
+}
+
+void checkIndependentInputServices() {
+	lexxos::platform::PlatformServices platform{};
+	lexxos::vfs::Vfs leftVfs, rightVfs;
+	leftVfs.initialize(platform);
+	rightVfs.initialize(platform);
+	lexxos::lifecycle::EventBus leftEvents, rightEvents;
+	lexxos::app::ProgramInputService leftInput{leftEvents}, rightInput{rightEvents};
+	lexxos::app::ConsoleInputService leftConsole, rightConsole;
+	lexxos::os::OperatingSystem left{platform, leftVfs, leftInput, leftConsole};
+	lexxos::os::OperatingSystem right{platform, rightVfs, rightInput, rightConsole};
+	auto leftContext = left.createAppContext({.processId = 7});
+	auto rightContext = right.createAppContext({.processId = 7});
+	auto child = leftContext.createChild({});
+	expect(&child.programInput() == &leftInput, "child inherits input service");
+	expect(&left.core().events() == &leftEvents, "core uses injected event bus");
+	expect(&right.core().events() == &rightEvents, "other core has independent event bus");
+	using lexxos::app::program_input::InputMode;
+	expect(leftContext.programInput().setInputMode(7, InputMode::Events), "set left process mode");
+	expect(rightContext.programInput().inputMode(7) == InputMode::Terminal, "same process id in another OS is independent");
+	lexxos::app::program_input::EventCursor leftCursor{}, rightCursor{}, secondLeftCursor{};
+	leftInput.reset(leftCursor);
+	leftInput.reset(secondLeftCursor);
+	rightInput.reset(rightCursor);
+	lexxos::devices::InputEvent event{.type = lexxos::devices::InputEventType::KeyDown,
+	    .key = lexxos::devices::KeyCode::A,
+	    .timestampMs = 123};
+	leftInput.publish(event);
+	expect(leftInput.pollEvent(leftCursor, event) && event.timestampMs == 123, "left input receives its event");
+	expect(leftInput.pollEvent(secondLeftCursor, event), "independent subscriber receives the same event");
+	expect(!rightInput.pollEvent(rightCursor, event), "event does not cross OS boundary");
+	lexxos::lifecycle::Event lifecycleEvent{};
+	expect(leftEvents.latest(lifecycleEvent) && lifecycleEvent.type == lexxos::lifecycle::EventType::Input,
+	    "input is published on injected event bus");
+	expect(!rightEvents.latest(lifecycleEvent), "input does not leak to another event bus");
+	expect(leftConsole.inject("\x1b[A"), "left escape sequence accepted");
+	expect(rightConsole.inject("R"), "right console input accepted");
+	leftConsole.setMode(lexxos::app::console_input::Mode::RawProgram);
+	expect(rightConsole.mode() == lexxos::app::console_input::Mode::Shell, "raw mode is local to OS");
+	leftConsole.setMode(lexxos::app::console_input::Mode::Program);
+	{
+		lexxos::apps::filesystem_programs::detail::ymodem::RawConsoleModeGuard raw{leftConsole};
+		expect(leftConsole.mode() == lexxos::app::console_input::Mode::RawProgram, "guard enters raw mode");
+		expect(rightConsole.mode() == lexxos::app::console_input::Mode::Shell, "guard leaves other OS unchanged");
+	}
+	expect(leftConsole.mode() == lexxos::app::console_input::Mode::Program, "guard restores the owning console mode");
+	char byte{};
+	expect(rightContext.consoleInput().readChar(platform, byte) && byte == 'R', "right console only receives its byte");
+	expect(!rightConsole.readChar(platform, byte), "right input exhausted independently");
+	expect(leftConsole.pendingInjected() == 3, "right reads preserve left escape sequence");
+	rightConsole.clearInjected();
+	expect(leftConsole.pendingInjected() == 3, "right clear preserves left queue");
+	leftInput.releaseInputMode(7);
+	expect(leftInput.inputMode(7) == InputMode::Terminal, "released process resets mode");
+	for (std::uint32_t id = 1; id <= lexxos::runtime::standardRuntimeProfile.programs.maxProcesses; ++id) {
+		expect(leftInput.setInputMode(id, InputMode::Events), "fill mode slots");
+	}
+
+	expect(!leftInput.setInputMode(999, InputMode::Events), "mode table is bounded");
+	leftInput.releaseInputMode(1);
+	expect(leftInput.setInputMode(999, InputMode::Events), "released slot can be reused");
+	expect(!leftInput.setInputMode(0, InputMode::Events), "shell cannot own a process mode");
+	expect(!leftInput.setInputMode(7, static_cast<InputMode>(255)), "invalid mode rejected");
+	expect(leftVfs.writeText("/tmp/isolated", "left") == lexxos::vfs::WriteStatus::Ok, "write left VFS");
+	lexxos::vfs::Stat stat{};
+	expect(!rightVfs.stat("/tmp/isolated", stat), "file does not cross VFS boundary");
 }
 
 } // namespace
 
+void checkSdmmcCommand();
+
+void checkBoardDeviceProviders();
+void checkInfoProgram();
+
 int main() {
+	checkBoardDeviceProviders();
+	checkInfoProgram();
+	checkSdmmcCommand();
+	checkIndependentInputServices();
+	checkSharedCoreState();
 	checkIndependentProgramRegistries();
 	checkTaskProfileLaunchesThroughSupervisor();
 	checkGraphicalTaskProfilePreservesFocusInterface();

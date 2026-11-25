@@ -1,0 +1,13 @@
+menu "Blink / ESP-WROOM-32"
+    config BLINK_LED_GPIO
+        int "Status LED GPIO"
+        range 0 33
+        default 2
+        help
+            Default: GPIO2 on common ESP-WROOM-32 development boards.
+            GPIOs used by flash or UART0 are rejected at compile time.
+
+    config BLINK_LED_ACTIVE_LOW
+        bool "Status LED is active-low"
+        default n
+endmenu

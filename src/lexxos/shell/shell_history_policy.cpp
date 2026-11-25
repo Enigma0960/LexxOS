@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 
 namespace lexxos::shell::detail {
 
@@ -17,6 +17,7 @@ bool hasSensitiveArguments(lexxos::program::ProgramArgumentList arguments) {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -45,6 +46,7 @@ bool historyLineAllowed(std::string_view line, SensitiveCommandLookup lookup, vo
 					decoded = true;
 					continue;
 				}
+
 				if (quote == '"' && value == '\\' && cursor < line.size()) {
 					value = line[cursor++];
 					decoded = true;
@@ -53,11 +55,13 @@ bool historyLineAllowed(std::string_view line, SensitiveCommandLookup lookup, vo
 				if (value == ' ' || value == '\t') {
 					break;
 				}
+
 				if (value == '\'' || value == '"') {
 					quote = value;
 					decoded = true;
 					continue;
 				}
+
 				if (value == '\\' && cursor < line.size()) {
 					value = line[cursor++];
 					decoded = true;
@@ -84,6 +88,7 @@ bool historyLineAllowed(std::string_view line, SensitiveCommandLookup lookup, vo
 			return false;
 		}
 	}
+
 	return true;
 }
 

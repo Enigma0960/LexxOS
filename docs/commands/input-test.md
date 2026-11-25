@@ -1,6 +1,6 @@
 # `input-test`
 
-print pending input events.
+Выводит ожидающие события ввода.
 
 ## Справка shell
 

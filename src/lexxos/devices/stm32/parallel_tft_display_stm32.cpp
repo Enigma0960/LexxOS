@@ -24,9 +24,11 @@ bool Stm32ParallelTftDisplay::initialize() {
 	if (!_config.isValid() || !stm32::detail::configureParallelTftBus(_config)) {
 		return false;
 	}
+
 	if (_config.reset.isValid() && !_configureOutput(_config.reset, true)) {
 		return false;
 	}
+
 	if (_config.backlight.isValid() && !_configureOutput(_config.backlight, false)) {
 		return false;
 	}
@@ -73,6 +75,7 @@ bool Stm32ParallelTftDisplay::clear(std::uint16_t rgb565) {
 	for (int index = 0; index < _config.width * _config.height; ++index) {
 		stm32::detail::writeParallelTftData(rgb565);
 	}
+
 	return true;
 }
 
@@ -96,6 +99,7 @@ bool Stm32ParallelTftDisplay::blitRgb565(Rect const& rect, std::uint16_t const* 
 			stm32::detail::writeParallelTftData(row[x]);
 		}
 	}
+
 	return true;
 }
 

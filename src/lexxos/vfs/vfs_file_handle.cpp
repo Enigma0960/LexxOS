@@ -1,12 +1,12 @@
-#include <lexxos/vfs/vfs.h>
-
 #include <algorithm>
 #include <cstring>
 
+#include <lexxos/vfs/detail/vfs_autostart.h>
 #include <lexxos/vfs/detail/vfs_mount_table.h>
 #include <lexxos/vfs/detail/vfs_pseudo_files.h>
 #include <lexxos/vfs/detail/vfs_string.h>
 #include <lexxos/vfs/detail/vfs_tmpfs.h>
+#include <lexxos/vfs/vfs.h>
 #include <lexxos/vfs/vfs_internal_types.h>
 
 lexxos::vfs::FileHandle::FileHandle(FileHandle&& other) noexcept {
@@ -65,10 +65,12 @@ std::uint64_t lexxos::vfs::FileHandle::size() const {
 		if (_vfs == nullptr) {
 			return _size;
 		}
+
 		if (auto const* file = _vfs->tmpFileByIndex(_tmpIndex); file != nullptr) {
 			return file->size;
 		}
 	}
+
 	return _size;
 }
 
@@ -80,23 +82,29 @@ lexxos::vfs::ReadStatus lexxos::vfs::FileHandle::read(
 	if (!_open || !_readable) {
 		return ReadStatus::NotReadable;
 	}
+
 	if (capacity == 0) {
 		return ReadStatus::Ok;
 	}
+
 	if (buffer == nullptr) {
 		return ReadStatus::InvalidPath;
 	}
+
 	if (_kind == Kind::DevNull) {
 		return ReadStatus::Ok;
 	}
+
 	if (_kind == Kind::TmpFile) {
 		if (_vfs == nullptr) {
 			return ReadStatus::NotFound;
 		}
+
 		auto const* file = _vfs->tmpFileByIndex(_tmpIndex);
 		if (file == nullptr) {
 			return ReadStatus::NotFound;
 		}
+
 		if (_position >= file->size) {
 			return ReadStatus::Ok;
 		}
@@ -113,6 +121,7 @@ lexxos::vfs::ReadStatus lexxos::vfs::FileHandle::read(
 		if (_filesystem == nullptr) {
 			return ReadStatus::NotReadable;
 		}
+
 		auto const status = _filesystem->read(
 		    std::string_view{_relativePath.data(), _relativePathSize},
 		    _position,
@@ -122,6 +131,7 @@ lexxos::vfs::ReadStatus lexxos::vfs::FileHandle::read(
 		if (status == ReadStatus::Ok) {
 			_position += bytesRead;
 		}
+
 		return status;
 	}
 
@@ -172,6 +182,7 @@ lexxos::vfs::ReadStatus lexxos::vfs::FileHandle::read(
 		if (target.position > _size) {
 			_size = target.position;
 		}
+
 		return ReadStatus::Ok;
 	}
 
@@ -182,10 +193,12 @@ lexxos::vfs::WriteStatus lexxos::vfs::FileHandle::write(std::string_view data) {
 	if (!_open || !_writable) {
 		return WriteStatus::NotWritable;
 	}
+
 	if (_kind == Kind::DevNull) {
 		_position += data.size();
 		return WriteStatus::Ok;
 	}
+
 	if (_kind == Kind::FilesystemWrite) {
 		if (_filesystem == nullptr) {
 			return WriteStatus::NotWritable;
@@ -198,12 +211,15 @@ lexxos::vfs::WriteStatus lexxos::vfs::FileHandle::write(std::string_view data) {
 		if (status != WriteStatus::Ok) {
 			return status;
 		}
+
 		_position += data.size();
 		if (_position > _size) {
 			_size = _position;
 		}
+
 		return WriteStatus::Ok;
 	}
+
 	if (_kind != Kind::TmpFile) {
 		return WriteStatus::NotWritable;
 	}
@@ -211,13 +227,16 @@ lexxos::vfs::WriteStatus lexxos::vfs::FileHandle::write(std::string_view data) {
 	if (_vfs == nullptr) {
 		return WriteStatus::NotWritable;
 	}
+
 	auto* file = _vfs->tmpFileByIndex(_tmpIndex);
 	if (file == nullptr) {
 		return WriteStatus::NotWritable;
 	}
+
 	if (_position > file->size) {
 		return WriteStatus::InvalidPath;
 	}
+
 	if (data.size() > file->data.size() - static_cast<std::size_t>(_position)) {
 		return WriteStatus::TooLarge;
 	}
@@ -225,10 +244,12 @@ lexxos::vfs::WriteStatus lexxos::vfs::FileHandle::write(std::string_view data) {
 	if (!data.empty()) {
 		std::memcpy(file->data.data() + _position, data.data(), data.size());
 	}
+
 	_position += data.size();
 	if (_position > file->size) {
 		file->size = static_cast<std::size_t>(_position);
 	}
+
 	_size = file->size;
 	return WriteStatus::Ok;
 }
@@ -237,18 +258,27 @@ bool lexxos::vfs::FileHandle::seek(std::uint64_t position) {
 	if (!_open) {
 		return false;
 	}
+
 	if (_kind == Kind::TmpFile && position > size()) {
 		return false;
 	}
+
 	_position = position;
 	return true;
 }
 
-void lexxos::vfs::FileHandle::close() {
+lexxos::vfs::WriteStatus lexxos::vfs::FileHandle::finish() {
+	auto status = WriteStatus::Ok;
 	if (_open && _kind == Kind::FilesystemWrite && _filesystem != nullptr) {
-		_filesystem->closeWrite(std::string_view{_relativePath.data(), _relativePathSize});
+		status = _filesystem->finishWrite(std::string_view{_relativePath.data(), _relativePathSize});
 	}
-	reset();
+
+	reset(); // At most one flush/close; a repeated finish is harmless.
+	return status;
+}
+
+void lexxos::vfs::FileHandle::close() {
+	(void) finish();
 }
 
 void lexxos::vfs::FileHandle::reset() {
@@ -271,6 +301,7 @@ bool lexxos::vfs::FileHandle::setPath(std::string_view path) {
 	if (path.size() + 1 > _path.size()) {
 		return false;
 	}
+
 	std::memcpy(_path.data(), path.data(), path.size());
 	_path[path.size()] = '\0';
 	_pathSize = path.size();
@@ -281,6 +312,7 @@ bool lexxos::vfs::FileHandle::setRelativePath(std::string_view path) {
 	if (path.size() + 1 > _relativePath.size()) {
 		return false;
 	}
+
 	std::memcpy(_relativePath.data(), path.data(), path.size());
 	_relativePath[path.size()] = '\0';
 	_relativePathSize = path.size();
@@ -292,9 +324,24 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
     OpenMode mode,
     FileHandle& output) {
 	output.close();
+
 	if (path.empty() || path[0] != '/' || path.size() + 1 > maxPathLength) {
 		return OpenStatus::InvalidPath;
 	}
+
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> mapped{};
+		if (!detail::autostartStoragePathFor(path, mapped)) {
+			return OpenStatus::InvalidPath;
+		}
+
+		if (mode != OpenMode::Read) {
+			detail::ensureAutostartStorage(*this);
+		}
+
+		return open(mapped.data(), mode, output);
+	}
+
 	output._vfs = this;
 
 	if (mode == OpenMode::Read) {
@@ -302,9 +349,11 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 		if (!stat(path, node)) {
 			return OpenStatus::NotFound;
 		}
+
 		if (node.type == NodeType::Directory) {
 			return OpenStatus::IsDirectory;
 		}
+
 		if (node.type == NodeType::BlockDevice) {
 			return OpenStatus::IsBlockDevice;
 		}
@@ -312,6 +361,7 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 		if (!output.setPath(path)) {
 			return OpenStatus::InvalidPath;
 		}
+
 		output._readable = true;
 		output._writable = false;
 		output._open = true;
@@ -329,6 +379,7 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 				output.close();
 				return OpenStatus::InvalidPath;
 			}
+
 			output._kind = FileHandle::Kind::FilesystemRead;
 			output._filesystem = mount->filesystem;
 			return OpenStatus::Ok;
@@ -341,6 +392,7 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 				output.close();
 				return OpenStatus::NotFound;
 			}
+
 			output._kind = FileHandle::Kind::TmpFile;
 			output._tmpIndex = tmpFileIndex(file);
 			output._size = file->size;
@@ -355,6 +407,7 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 		if (!output.setPath(path)) {
 			return OpenStatus::InvalidPath;
 		}
+
 		output._kind = FileHandle::Kind::DevNull;
 		output._readable = false;
 		output._writable = true;
@@ -396,6 +449,7 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 			mount->filesystem->closeWrite(relativePath);
 			return OpenStatus::InvalidPath;
 		}
+
 		output._kind = FileHandle::Kind::FilesystemWrite;
 		output._filesystem = mount->filesystem;
 		output._readable = false;
@@ -405,12 +459,15 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 		output._position = mode == OpenMode::AppendWrite && appendExistingFile ? node.sizeBytes : 0;
 		return OpenStatus::Ok;
 	}
+
 	if (isKnownDirectory(path)) {
 		return OpenStatus::IsDirectory;
 	}
+
 	if (findBlockDeviceByPath(path) != nullptr) {
 		return OpenStatus::IsBlockDevice;
 	}
+
 	if (!isTmpFilePath(path)) {
 		return OpenStatus::NotWritable;
 	}
@@ -420,6 +477,7 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 	if (file == nullptr) {
 		return name.size() + 1 > maxNameLength ? OpenStatus::InvalidPath : OpenStatus::NoSpace;
 	}
+
 	if (mode == OpenMode::CreateTruncateWrite) {
 		file->size = 0;
 	}
@@ -427,6 +485,7 @@ lexxos::vfs::OpenStatus lexxos::vfs::Vfs::open(
 	if (!output.setPath(path)) {
 		return OpenStatus::InvalidPath;
 	}
+
 	output._kind = FileHandle::Kind::TmpFile;
 	output._tmpIndex = tmpFileIndex(file);
 	output._readable = false;
@@ -452,6 +511,16 @@ lexxos::vfs::WriteStatus lexxos::vfs::Vfs::writeText(
 		return WriteStatus::InvalidPath;
 	}
 
+	if (detail::isAutostartPath(path) && path != detail::autostartVirtualPath) {
+		std::array<char, maxPathLength> mapped{};
+		if (!detail::autostartStoragePathFor(path, mapped)) {
+			return WriteStatus::InvalidPath;
+		}
+
+		detail::ensureAutostartStorage(*this);
+		return writeText(mapped.data(), text, mode);
+	}
+
 	if (auto* mount = findFilesystemByPath(path); mount != nullptr && mount->filesystem != nullptr) {
 		return mount->filesystem->writeText(pathInsideMount(*mount, path), text, mode);
 	}
@@ -460,6 +529,7 @@ lexxos::vfs::WriteStatus lexxos::vfs::Vfs::writeText(
 	auto const openMode = mode == WriteMode::CreateTruncate
 	    ? OpenMode::CreateTruncateWrite
 	    : OpenMode::AppendWrite;
+
 	auto const openStatus = open(path, openMode, file);
 	switch (openStatus) {
 		case OpenStatus::Ok:

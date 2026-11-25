@@ -1,6 +1,6 @@
 # `gb-test-run`
 
-run Game Boy hardware test ROM with serial capture.
+Запускает аппаратный тестовый ROM Game Boy с захватом последовательного вывода.
 
 ## Справка shell
 

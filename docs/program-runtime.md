@@ -23,11 +23,11 @@ ROM cache, документы, scrollback и другие крупные дан�
 долговременные данные      -> VFS / SD
 ```
 
-## Runtime profile
+## Профиль выполнения
 
 Каждая программа может задать `ProgramRuntimeProfile` в `ProgramDescriptor`.
 
-### Launch mode
+### Режим запуска
 
 ```text
 Inline
@@ -45,7 +45,7 @@ foreground console ownership.
 `BackgroundTask` зарезервирован для программ, которые могут работать без интерактивного ввода и без владения консолью.
 Фактический background-запуск включается отдельно через `allowBackground`.
 
-### Memory class
+### Класс памяти
 
 ```text
 InternalOnly
@@ -300,7 +300,7 @@ jobs
 running -> stop requested -> finished, exit=130
 ```
 
-## TODO / Roadmap
+## Задачи и дорожная карта
 
 ### 1. Закрепить job-модель
 

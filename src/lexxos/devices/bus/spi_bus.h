@@ -3,20 +3,28 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <lexxos/devices/bus/bus_transaction_queue.h>
+#include <lexxos/devices/bus/spi_bus_transaction.h>
+#include <lexxos/devices/bus/spi_clock_mode.h>
 #include <lexxos/platform/board.h>
 
 namespace lexxos::devices {
 
-enum class SpiClockMode : std::uint8_t {
-	Mode0 = 0,
-	Mode1 = 1,
-	Mode2 = 2,
-	Mode3 = 3,
-};
-
 class SpiBus {
 public:
+	SpiBus() = default;
+
+	// Для нескольких CS на одном контроллере composition передаёт одну очередь.
+	// Очередь должна пережить все связанные с ней устройства.
+	explicit SpiBus(BusTransactionQueue& queue);
+
 	virtual ~SpiBus() = default;
+
+	void setTransactionWaitFunction(BusTransactionQueue::WaitFunction wait);
+
+	[[nodiscard]] bool transactionBusy() const;
+
+	[[nodiscard]] std::uint32_t pendingTransactions() const;
 
 	virtual bool initialize(lexxos::platform::SpiPins const& pins) = 0;
 	[[nodiscard]] virtual bool isReady() const = 0;
@@ -29,91 +37,22 @@ public:
 	virtual bool write(std::uint8_t const* data, std::size_t size) = 0;
 	virtual bool read(std::uint8_t fill, std::uint8_t* data, std::size_t size) = 0;
 
-	virtual bool beginTransaction() {
-		return true;
-	}
+	virtual bool beginTransaction();
 
-	virtual void endTransaction() {
-	}
+	virtual void endTransaction();
 
-	[[nodiscard]] virtual bool supportsDma() const {
-		return false;
-	}
+	[[nodiscard]] virtual bool supportsDma() const;
 
-	virtual bool startDmaTransfer(std::uint8_t const* tx, std::uint8_t* rx, std::size_t size) {
-		if (tx != nullptr && rx != nullptr) {
-			return transfer(tx, rx, size);
-		}
-		if (tx != nullptr) {
-			return write(tx, size);
-		}
-		if (rx != nullptr) {
-			return read(0xFF, rx, size);
-		}
-		return size == 0;
-	}
+	virtual bool startDmaTransfer(std::uint8_t const* tx, std::uint8_t* rx, std::size_t size);
 
-	virtual bool waitDmaTransfer(std::uint32_t timeoutMs) {
-		(void) timeoutMs;
-		return true;
-	}
+	virtual bool waitDmaTransfer(std::uint32_t timeoutMs);
 
-	virtual bool transferDma(std::uint8_t const* tx, std::uint8_t* rx, std::size_t size, std::uint32_t timeoutMs) {
-		return startDmaTransfer(tx, rx, size) && waitDmaTransfer(timeoutMs);
-	}
-};
-
-class SpiBusTransaction {
-public:
-	explicit SpiBusTransaction(SpiBus& bus)
-	    : _bus(&bus)
-	    , _active(bus.beginTransaction()) {
-	}
-
-	SpiBusTransaction(SpiBusTransaction const&) = delete;
-	SpiBusTransaction& operator=(SpiBusTransaction const&) = delete;
-
-	SpiBusTransaction(SpiBusTransaction&& other) noexcept
-	    : _bus(other._bus)
-	    , _active(other._active) {
-		other._bus = nullptr;
-		other._active = false;
-	}
-
-	SpiBusTransaction& operator=(SpiBusTransaction&& other) noexcept {
-		if (this != &other) {
-			release();
-			_bus = other._bus;
-			_active = other._active;
-			other._bus = nullptr;
-			other._active = false;
-		}
-		return *this;
-	}
-
-	~SpiBusTransaction() {
-		release();
-	}
-
-	[[nodiscard]] bool active() const {
-		return _active;
-	}
-
-	[[nodiscard]] explicit operator bool() const {
-		return active();
-	}
-
-	void release() {
-		if (_bus != nullptr && _active) {
-			_bus->endTransaction();
-		}
-		_bus = nullptr;
-		_active = false;
-	}
+	virtual bool transferDma(std::uint8_t const* tx, std::uint8_t* rx, std::size_t size, std::uint32_t timeoutMs);
 
 private:
-	SpiBus* _bus{nullptr};
-	bool _active{false};
+	friend class SpiBusTransaction;
+	BusTransactionQueue _ownedQueue{};
+	BusTransactionQueue* _queue{&_ownedQueue};
 };
 
 SpiBus& sdCardSpiBus();

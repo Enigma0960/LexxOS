@@ -12,6 +12,7 @@
 #include <esp_intr_alloc.h>
 #include <esp_log.h>
 #include <esp_timer.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
@@ -23,6 +24,7 @@
 #include <lexxos/devices/pointing_device.h>
 
 namespace lexxos::devices::espidf_usb_hid {
+
 namespace {
 
 	constexpr char tag[] = "lexxos-usb-hid";
@@ -85,12 +87,15 @@ namespace {
 		if (usage >= 0x04U && usage <= 0x1DU) {
 			return alphaKeys[usage - 0x04U];
 		}
+
 		if (usage >= 0x1EU && usage <= 0x26U) {
 			return static_cast<KeyCode>(static_cast<std::uint16_t>(KeyCode::Num1) + (usage - 0x1EU));
 		}
+
 		if (usage == 0x27U) {
 			return KeyCode::Num0;
 		}
+
 		switch (usage) {
 			case 0x28: return KeyCode::Enter;
 			case 0x29: return KeyCode::Escape;
@@ -137,6 +142,7 @@ namespace {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -145,15 +151,19 @@ namespace {
 		if ((hidModifiers & hidLeftShift) != 0) {
 			result |= InputModifierShiftLeft;
 		}
+
 		if ((hidModifiers & hidRightShift) != 0) {
 			result |= InputModifierShiftRight;
 		}
+
 		if ((hidModifiers & (hidLeftAlt | hidRightAlt)) != 0) {
 			result |= InputModifierAlt;
 		}
+
 		if ((hidModifiers & (hidLeftControl | hidRightControl)) != 0) {
 			result |= InputModifierCtrl;
 		}
+
 		return result;
 	}
 
@@ -164,14 +174,17 @@ namespace {
 			if (shift != capsLock) {
 				value = static_cast<char>(value - 'a' + 'A');
 			}
+
 			return static_cast<std::uint8_t>(value);
 		}
+
 		static constexpr char unshifted[] = "1234567890";
 		static constexpr char shifted[] = "!@#$%^&*()";
 		if (usage >= 0x1EU && usage <= 0x27U) {
 			auto const index = usage - 0x1EU;
 			return static_cast<std::uint8_t>(shift ? shifted[index] : unshifted[index]);
 		}
+
 		switch (usage) {
 			case 0x28: return '\r';
 			case 0x2A: return '\b';
@@ -212,6 +225,7 @@ namespace {
 				portEXIT_CRITICAL(&_mux);
 				return false;
 			}
+
 			event = _events[_eventTail];
 			_eventTail = (_eventTail + 1U) % keyboardEventCapacity;
 			--_eventCount;
@@ -228,6 +242,7 @@ namespace {
 					break;
 				}
 			}
+
 			portEXIT_CRITICAL(&_mux);
 			return pressed;
 		}
@@ -256,12 +271,14 @@ namespace {
 			if (_connectedCount != 0) {
 				--_connectedCount;
 			}
+
 			auto const timestamp = uptimeMs();
 			for (auto const usage : _keys) {
 				if (usage > 3U) {
 					pushLocked(InputEventType::KeyUp, usage, _modifiers, 0, timestamp);
 				}
 			}
+
 			_keys.fill(0);
 			_modifiers = 0;
 			portEXIT_CRITICAL(&_mux);
@@ -278,6 +295,7 @@ namespace {
 			if (data == nullptr || length < 8U) {
 				return;
 			}
+
 			std::array<std::uint8_t, keyboardReportKeyCount> next{};
 			std::memcpy(next.data(), data + 2, next.size());
 			auto const nextModifiers = data[0];
@@ -288,16 +306,20 @@ namespace {
 					pushLocked(InputEventType::KeyUp, usage, _modifiers, 0, timestamp);
 				}
 			}
+
 			for (auto const usage : next) {
 				if (usage <= 3U || containsUsage(_keys, usage)) {
 					continue;
 				}
+
 				if (usage == 0x39U) {
 					_capsLock = !_capsLock;
 				}
+
 				pushLocked(InputEventType::KeyDown, usage, nextModifiers,
 				    keyCharacter(usage, nextModifiers, _capsLock), timestamp);
 			}
+
 			_keys = next;
 			_modifiers = nextModifiers;
 			portEXIT_CRITICAL(&_mux);
@@ -310,10 +332,12 @@ namespace {
 			if (key == KeyCode::Unknown && !_rawReporting) {
 				return;
 			}
+
 			if (_eventCount == keyboardEventCapacity) {
 				_eventTail = (_eventTail + 1U) % keyboardEventCapacity;
 				--_eventCount;
 			}
+
 			_events[_eventHead] = {
 			    .type = type,
 			    .key = key,
@@ -374,6 +398,7 @@ namespace {
 			if (_connectedCount != 0) {
 				--_connectedCount;
 			}
+
 			_state.buttons = 0;
 			portEXIT_CRITICAL(&_mux);
 		}
@@ -382,6 +407,7 @@ namespace {
 			if (data == nullptr || length < 3U) {
 				return;
 			}
+
 			auto const timestamp = uptimeMs();
 			portENTER_CRITICAL(&_mux);
 			_state.buttons = data[0] & 0x1FU;
@@ -390,6 +416,7 @@ namespace {
 			if (length >= 4U) {
 				_state.wheel += static_cast<std::int8_t>(data[3]);
 			}
+
 			++_state.reportCount;
 			_state.lastReportTimestampMs = timestamp;
 			portEXIT_CRITICAL(&_mux);
@@ -478,14 +505,17 @@ namespace {
 		if (size == 0) {
 			return 0;
 		}
+
 		if (size >= 4) {
 			return static_cast<std::int32_t>(value);
 		}
+
 		auto const bitCount = static_cast<unsigned>(size * 8U);
 		auto const signBit = 1U << (bitCount - 1U);
 		if ((value & signBit) == 0) {
 			return static_cast<std::int32_t>(value);
 		}
+
 		auto const mask = ~((1U << bitCount) - 1U);
 		return static_cast<std::int32_t>(value | mask);
 	}
@@ -506,6 +536,7 @@ namespace {
 			    .id = static_cast<std::uint16_t>(value & 0xFFFFU),
 			};
 		}
+
 		return {
 		    .page = defaultPage,
 		    .id = static_cast<std::uint16_t>(value),
@@ -524,6 +555,7 @@ namespace {
 		if (index < local.usageCount) {
 			return local.usages[index];
 		}
+
 		if (local.hasUsageRange && local.usageMinimum.page == local.usageMaximum.page) {
 			auto const id = static_cast<std::uint32_t>(local.usageMinimum.id) + index;
 			if (id <= local.usageMaximum.id) {
@@ -533,9 +565,11 @@ namespace {
 				};
 			}
 		}
+
 		if (local.usageCount > 0) {
 			return local.usages[local.usageCount - 1U];
 		}
+
 		return {};
 	}
 
@@ -545,6 +579,7 @@ namespace {
 				return offset;
 			}
 		}
+
 		for (auto& offset : offsets) {
 			if (!offset.used) {
 				offset.used = true;
@@ -553,6 +588,7 @@ namespace {
 				return offset;
 			}
 		}
+
 		return offsets[0];
 	}
 
@@ -562,6 +598,7 @@ namespace {
 			layout.hasReportId = reportId != 0;
 			return true;
 		}
+
 		return layout.reportId == reportId;
 	}
 
@@ -569,17 +606,21 @@ namespace {
 		if (field.bitSize == 0 || !layoutAcceptsReport(layout, reportId)) {
 			return;
 		}
+
 		if (field.usage.page == hidUsagePageButton && field.usage.id > 0) {
 			if (layout.buttonCount >= layout.buttons.size()) {
 				return;
 			}
+
 			layout.buttons[layout.buttonCount] = field;
 			++layout.buttonCount;
 			return;
 		}
+
 		if (field.usage.page != hidUsagePageGenericDesktop) {
 			return;
 		}
+
 		if (field.usage.id == hidUsageX && !layout.hasXAxis) {
 			layout.xAxis = field;
 			layout.hasXAxis = true;
@@ -602,11 +643,13 @@ namespace {
 		if (constant || globals.reportSize == 0 || globals.reportCount == 0) {
 			return;
 		}
+
 		for (std::uint8_t index = 0; index < globals.reportCount; ++index) {
 			auto const usage = localUsageAt(local, index);
 			if (usage.page == 0 || usage.id == 0) {
 				continue;
 			}
+
 			addGamepadField(layout, globals.reportId, {
 			                                              .usage = usage,
 			                                              .bitOffset = static_cast<std::uint16_t>(bitOffset + index * globals.reportSize),
@@ -622,6 +665,7 @@ namespace {
 		if (descriptor == nullptr || length == 0) {
 			return false;
 		}
+
 		HidGlobalState globals{};
 		HidLocalState local{};
 		std::array<HidReportOffset, hidReportOffsetCapacity> offsets{};
@@ -632,14 +676,17 @@ namespace {
 				if (cursor + 2U > length) {
 					return false;
 				}
+
 				auto const longSize = descriptor[cursor];
 				cursor += 2U + longSize;
 				continue;
 			}
+
 			auto const dataSize = hidItemDataSize(prefix);
 			if (cursor + dataSize > length) {
 				return false;
 			}
+
 			auto const unsignedValue = readLittleEndian(descriptor + cursor, dataSize);
 			auto const signedValue = signedItemValue(unsignedValue, dataSize);
 			cursor += dataSize;
@@ -680,6 +727,7 @@ namespace {
 				}
 			}
 		}
+
 		return layout.buttonCount > 0 && (layout.hasHat || layout.hasXAxis || layout.hasYAxis);
 	}
 
@@ -687,6 +735,7 @@ namespace {
 		if (data == nullptr || bitSize == 0 || bitSize > 32U) {
 			return 0;
 		}
+
 		std::uint32_t value = 0;
 		for (std::uint8_t bit = 0; bit < bitSize; ++bit) {
 			auto const sourceBit = static_cast<std::uint32_t>(bitOffset) + bit;
@@ -694,10 +743,12 @@ namespace {
 			if (byteIndex >= length) {
 				return value;
 			}
+
 			if ((data[byteIndex] & (1U << (sourceBit % 8U))) != 0) {
 				value |= 1U << bit;
 			}
 		}
+
 		return value;
 	}
 
@@ -705,10 +756,12 @@ namespace {
 		if (field.logicalMin >= 0 || field.bitSize == 0 || field.bitSize >= 32U) {
 			return static_cast<std::int32_t>(rawValue);
 		}
+
 		auto const signBit = 1U << (field.bitSize - 1U);
 		if ((rawValue & signBit) == 0) {
 			return static_cast<std::int32_t>(rawValue);
 		}
+
 		auto const mask = ~((1U << field.bitSize) - 1U);
 		return static_cast<std::int32_t>(rawValue | mask);
 	}
@@ -724,6 +777,7 @@ namespace {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -733,6 +787,7 @@ namespace {
 		if (maxValue > minValue) {
 			return;
 		}
+
 		if (field.logicalMin < 0 && field.bitSize > 1U) {
 			auto const magnitude = static_cast<std::int64_t>(1) << (field.bitSize - 1U);
 			minValue = magnitude > 0x7FFFFFFFLL ? (-2147483647 - 1) : static_cast<std::int32_t>(-magnitude);
@@ -816,14 +871,17 @@ namespace {
 		if (layout.hasHat) {
 			applyHatSwitch(state, readBits(data, length, layout.hat.bitOffset, layout.hat.bitSize));
 		}
+
 		if (layout.hasXAxis) {
 			state.left = state.left || axisNegative(layout.xAxis, data, length);
 			state.right = state.right || axisPositive(layout.xAxis, data, length);
 		}
+
 		if (layout.hasYAxis) {
 			state.up = state.up || axisNegative(layout.yAxis, data, length);
 			state.down = state.down || axisPositive(layout.yAxis, data, length);
 		}
+
 		return state;
 	}
 
@@ -855,9 +913,11 @@ namespace {
 			if (_connectedCount != 0) {
 				--_connectedCount;
 			}
+
 			if (_connectedCount == 0) {
 				_state = {};
 			}
+
 			portEXIT_CRITICAL(&_mux);
 		}
 
@@ -885,6 +945,7 @@ namespace {
 			if (data == nullptr || length == 0) {
 				return;
 			}
+
 			auto const timestamp = uptimeMs();
 			portENTER_CRITICAL(&_mux);
 			_lastReportBytes = length > 255U ? 255U : static_cast<std::uint8_t>(length);
@@ -893,10 +954,12 @@ namespace {
 					portEXIT_CRITICAL(&_mux);
 					return;
 				}
+
 				_state = parseGamepadState(_layout, data + 1, length - 1U);
 			} else {
 				_state = parseGamepadState(_layout, data, length);
 			}
+
 			++_reportCount;
 			_lastReportTimestampMs = timestamp;
 			portEXIT_CRITICAL(&_mux);
@@ -961,12 +1024,14 @@ namespace {
 		if (result == ESP_OK) {
 			g_usbInstalled.store(true, std::memory_order_release);
 		}
+
 		xTaskNotifyGive(static_cast<TaskHandle_t>(argument));
 		if (result != ESP_OK) {
 			recordError(result, "usb_host_install");
 			vTaskDelete(nullptr);
 			return;
 		}
+
 		for (;;) {
 			std::uint32_t flags = 0;
 			auto const error = usb_host_lib_handle_events(portMAX_DELAY, &flags);
@@ -983,6 +1048,7 @@ namespace {
 			recordError(error, "hid_host_device_get_params");
 			return;
 		}
+
 		if (event == HID_HOST_INTERFACE_EVENT_INPUT_REPORT) {
 			std::array<std::uint8_t, hidReportBufferBytes> report{};
 			std::size_t length = 0;
@@ -991,6 +1057,7 @@ namespace {
 				recordError(error, "hid_host_device_get_raw_input_report_data");
 				return;
 			}
+
 			if (params.sub_class == HID_SUBCLASS_BOOT_INTERFACE && params.proto == HID_PROTOCOL_KEYBOARD) {
 				g_keyboard.report(report.data(), length);
 			} else if (params.sub_class == HID_SUBCLASS_BOOT_INTERFACE && params.proto == HID_PROTOCOL_MOUSE) {
@@ -998,25 +1065,32 @@ namespace {
 			} else if (handle == g_gamepadHandle.load(std::memory_order_acquire)) {
 				g_gamepad.report(report.data(), length);
 			}
+
 			return;
 		}
+
 		if (event == HID_HOST_INTERFACE_EVENT_DISCONNECTED) {
 			if (params.proto == HID_PROTOCOL_KEYBOARD) {
 				g_keyboard.disconnected();
 			}
+
 			if (params.proto == HID_PROTOCOL_MOUSE) {
 				g_mouse.disconnected();
 			}
+
 			if (handle == g_gamepadHandle.load(std::memory_order_acquire)) {
 				g_gamepad.disconnected();
 				g_gamepadHandle.store(nullptr, std::memory_order_release);
 			}
+
 			error = hid_host_device_close(handle);
 			if (error != ESP_OK) {
 				recordError(error, "hid_host_device_close");
 			}
+
 			return;
 		}
+
 		if (event == HID_HOST_INTERFACE_EVENT_TRANSFER_ERROR) {
 			recordError(ESP_FAIL, "USB HID interrupt transfer");
 		}
@@ -1029,6 +1103,7 @@ namespace {
 			recordError(error, "hid_host_device_get_params");
 			return;
 		}
+
 		auto const isBootKeyboard = params.sub_class == HID_SUBCLASS_BOOT_INTERFACE && params.proto == HID_PROTOCOL_KEYBOARD;
 		auto const isBootMouse = params.sub_class == HID_SUBCLASS_BOOT_INTERFACE && params.proto == HID_PROTOCOL_MOUSE;
 		hid_host_device_config_t config{};
@@ -1055,34 +1130,41 @@ namespace {
 				(void) hid_host_device_close(handle);
 				return;
 			}
+
 			if (g_gamepadHandle.load(std::memory_order_acquire) != nullptr) {
 				ESP_LOGW(tag, "ignoring extra HID gamepad interface");
 				(void) hid_host_device_close(handle);
 				return;
 			}
 		}
+
 		if (isBootKeyboard) {
 			error = hid_class_request_set_idle(handle, 0, 0);
 			if (error != ESP_OK) {
 				ESP_LOGW(tag, "keyboard set-idle failed: %s", esp_err_to_name(error));
 			}
 		}
+
 		error = hid_host_device_start(handle);
 		if (error != ESP_OK) {
 			recordError(error, "hid_host_device_start");
 			(void) hid_host_device_close(handle);
 			return;
 		}
+
 		if (isBootKeyboard) {
 			g_keyboard.connected();
 		}
+
 		if (isBootMouse) {
 			g_mouse.connected();
 		}
+
 		if (!isBootKeyboard && !isBootMouse) {
 			g_gamepad.connected(gamepadLayout);
 			g_gamepadHandle.store(handle, std::memory_order_release);
 		}
+
 		g_connectionEvents.fetch_add(1U, std::memory_order_relaxed);
 		ESP_LOGI(tag, "USB HID %s connected",
 		    isBootKeyboard ? "keyboard" : isBootMouse ? "mouse"
@@ -1112,21 +1194,25 @@ bool initialize() {
 	if (g_initialized.load(std::memory_order_acquire)) {
 		return true;
 	}
+
 	g_driverEvents = xQueueCreate(16, sizeof(DriverEvent));
 	if (g_driverEvents == nullptr) {
 		recordError(ESP_ERR_NO_MEM, "xQueueCreate");
 		return false;
 	}
+
 	auto const currentTask = xTaskGetCurrentTaskHandle();
 	if (xTaskCreate(usbLibraryTask, "usb-host", usbHostStackBytes, currentTask, 4, nullptr) != pdPASS) {
 		recordError(ESP_ERR_NO_MEM, "xTaskCreate(usb-host)");
 		return false;
 	}
+
 	if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(initializationTimeoutMs)) == 0
 	    || g_usbInstallResult.load(std::memory_order_acquire) != ESP_OK) {
 		recordError(g_usbInstallResult.load(std::memory_order_acquire), "USB host startup");
 		return false;
 	}
+
 	hid_host_driver_config_t hidConfig{};
 	hidConfig.create_background_task = true;
 	hidConfig.task_priority = 5;
@@ -1139,11 +1225,13 @@ bool initialize() {
 		recordError(error, "hid_host_install");
 		return false;
 	}
+
 	g_hidInstalled.store(true, std::memory_order_release);
 	if (xTaskCreate(hidEventTask, "usb-hid-events", hidEventStackBytes, nullptr, 4, nullptr) != pdPASS) {
 		recordError(ESP_ERR_NO_MEM, "xTaskCreate(usb-hid-events)");
 		return false;
 	}
+
 	g_keyboard.setReady(true);
 	g_mouse.setReady(true);
 	g_gamepad.setReady(true);
@@ -1172,6 +1260,7 @@ UsbHidHostStatus status() {
 	if (usbInstalled) {
 		usbInfoError = usb_host_lib_info(&usbInfo);
 	}
+
 	auto const usbInfoAvailable = usbInfoError == ESP_OK;
 	return {
 	    .initialized = g_initialized.load(std::memory_order_acquire),

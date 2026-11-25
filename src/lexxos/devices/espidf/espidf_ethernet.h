@@ -26,9 +26,9 @@ struct Status {
 	char lastErrorName[24]{};
 };
 
-bool start(lexxos::platform::BoardDescriptor const& board);
+bool start(lexxos::platform::LegacyBoardDescriptor const& board);
 bool stop();
-bool restart(lexxos::platform::BoardDescriptor const& board);
+bool restart(lexxos::platform::LegacyBoardDescriptor const& board);
 Status status();
 
 } // namespace lexxos::devices::espidf_ethernet

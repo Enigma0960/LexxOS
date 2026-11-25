@@ -1,0 +1,16 @@
+{
+  "id": "m5stack_cardputer",
+  "name": "M5Stack Cardputer",
+  "platform": "espidf",
+  "preset": "debug-cardputer",
+  "buildDir": "build/configurator/cardputer",
+  "userPresetName": "user-espidf-m5stack_cardputer",
+  "cmakeDefaults": {
+    "IDF_TARGET": "esp32s3"
+  },
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_ENABLE_GAMEBOY": "OFF"
+  }
+}

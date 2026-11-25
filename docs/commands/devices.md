@@ -1,6 +1,6 @@
 # `devices`
 
-list registered devices.
+Перечисляет зарегистрированные устройства.
 
 ## Справка shell
 

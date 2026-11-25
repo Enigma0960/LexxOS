@@ -1,4 +1,4 @@
-# Backend FatFs
+# Реализация FatFs
 
 LexxOS использует FatFs как единственный backend файловой системы FAT. Предыдущая экспериментальная реализация LexxOS
 удалена: все runtime paths, automount и shell-команды работают через FatFs adapter.
@@ -51,7 +51,7 @@ LEXXOS_FEATURE_FATFS=ON
 #define FF_FS_MINIMIZE    0
 #define FF_USE_FIND       0
 #define FF_USE_MKFS       0
-#define FF_USE_FASTSEEK   0
+#define FF_USE_FASTSEEK   0 /* исходный ffconf.h из third_party */
 #define FF_USE_LFN        2
 #define FF_MAX_LFN        64
 #define FF_LFN_UNICODE    0
@@ -64,7 +64,44 @@ LEXXOS_FEATURE_FATFS=ON
 #define FF_FS_TINY        0
 ```
 
+Заголовок `third_party/fatfs/source/ffconf.h` **не изменяется**. Для Lyra
+`config/fatfs/lexxos_ffconf_override.h` принудительно подключается компилятором
+перед любым `ff.h`: сначала читается исходный `ffconf.h`, затем переопределяется
+только `FF_USE_FASTSEEK=1`. FatFs использует `FFCONF_DEF` и не перечитывает
+исходный заголовок при последующем включении `ff.h`.
+
+Один и тот же overlay должен действовать при компиляции `ff.c` и всех C/C++
+модулей, использующих `FIL` (`FF_USE_FASTSEEK` меняет его размер). Поэтому
+параметры задаются через `config/cmake/FatFsConfigOverride.cmake` — `PRIVATE`
+для прошивки Lyra, которая компилирует `ff.c` непосредственно, и `PUBLIC` для
+общего target `fatfs`. При `-DLEXXOS_FATFS_FASTSEEK=OFF` заголовок overlay
+не подключается и применяется обычная конфигурация FatFs.
+
 Текущий адаптер требует `FF_LFN_UNICODE=0`; это дополнительно проверяется на этапе компиляции.
+
+## Ускорение больших .lexx на RK3506/Lyra
+
+`LEXXOS_FATFS_FASTSEEK` автоматически включён для `LEXXOS_PLATFORM=rk3506`
+и выключен для остальных платформ. Его можно переопределить через CMake:
+
+```bash
+cmake --preset picocalc-lyra-release -DLEXXOS_FATFS_FASTSEEK=ON
+```
+
+При чтении файла `.lexx` от 4 МиБ FatVolume однократно пытается построить
+CLMT (Cluster Link Map Table, максимум 2048 DWORD = 8 КиБ на активный файл).
+Таблица ускоряет повторные произвольные `f_lseek()` во время поиска по индексу
+LXR2 и чтения ассетов. Первое построение CLMT может занять время, сопоставимое
+с полным проходом цепочки кластеров. При нехватке памяти либо чрезмерной
+фрагментации используется стандартный FatFs seek; ошибки чтения не возникают.
+
+Один активный `.lexx` удерживается в выделенном read-only FIL, независимо от
+обычного кеша чтения: операции с сохранениями не сбрасывают CLMT.
+При перезаписи `.lexx`, rename/remove, размонтировании и reset карта освобождается.
+Потребление памяти ограничено 8 КиБ плюс один `FIL` и путь на том.
+
+Fast Seek не меняет формат FAT32, `.lexx` или интерфейс VFS. Опция
+`FF_USE_FASTSEEK=1` сама по себе не влияет на `FIL` без `cltbl`.
 
 ## Интеграция с runtime
 

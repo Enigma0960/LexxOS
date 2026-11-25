@@ -1,6 +1,6 @@
 # `display-text`
 
-draw simple text on display.
+Рисует простой текст на дисплее.
 
 ## Справка shell
 

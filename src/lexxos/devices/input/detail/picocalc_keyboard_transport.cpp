@@ -21,8 +21,10 @@ bool PicoCalcKeyboardTransport::readStateWithRetry(
 		if (readState(state)) {
 			return true;
 		}
+
 		_sleepMs(clock, retryDelayMs);
 	}
+
 	return false;
 }
 
@@ -36,10 +38,12 @@ bool PicoCalcKeyboardTransport::drainFifo(std::uint8_t maxEvents) const {
 		if (!readFifo(event)) {
 			return false;
 		}
+
 		if (event.isEmpty()) {
 			return true;
 		}
 	}
+
 	return true;
 }
 

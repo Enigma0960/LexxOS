@@ -23,6 +23,7 @@ PicoCalcKeyboardFifoPollResult PicoCalcKeyboardFifoPoller::poll(
 		events[result.eventCount] = event;
 		++result.eventCount;
 	}
+
 	return result;
 }
 

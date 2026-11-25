@@ -1,6 +1,6 @@
 # `rename`
 
-rename a writable VFS file or directory.
+Переименовывает файл или каталог VFS.
 
 ## Справка shell
 

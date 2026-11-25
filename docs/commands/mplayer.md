@@ -5,7 +5,7 @@
 
 > Опциональная команда: в standard-сборке LexxOS 0.0.7 отключена по умолчанию через `LEXXOS_FEATURE_MIDI=OFF`.
 
-play a MIDI file from VFS.
+Проигрывает MIDI-файл из VFS.
 
 ## Справка shell
 
@@ -34,7 +34,8 @@ Arguments:
 - tempo meta event `FF 51`;
 - note on/off, включая `note on velocity=0` как note off;
 - program change для выбора простого тембра/waveform;
-- control change `7` volume, `10` pan, `11` expression, `64` sustain, `120`/`123` all notes off, `121` reset
+- управляющие сообщения: `7` — громкость, `10` — панорама, `11` — экспрессия, `64` — педаль, `120`/`123` — выключить все
+  ноты, `121` — сброс
   controllers;
 - channel 10 percussion как упрощённые noise/pulse/sine голоса.
 

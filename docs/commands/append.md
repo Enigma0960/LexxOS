@@ -1,6 +1,6 @@
 # `append`
 
-append text to a writable VFS file.
+Дописывает текст в доступный для записи файл VFS.
 
 ## Справка shell
 

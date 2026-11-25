@@ -1,0 +1,19 @@
+{
+  "id": "dev_pico",
+  "name": "LexxOS Pico dev board",
+  "platform": "pico",
+  "preset": "debug-pico",
+  "buildDir": "build/configurator/pico",
+  "userPresetName": "user-pico-dev_pico",
+  "cmakeDefaults": {
+    "PICO_BOARD": "pico"
+  },
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_DEBUG_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_FEATURE_DS3231_RTC": "ON"
+  }
+}

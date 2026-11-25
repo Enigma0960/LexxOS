@@ -21,6 +21,8 @@ public:
 	void clearDirtyCellsInRow(int row, int columns, int rows);
 
 	void scrollDirtyCellsUp(int columns, int rows);
+	// Rotate logical rows; no display operation and no whole-screen copy.
+	void advanceLine(int columns, int rows);
 
 	char& cell(int column, int row);
 
@@ -36,6 +38,8 @@ public:
 
 private:
 	[[nodiscard]] static std::size_t _cellIndex(int column, int row);
+	[[nodiscard]] std::size_t _physicalIndex(int column, int row) const;
+	int _firstRow{0}, _rowCount{maxRows};
 
 	std::array<char, maxColumns * maxRows> _cells{};
 	std::array<std::uint8_t, maxColumns * maxRows> _attributes{};

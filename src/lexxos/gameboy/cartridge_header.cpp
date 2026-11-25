@@ -1,6 +1,7 @@
 #include <lexxos/gameboy/cartridge_header.h>
 
 namespace lexxos::gameboy {
+
 namespace {
 
 	// @formatter:off
@@ -79,6 +80,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -89,12 +91,15 @@ namespace {
 			if (value == 0) {
 				break;
 			}
+
 			if (!isTitleCharacter(value)) {
 				break;
 			}
+
 			output[outputIndex] = static_cast<char>(value);
 			++outputIndex;
 		}
+
 		output[outputIndex] = '\0';
 	}
 
@@ -186,6 +191,7 @@ std::string_view cartridgeTypeName(std::uint8_t code) {
 		case 0xFF:
 			return "HuC1+RAM+BATTERY";
 	}
+
 	return "unknown";
 }
 
@@ -216,6 +222,7 @@ std::uint32_t romSizeBytes(std::uint8_t code) {
 		case 0x54:
 			return 1536U * 1024U;
 	}
+
 	return 0;
 }
 
@@ -246,6 +253,7 @@ std::string_view romSizeName(std::uint8_t code) {
 		case 0x54:
 			return "1.5 MiB";
 	}
+
 	return "unknown";
 }
 
@@ -264,6 +272,7 @@ std::uint32_t ramSizeBytes(std::uint8_t code) {
 		case 0x05:
 			return 64U * 1024U;
 	}
+
 	return 0;
 }
 
@@ -282,6 +291,7 @@ std::string_view ramSizeName(std::uint8_t code) {
 		case 0x05:
 			return "64 KiB";
 	}
+
 	return "unknown";
 }
 
@@ -292,6 +302,7 @@ std::string_view destinationName(std::uint8_t code) {
 		case 0x01:
 			return "Overseas";
 	}
+
 	return "unknown";
 }
 
@@ -304,6 +315,7 @@ std::string_view cgbFlagName(std::uint8_t code) {
 		case 0xC0:
 			return "required";
 	}
+
 	return "unknown";
 }
 

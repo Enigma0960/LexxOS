@@ -23,20 +23,20 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec moveArguments[] = {
 	    {
-         .name = "source",
-         .valueName = "source",
-         .help = "readable VFS source file",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "source",
+	     .valueName = "source",
+	     .help = "readable VFS source file",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	    {
-         .name = "target",
-         .valueName = "target",
-         .help = "writable VFS target file",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "target",
+	     .valueName = "target",
+	     .help = "writable VFS target file",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	};
 
@@ -74,7 +74,7 @@ ProgramDescriptor MoveProgram::descriptor() {
 	    .handler = run,
 	    .runtime = {
 	                .launchMode = ProgramLaunchMode::ForegroundTask,
-	                .stackSizeBytes = 4096,
+	                .stackSizeBytes = lexxos::runtime::standardRuntimeProfile.programs.filesystemMutationStackBytes,
 	                .priority = 1,
 	                .memoryClass = ProgramMemoryClass::InternalOnly,
 	                .externalMemoryQuotaBytes = 0,
@@ -99,6 +99,7 @@ int MoveProgram::run(
 	if (!resolvePath(context, arguments.positional("source"), *source)) {
 		return 1;
 	}
+
 	if (!resolvePath(context, arguments.positional("target"), *target)) {
 		return 1;
 	}
@@ -114,6 +115,7 @@ int MoveProgram::run(
 		context.writeLine(lexxos::vfs::toString(status));
 		return 1;
 	}
+
 	return 0;
 }
 

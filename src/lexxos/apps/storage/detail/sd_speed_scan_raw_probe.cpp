@@ -15,6 +15,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs::detail {
+
 namespace {
 
 	void printFirstDifference(
@@ -81,6 +82,7 @@ bool runSpeedRawProbe(
 		if (!readBlocksAtSettings(context, device, targetMode, expectedBaudRate, blockNumber, batchBlocks, blockA.data(), "raw")) {
 			return false;
 		}
+
 		if (!readBlocksAtSettings(context, device, targetMode, expectedBaudRate, blockNumber, batchBlocks, blockB.data(), "raw")) {
 			return false;
 		}
@@ -97,6 +99,7 @@ bool runSpeedRawProbe(
 			printSdLastDiagnostic(context);
 			return true;
 		}
+
 		if (std::memcmp(referenceBlocks.data(), blockA.data(), batchBytes) != 0) {
 			context.write("sd-speed-scan: raw reference mismatch at block ");
 			lexxos::apps::writeUnsigned64(context, blockNumber);

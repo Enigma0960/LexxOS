@@ -1,11 +1,10 @@
-#include <lexxos/devices/bus/i2c_bus.h>
-
 #include <cstdint>
 
 #include <driver/i2c.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
-
+#include <lexxos/devices/bus/i2c_bus.h>
 #include <lexxos/platform/board.h>
 
 namespace lexxos::devices {
@@ -28,6 +27,7 @@ namespace {
 			if (_ready) {
 				(void) i2c_driver_delete(_port);
 			}
+
 			if (_mutex != nullptr) {
 				vSemaphoreDelete(_mutex);
 			}
@@ -62,6 +62,7 @@ namespace {
 			if (i2c_param_config(_port, &config) != ESP_OK) {
 				return false;
 			}
+
 			if (i2c_driver_install(_port, I2C_MODE_MASTER, 0, 0, 0) != ESP_OK) {
 				return false;
 			}
@@ -98,6 +99,7 @@ namespace {
 			if (!_ready || data == nullptr || size == 0 || !_lock()) {
 				return false;
 			}
+
 			auto const result = i2c_master_write_to_device(_port, address, data, size, i2cTimeoutTicks);
 			_unlock();
 			return result == ESP_OK;
@@ -107,6 +109,7 @@ namespace {
 			if (!_ready || data == nullptr || size == 0 || !_lock()) {
 				return false;
 			}
+
 			auto const result = i2c_master_read_from_device(_port, address, data, size, i2cTimeoutTicks);
 			_unlock();
 			return result == ESP_OK;

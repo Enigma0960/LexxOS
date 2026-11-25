@@ -61,6 +61,7 @@ namespace {
 			lookup.row->set(11, lexxos::program::toString(process.launchStatus));
 			lookup.found = true;
 		}
+
 		++lookup.current;
 	}
 
@@ -97,6 +98,7 @@ int JobsProgram::run(lexxos::os::AppContext& context,
 			context.writeLine(" finished processes");
 			return 0;
 		}
+
 		context.writeErrorLine("usage: jobs [clear]");
 		return 2;
 	}

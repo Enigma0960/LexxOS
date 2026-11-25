@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
+
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -33,6 +34,7 @@ int _write(int file, char const* data, int size) {
 	if (data == NULL || size <= 0) {
 		return 0;
 	}
+
 	lexxos_stm32_uart_write_raw(data, (size_t) size);
 	return size;
 }

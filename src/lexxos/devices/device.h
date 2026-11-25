@@ -46,6 +46,7 @@ enum class DeviceKind {
 		case DeviceKind::Pointing:
 			return "pointer";
 	}
+
 	return "unknown";
 }
 

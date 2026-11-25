@@ -56,6 +56,7 @@ int GbBusProgram::run(
 	if (requestedBank >= romBanks && romBanks != 0) {
 		requestedBank %= romBanks;
 	}
+
 	if (requestedBank == 0 && romBanks > 1) {
 		requestedBank = 1;
 	}

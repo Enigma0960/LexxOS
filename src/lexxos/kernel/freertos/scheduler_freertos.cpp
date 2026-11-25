@@ -1,29 +1,69 @@
-#include <lexxos/kernel/scheduler.h>
-
-#include <algorithm>
 #include <array>
+#include <limits>
 
 #include <FreeRTOS.h>
 #include <task.h>
 
 #include <lexxos/kernel/freertos/freertos_scheduler_types.h>
+#include <lexxos/kernel/scheduler.h>
+#include <lexxos/kernel/task_policy.h>
 
 #if defined(LEXXOS_PLATFORM_PICO) && defined(PICO_RP2350) && PICO_RP2350
 namespace lexxos::platform::pico::detail {
+
 void installFreeRtosExceptionHandlers();
-}
+
+} // namespace lexxos::platform::pico::detail
+#endif
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+extern "C" std::uint64_t rk3506_timer_counter();
+extern "C" std::uint32_t rk3506_timer_counter_frequency();
 #endif
 
 namespace {
 
 using lexxos::kernel::freertos::detail::FreeRtosTask;
 
+// Only suspend after scheduler start; boot creates tasks before the port is running.
+class RegistryGuard {
+public:
+	RegistryGuard()
+	    : _active(xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) {
+		if (_active) {
+			vTaskSuspendAll();
+		}
+	}
+
+	~RegistryGuard() {
+		if (_active) {
+			(void) xTaskResumeAll();
+		}
+	}
+
+	RegistryGuard(RegistryGuard const&) = delete;
+	RegistryGuard& operator=(RegistryGuard const&) = delete;
+
+private:
+	bool _active;
+};
+
 constexpr std::size_t maxTasks = 8;
 std::array<FreeRtosTask, maxTasks> g_tasks{};
 
-configSTACK_DEPTH_TYPE stackSizeToDepth(std::uint32_t stackSizeBytes) {
-	auto const depth = stackSizeBytes / static_cast<std::uint32_t>(sizeof(StackType_t));
-	return static_cast<configSTACK_DEPTH_TYPE>(std::max<std::uint32_t>(depth, configMINIMAL_STACK_SIZE));
+bool stackSizeToDepth(std::uint32_t stackSizeBytes, configSTACK_DEPTH_TYPE& result) {
+	std::uint32_t depth{};
+	if (!lexxos::kernel::taskStackDepthFromBytes(
+	        stackSizeBytes,
+	        sizeof(StackType_t),
+	        configMINIMAL_STACK_SIZE,
+	        std::numeric_limits<configSTACK_DEPTH_TYPE>::max(),
+	        depth)) {
+		return false;
+	}
+
+	result = static_cast<configSTACK_DEPTH_TYPE>(depth);
+	return true;
 }
 
 std::uint32_t stackDepthToBytes(configSTACK_DEPTH_TYPE stackDepth) {
@@ -39,7 +79,7 @@ TickType_t millisecondsToTicks(std::uint32_t milliseconds) {
 	return ticks;
 }
 
-UBaseType_t coreAffinityMask(int coreAffinity) {
+[[maybe_unused]] UBaseType_t coreAffinityMask(int coreAffinity) {
 #if defined(configUSE_CORE_AFFINITY) && configUSE_CORE_AFFINITY && defined(configNUMBER_OF_CORES) && (configNUMBER_OF_CORES > 1)
 	if (coreAffinity >= 0 && coreAffinity < configNUMBER_OF_CORES) {
 		return static_cast<UBaseType_t>(1U << static_cast<unsigned>(coreAffinity));
@@ -50,41 +90,80 @@ UBaseType_t coreAffinityMask(int coreAffinity) {
 	return 0;
 }
 
-int effectiveCoreAffinity(int coreAffinity) {
-#if defined(configUSE_CORE_AFFINITY) && configUSE_CORE_AFFINITY && defined(configNUMBER_OF_CORES) && (configNUMBER_OF_CORES > 1)
-	if (coreAffinity >= 0 && coreAffinity < configNUMBER_OF_CORES) {
-		return coreAffinity;
-	}
-	return 0;
+constexpr int supportedCoreCount() {
+#if defined(configNUMBER_OF_CORES) && (configNUMBER_OF_CORES > 1)
+	return configNUMBER_OF_CORES;
 #else
-	return coreAffinity;
+	return 1;
 #endif
 }
 
 void taskTrampoline(void* parameter) {
 	auto& task = *static_cast<FreeRtosTask*>(parameter);
-	task.snapshot.started = true;
+	{
+		RegistryGuard guard;
+		task.snapshot.started = true;
+	}
 
-	lexxos::kernel::schedulerBackend().writeConsole("FreeRTOS task start: ");
-	lexxos::kernel::schedulerBackend().writeConsole(task.snapshot.name != nullptr ? task.snapshot.name : "<unnamed>");
-	lexxos::kernel::schedulerBackend().writeConsole("\r\n");
+#if 0 // Disable debug write
+	char line[96]{};
+	std::size_t used = 0;
+	for (auto text : {std::string_view{"FreeRTOS task start: "}, std::string_view{task.snapshot.name ? task.snapshot.name : "<unnamed>"}, std::string_view{"\r\n"}}) {
+		for (char c : text) {
+			if (used < sizeof(line)) {
+				line[used++] = c;
+			}
+		}
+	}
+	lexxos::kernel::schedulerBackend().writeConsole({line, used});
+#endif
 
 	task.entry(task.userData);
-	task.snapshot.started = false;
-	task.handle = nullptr;
-	task.entry = nullptr;
-	task.userData = nullptr;
-	task.allocated = false;
-	vTaskDelete(nullptr);
+	{
+		RegistryGuard guard;
+		task.snapshot.started = false;
+		task.retiring = true;
+	}
+	// Do not publish a free slot before the final instruction of this task.
+	// A later task-context reaper deletes only tasks confirmed suspended.
+	for (;;) {
+		vTaskSuspend(nullptr);
+	}
+}
+
+// Task context only. The old trampoline can no longer access its slot
+// once FreeRTOS reports eSuspended. Delete outside the registry guard.
+std::size_t reapRetiredTasks() {
+	std::array<TaskHandle_t, maxTasks> retired{};
+	std::size_t count = 0;
+	{
+		RegistryGuard guard;
+		for (auto& task : g_tasks) {
+			if (!task.allocated || !task.retiring || task.handle == nullptr || eTaskGetState(task.handle) != eSuspended) {
+				continue;
+			}
+
+			retired[count++] = task.handle;
+			task = FreeRtosTask{};
+		}
+	}
+
+	for (std::size_t i = 0; i < count; ++i) {
+		vTaskDelete(retired[i]);
+	}
+
+	return count;
 }
 
 FreeRtosTask* allocateTaskSlot() {
 	for (auto& task : g_tasks) {
 		if (!task.allocated) {
+			task = FreeRtosTask{};
 			task.allocated = true;
 			return &task;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -93,17 +172,26 @@ FreeRtosTask* allocateTaskSlot() {
 namespace lexxos::kernel {
 
 bool createTask(TaskEntry entry, void* userData, TaskOptions options) {
-	if (entry == nullptr) {
+	if (entry == nullptr
+	    || !validTaskPriority(options.priority, configMAX_PRIORITIES)
+	    || !validTaskCoreAffinity(options.coreAffinity, supportedCoreCount())) {
 		return false;
 	}
 
-	auto const stackDepth = stackSizeToDepth(options.stackSizeBytes);
+	configSTACK_DEPTH_TYPE stackDepth{};
+	if (!stackSizeToDepth(options.stackSizeBytes, stackDepth)) {
+		return false;
+	}
+
+	reapRetiredTasks();
+	RegistryGuard guard;
 	auto* const taskSlot = allocateTaskSlot();
 	if (taskSlot == nullptr) {
 		return false;
 	}
+
 	auto& task = *taskSlot;
-	auto const coreAffinity = effectiveCoreAffinity(options.coreAffinity);
+	auto const coreAffinity = options.coreAffinity;
 
 	task.entry = entry;
 	task.userData = userData;
@@ -137,9 +225,9 @@ bool createTask(TaskEntry entry, void* userData, TaskOptions options) {
 		    static_cast<UBaseType_t>(options.priority),
 		    &task.handle);
 	}
+
 	if (result != pdPASS) {
-		task.allocated = false;
-		task.handle = nullptr;
+		task = FreeRtosTask{};
 		return false;
 	}
 
@@ -158,6 +246,25 @@ void startScheduler() {
 }
 
 void sleepMs(std::uint32_t milliseconds) {
+#if defined(LEXXOS_PLATFORM_RK3506)
+	// LCD initialization needs delays before vTaskStartScheduler().
+	// Generic Virtual Counter is already running, but FreeRTOS tick
+	// and vTaskDelay() are not available yet.
+	if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+		if (milliseconds != 0U) {
+			auto const frequency = rk3506_timer_counter_frequency();
+			auto const duration =
+			    (static_cast<std::uint64_t>(frequency) * milliseconds) / 1000U;
+			auto const started = rk3506_timer_counter();
+			while (rk3506_timer_counter() - started < duration) {
+				asm volatile("nop");
+			}
+		}
+
+		return;
+	}
+#endif
+
 	if (milliseconds == 0) {
 		taskYIELD();
 		return;
@@ -170,13 +277,19 @@ void yield() {
 	taskYIELD();
 }
 
+std::size_t reapFinishedTasks() {
+	return reapRetiredTasks();
+}
+
 std::size_t taskCount() {
+	RegistryGuard guard;
 	std::size_t count = 0;
 	for (auto const& task : g_tasks) {
-		if (task.allocated) {
+		if (task.allocated && !task.retiring) {
 			++count;
 		}
 	}
+
 	return count;
 }
 
@@ -185,17 +298,25 @@ void visitTasks(TaskVisitor visitor, void* userData) {
 		return;
 	}
 
-	for (auto const& task : g_tasks) {
-		if (!task.allocated) {
-			continue;
-		}
+	std::array<TaskSnapshot, maxTasks> snapshots{};
+	std::size_t count = 0;
+	{
+		RegistryGuard guard;
+		for (auto const& task : g_tasks) {
+			if (!task.allocated || task.retiring) {
+				continue;
+			}
 
-		auto snapshot = task.snapshot;
-		if (task.handle != nullptr) {
-			snapshot.stackFreeBytes = static_cast<std::uint32_t>(uxTaskGetStackHighWaterMark(task.handle))
-			    * static_cast<std::uint32_t>(sizeof(StackType_t));
+			auto& snapshot = snapshots[count++];
+			snapshot = task.snapshot;
+			if (task.handle != nullptr) {
+				snapshot.stackFreeBytes = static_cast<std::uint32_t>(uxTaskGetStackHighWaterMark(task.handle))
+				    * static_cast<std::uint32_t>(sizeof(StackType_t));
+			}
 		}
-		visitor(snapshot, userData);
+	}
+	for (std::size_t i = 0; i < count; ++i) {
+		visitor(snapshots[i], userData);
 	}
 }
 

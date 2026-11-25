@@ -42,6 +42,7 @@ PicoCalcKeyboardInputResult PicoCalcKeyboardInputState::handleRawEvent(
 		if (!_handleModifierEvent(status, scanCode)) {
 			return {};
 		}
+
 		return {
 		    .rawEventAccepted = true,
 		    .rawEvent = _rawEvent(status, scanCode),
@@ -70,11 +71,13 @@ PicoCalcKeyboardInputResult PicoCalcKeyboardInputState::handleRawEvent(
 		if (wasPressed) {
 			return {};
 		}
+
 		_pressedScanCodes.setPressed(scanCode, true);
 		_pressedScanCodeMs[scanCode] = now;
 		if (mask != 0) {
 			_pressedKeys |= mask;
 		}
+
 		_nextRepeatMs[scanCode] = picoCalcKeyboardIsRepeatable(mapping, scanCode) ? now + keyRepeatDelayMs : 0;
 		return {
 		    .rawEventAccepted = true,
@@ -90,9 +93,11 @@ PicoCalcKeyboardInputResult PicoCalcKeyboardInputState::handleRawEvent(
 	if (mask != 0) {
 		_pressedKeys &= ~mask;
 	}
+
 	if (!wasPressed) {
 		return {};
 	}
+
 	return {
 	    .rawEventAccepted = true,
 	    .rawEvent = _rawEvent(status, scanCode),
@@ -128,6 +133,7 @@ PicoCalcKeyboardInputResult PicoCalcKeyboardInputState::nextRepeatEvent(std::uin
 		    .event = _makeEvent(InputEventType::KeyDown, mapping.key, now, mapping.character, scanCode),
 		};
 	}
+
 	return {};
 }
 
@@ -157,6 +163,7 @@ PicoCalcKeyboardInputResult PicoCalcKeyboardInputState::releaseNextStaleScanCode
 		if (mask != 0) {
 			_pressedKeys &= ~mask;
 		}
+
 		++_staleScanCodeReleases;
 		++_staleReleaseCount;
 
@@ -167,6 +174,7 @@ PicoCalcKeyboardInputResult PicoCalcKeyboardInputState::releaseNextStaleScanCode
 		    .event = _makeEvent(InputEventType::KeyUp, mapping.key, now, mapping.character, scanCode),
 		};
 	}
+
 	return {};
 }
 
@@ -208,9 +216,11 @@ bool PicoCalcKeyboardInputState::_handleModifierEvent(std::uint8_t status, std::
 	if (status == keyEventPressed && wasPressed) {
 		return false;
 	}
+
 	if (status == keyEventHold && wasPressed) {
 		return false;
 	}
+
 	if (status == keyEventReleased && !wasPressed) {
 		return false;
 	}
@@ -220,6 +230,7 @@ bool PicoCalcKeyboardInputState::_handleModifierEvent(std::uint8_t status, std::
 	} else if (status == keyEventPressed || status == keyEventHold) {
 		_modifierKeys |= mask;
 	}
+
 	return true;
 }
 

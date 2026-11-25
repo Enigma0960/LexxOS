@@ -1,6 +1,6 @@
 # `mic`
 
-show or test the primary microphone.
+Показывает или проверяет основной микрофон.
 
 ## Примеры
 
@@ -12,12 +12,13 @@ lexx:/> mic loopback -s 1 -g 2
 
 ## Cardputer-Adv
 
-Cardputer-Adv exposes ES8311/I2S capture as `cardputer-adv-mic`. `mic sample` captures one 512-frame PCM chunk and
-prints peak/average levels. `mic loopback` captures microphone PCM and writes it to the primary `AudioDevice`, so it is
-a short audible wiring test rather than a recorder.
+Cardputer-Adv регистрирует захват ES8311/I2S как `cardputer-adv-mic`.
+`mic sample` получает 512 PCM-кадров и печатает пиковый/средний уровень.
+`mic loopback` сразу передаёт PCM основному `AudioDevice` для короткой
+звуковой проверки подключения.
 
-The loopback path is intentionally cancellable and uses a 10 KiB foreground task stack because it keeps a 512-frame
-stereo PCM chunk on the task stack while calling both microphone capture and audio output.
+Проверку можно отменить. Она использует стек интерактивной задачи 10 КиБ:
+512 стереокадров PCM остаются на стеке при вызовах захвата и воспроизведения.
 
 ## Справка shell
 

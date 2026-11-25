@@ -1,6 +1,6 @@
 # `mv`
 
-rename a writable VFS file or directory.
+Переименовывает или перемещает файл либо каталог VFS.
 
 ## Справка shell
 

@@ -27,7 +27,7 @@ ctest --test-dir build/host-checks --output-on-failure
 `lexxos_board_preset_check`, build/run пары C++ contract tests, `lexxos_gameboy_settings_tests` и
 `lexxos_vfs_file_string_tests`.
 
-## C++ contract tests
+## Контрактные тесты C++
 
 Быстрые C++ contract tests подключены через CTest только для `LEXXOS_PLATFORM=host`:
 
@@ -84,7 +84,7 @@ git ls-files -z '*.cpp' '*.h' '*.hpp' '*.c' '*.cc' '*.cxx' \
 
 Если `clang-format` не находится в `PATH`, замените имя команды на абсолютный путь установленного бинаря.
 
-По умолчанию `check_cpp_layout.py` сканирует только исходные области проекта: `src`, `emulator/native` и `tests/cpp`.
+По умолчанию `check_cpp_layout.py` сканирует только исходные области проекта: `src`, `tools/emulator/native` и `tests/cpp`.
 Это исключает локальные виртуальные окружения, build-каталоги и сторонние зависимости из отчёта. При необходимости
 можно явно задать область:
 
@@ -125,7 +125,7 @@ python3 tools/check_cpp_layout.py . --forbid-cpp-types
 - существуют ли локальные Markdown-ссылки на файлы и каталоги внутри репозитория.
 
 Внешние ссылки, `mailto:` и ссылки на anchor внутри текущего документа не проверяются.
-Загружаемые ESP-IDF зависимости в `managed_components/` исключены, как и `third_party/`:
+Загружаемые ESP-IDF зависимости в `work/espidf/managed_components/` исключены, как и `third_party/`:
 их документация не является частью проверяемой документации LexxOS.
 
 ## Проверка board presets
@@ -159,18 +159,40 @@ python3 -m unittest discover -s tests/python -p test_command_docs.py
 3. CI запускает host checks для minimal/full и отдельную full simulator regression.
    Workflow: [checks.yml](../.github/workflows/checks.yml). Firmware builds ещё предстоит подключить.
 
-## Headless simulator regression
+## Регрессия симулятора без графического интерфейса
 
 Полный набор включает headless Qt-тесты интерфейса. Из корня репозитория:
 
 ```bash
-uv sync --project emulator --locked
-uv run --project emulator python emulator/lexxos_emu/gui.py --profile full --build-only
-QT_QPA_PLATFORM=offscreen PYTHONPATH=emulator uv run --project emulator python -m pytest emulator/tests \
+uv sync --project tools/emulator --locked
+uv run --project tools/emulator python tools/emulator/lexxos_emu/gui.py --profile full --build-only
+QT_QPA_PLATFORM=offscreen PYTHONPATH=tools/emulator uv run --project tools/emulator python -m pytest tools/emulator/tests \
   --lexxos-sim-lib build/full-dev-sim/src/liblexxos_sim.dylib -q
 ```
 
 На Linux используйте `.so` вместо `.dylib`. Явно указанный отсутствующий файл — ошибка
 проверки. Без явного пути fixture ищет full public build; если его нет, интеграционные
 тесты пропускаются. Без PySide6 GUI-тесты также пропускаются, поэтому CI устанавливает
-все зависимости из `emulator/uv.lock`. Audio tests используют fake backend.
+все зависимости из `tools/emulator/uv.lock`. Audio tests используют fake backend.
+
+## Host-проверка RK3506 storage contracts
+
+`lexxos_rk3506_storage_tests` собирает реальный BlockDevice adapter и mount policy с
+подставным транспортом, без ARM toolchain и MMIO. Он входит в общий CTest-набор.
+Подробности и обязательный аппаратный прогон: [архитектура RK3506](boards/picocalc_lyra_m.md#архитектура-порта).
+
+## Проверка закрытых runtime-границ
+
+`lexxos_runtime_boundaries_check` включается через `LEXXOS_ENABLE_STATIC_CHECKS`.
+Его можно запустить отдельно: `python3 tools/check_runtime_boundaries.py .`.
+Он проверяет возврат прямых global input calls, global VFS calls в Game Boy settings
+и app/program includes в SDMMC probe backend. Это лексическая проверка, не AST-анализ.
+
+Проверки двух OS composition, SDMMC CLI, LXRS/LXR2 и SD hotplug policy описаны
+в [отчёте об исправлениях аудита](architecture-audit-remediation-2026-11-15.md).
+
+Для target composition `check_runtime_boundaries.py` также запрещает возврат
+`LEXXOS_PLATFORM_*` в общий runner регистрации устройств и включение конкретных
+memory overlays из общих runtime-заголовков. Выбор принадлежит CMake и target-local
+спискам провайдеров. Host-контракты проверяют порядок провайдеров, отказ до побочных
+эффектов при ошибке списка/GPIO, I²C aliases и несовместимые сочетания memory profiles.

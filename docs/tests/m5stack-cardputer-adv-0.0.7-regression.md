@@ -1,11 +1,11 @@
-# M5Stack Cardputer-Adv 0.0.7 regression checklist
+# Регрессионная проверка M5Stack Cardputer-Adv 0.0.7
 
 Имена тестовых файлов и идентификаторы портов в примерах условные; результаты измерений сохранены.
 
-Дата serial smoke: 2026-07-13.
+Дата проверки UART: 2026-07-13.
 Устройство: M5Stack Cardputer-Adv / ESP32-S3FN8 Stamp-S3A.
-Serial: `/dev/tty.usbmodemXXXX`, 115200 baud shell.
-Прошивка: `user-espidf-m5stack_cardputer`, board profile `m5stack_cardputer_adv`.
+Порт: `/dev/tty.usbmodemXXXX`, shell, 115200 бод.
+Прошивка: `user-espidf-m5stack_cardputer`, профиль платы `m5stack_cardputer_adv`.
 
 ## Сборка и прошивка
 
@@ -15,78 +15,83 @@ cmake --build --preset user-espidf-m5stack_cardputer-build
 ESPPORT=/dev/tty.usbmodemXXXX ESPBAUD=921600 cmake --build build/configurator/cardputer --target app-flash
 ```
 
-Финальный build после Game Boy mapped-flash / scheduler slot reuse / PCM release / launcher audio patch:
+Итог после изменений размещения ROM во flash, повторного использования слотов
+планировщика, освобождения PCM и звука в меню:
 
-- build: PASS;
-- compile definitions: PASS, ESP-IDF component command contains `LEXXOS_GAMEBOY_ROM_CACHE_BANKS=3`,
-  `LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES=8192` and `LEXXOS_GAMEBOY_DYNAMIC_ROM_CACHE=1`;
-- image size: PASS, `LexxOS.bin` `0xdcad0` bytes, app partition free `0x213530` bytes (71%);
-- flash: PASS through `/dev/tty.usbmodemXXXX`, `ESPBAUD=921600`;
-- build timestamp from `version`: `Jul 13 2026 09:58:01`.
+- сборка пройдена;
+- определения компонента ESP-IDF проверены: `LEXXOS_GAMEBOY_ROM_CACHE_BANKS=3`,
+  `LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES=8192`, `LEXXOS_GAMEBOY_DYNAMIC_ROM_CACHE=1`;
+- размер `LexxOS.bin` — `0xdcad0` байт, свободно в разделе приложения
+  `0x213530` байт (71%);
+- прошивка через `/dev/tty.usbmodemXXXX`, `ESPBAUD=921600` успешна;
+- время сборки из `version`: `Jul 13 2026 09:58:01`.
 
-## Serial smoke
+## Быстрая проверка через UART
 
-| Блок | Команда | Результат |
-|------|---------|-----------|
-| Версия | `version` | PASS: `platform: espidf`, `board: m5stack_cardputer_adv`, `milestone: fat-minimal-v1`; local `version:` field empty in this build |
-| Devices | `devices` | PASS: `sd0`, `m5stack-lcd`, `cardputer-keyboard`, `cardputer-gamepad`, `cardputer-bmi270`, `cardputer-ir`, `cardputer-adv-audio`, `cardputer-adv-mic` all `ready` |
-| LCD | `display-info`, `display-test` | PASS in previous same-day pass: `240x135`, `rgb565`, full-screen draw path works |
-| SD/FAT | `ls /mnt/sd/gb`, `cat /mnt/sd/apps/gbemu/settings.ini`, `gb-info /mnt/sd/gb/test-rom-2.gb` | PASS: FAT listing and `cat` work without stack overflow; ROM header `title: ZELDA`, MBC1+RAM+BATTERY, checksum ok |
-| Power | `power` | PASS: `source=cardputer-adc-gpio10`, `4126mV`, `97%`, `charging=unavailable` |
-| Status bar | `console-info` | PASS: `status battery: 99% charging=no`, status bar updated |
-| Keyboard idle | `keyboard-live -s 3 -i 50` | PASS: `events=0`, `changes=0`, no idle drift while USB Serial/JTAG is connected |
-| Gamepad idle | `gamepad-test`, `gamepad-live -s 3 -i 50` | PASS: all buttons 0; `changes=0` |
-| Gamepad mapping | board profile | PASS by code review: `e/z/a/d` => up/down/left/right, `[`/`]` => A/B, `;` => X, grave key => Y, Enter => Start, Backspace => Select |
-| BMI270 | `imu -n 3 -i 50` | PASS: `chip=0x24`, `status=0xD0`, nonzero accel/gyro, temp around `34.6C` |
-| IR info | `ir info` | PASS: `cardputer-ir`, `pin: 44`, `carrier-hz: 38000`, Samsung codes printed for power/on/off |
-| IR transmit | `ir samsung-power -r 1` | PASS: serial reports `ir: sent`; receiver/TV reaction is a manual line-of-sight check |
-| Audio info | `audio` | PASS in previous same-day pass: `cardputer-adv-audio`, `tone: yes`, `mix: no`, `pcm: yes` |
-| Audio PCM | `mplay --test` | PASS in previous same-day pass: `441000` PCM frames, no underruns/full waits, about 10-11 seconds |
-| Microphone sample | `mic sample` | PASS after `gbemu --audio`: `frames=512`, `sample-rate=44100`, `peak=32768`, `average=14501` |
-| Microphone loopback | `mic loopback -s 1 -g 2` | PASS after `gbemu`: `frames=43520`, `chunks=85`, `peak=32768` |
-| Game Boy headless | `gbemu --profile --frames 60 --display none /mnt/sd/gb/test-rom-2.gb` | PASS: old settings still had `rom_storage = file-cache`, but playable default selected `rom-storage=flash`; `rom-cache=8Kx6=48K`, `cache-fill=0`, `wall-ms=808`, `fps=74.25`, `realtime-x=1.24` |
-| Game Boy display | `gbemu --frames 60 --display crop /mnt/sd/gb/test-rom-2.gb` | PASS: `display-mode: crop`, `destination: 160x135 @ 40,0`, `cpu-ms=691`, `ppu-ms=74`, `blit-ms=211`, returned to shell |
-| Game Boy audio | `gbemu --audio --frames 2 --display none /mnt/sd/gb/test-rom-2.gb` twice | PASS: both runs used `rom-storage=flash`, `audio=1`, `status=ok`; `mem` returned to about `86456 bytes` after PCM output release |
-| Game Boy long audio | `gbemu --audio --profile --frames 600 --display none /mnt/sd/gb/test-rom-2.gb` | PASS: `audio=1`, `audio frames queued/written=221517/221517`, `wall-ms=9888`, `fps=60.67`, `realtime-x=1.01`, `status=ok` |
-| Game Boy launcher audio defaults | `gbemu-config --show-defaults`, code path | PASS: Cardputer-Adv defaults include `[audio] enabled = true`; legacy settings without `[audio]` parse to the target default, and launcher passes `--audio` when the setting is on |
-| Scheduler slots | 14 foreground commands including `cat`, `gbemu`, `mic`, `tasks` | PASS: no `task-create-failed`; `tasks` after the sequence listed only `console-mirror`, `console`, `cardputer-input` and `system-events` |
-| Heap after Game Boy | `mem` | PASS: after mapped-flash Game Boy + PCM + mic sequence `68272 bytes`, minimum-ever `47124 bytes`; scheduler task list stayed clean |
-| Clear | `clear`, visual check | PASS in previous same-day pass: shared console clear path clears the full LCD text area below status bar |
+| Блок                     | Команда                                                                                    | Результат                                                                                                                                                                               |
+|--------------------------|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Версия                   | `version`                                                                                  | Пройдено: `platform: espidf`, `board: m5stack_cardputer_adv`, `milestone: fat-minimal-v1`; поле `version:` пусто в этой сборке                                                          |
+| Устройства               | `devices`                                                                                  | Пройдено: `sd0`, `m5stack-lcd`, `cardputer-keyboard`, `cardputer-gamepad`, `cardputer-bmi270`, `cardputer-ir`, `cardputer-adv-audio`, `cardputer-adv-mic` — все `ready`                 |
+| LCD                      | `display-info`, `display-test`                                                             | Пройдено в предыдущем прогоне того же дня: `240x135`, `rgb565`, полноэкранный вывод работает                                                                                            |
+| SD/FAT                   | `ls /mnt/sd/gb`, `cat /mnt/sd/apps/gbemu/settings.ini`, `gb-info /mnt/sd/gb/test-rom-2.gb` | Пройдено: список FAT и `cat` без переполнения стека; ROM `title: ZELDA`, MBC1+RAM+BATTERY, контрольная сумма верна                                                                      |
+| Питание                  | `power`                                                                                    | Пройдено: `source=cardputer-adc-gpio10`, `4126mV`, `97%`, `charging=unavailable`                                                                                                        |
+| Строка состояния         | `console-info`                                                                             | Пройдено: `status battery: 99% charging=no`, строка обновлена                                                                                                                           |
+| Клавиатура без ввода     | `keyboard-live -s 3 -i 50`                                                                 | Пройдено: `events=0`, `changes=0`, ложных событий при подключённом USB Serial/JTAG нет                                                                                                  |
+| Геймпад без ввода        | `gamepad-test`, `gamepad-live -s 3 -i 50`                                                  | Пройдено: все кнопки 0, `changes=0`                                                                                                                                                     |
+| Раскладка геймпада       | профиль платы                                                                              | Проверено по коду: `e/z/a/d` — вверх/вниз/влево/вправо, `[`/`]` — A/B, `;` — X, обратная кавычка — Y, Enter — Start, Backspace — Select                                                 |
+| BMI270                   | `imu -n 3 -i 50`                                                                           | Пройдено: `chip=0x24`, `status=0xD0`, ненулевые ускорение/гироскоп, температура около `34.6C`                                                                                           |
+| Сведения ИК              | `ir info`                                                                                  | Пройдено: `cardputer-ir`, `pin: 44`, `carrier-hz: 38000`, выведены коды Samsung power/on/off                                                                                            |
+| ИК-передача              | `ir samsung-power -r 1`                                                                    | Пройдено: `ir: sent`; реакция приёмника/ТВ требует ручной проверки при прямой видимости                                                                                                 |
+| Сведения аудио           | `audio`                                                                                    | Пройдено в предыдущем прогоне того же дня: `cardputer-adv-audio`, `tone: yes`, `mix: no`, `pcm: yes`                                                                                    |
+| PCM                      | `mplay --test`                                                                             | Пройдено в предыдущем прогоне того же дня: `441000` кадров, без опустошения буфера/ожиданий заполнения, около 10–11 с                                                                   |
+| Захват микрофона         | `mic sample`                                                                               | Пройдено после `gbemu --audio`: `frames=512`, `sample-rate=44100`, `peak=32768`, `average=14501`                                                                                        |
+| Микрофон через динамик   | `mic loopback -s 1 -g 2`                                                                   | Пройдено после `gbemu`: `frames=43520`, `chunks=85`, `peak=32768`                                                                                                                       |
+| Game Boy без экрана      | `gbemu --profile --frames 60 --display none /mnt/sd/gb/test-rom-2.gb`                      | Пройдено: старые настройки `rom_storage = file-cache`, но игровой режим выбрал `rom-storage=flash`; `rom-cache=8Kx6=48K`, `cache-fill=0`, `wall-ms=808`, `fps=74.25`, `realtime-x=1.24` |
+| Game Boy с экраном       | `gbemu --frames 60 --display crop /mnt/sd/gb/test-rom-2.gb`                                | Пройдено: `display-mode: crop`, `destination: 160x135 @ 40,0`, `cpu-ms=691`, `ppu-ms=74`, `blit-ms=211`; возврат в shell                                                                |
+| Game Boy со звуком       | `gbemu --audio --frames 2 --display none /mnt/sd/gb/test-rom-2.gb` (дважды)                | Пройдено дважды: `rom-storage=flash`, `audio=1`, `status=ok`; после освобождения PCM `mem` вернулся примерно к `86456 bytes`                                                            |
+| Длительный звук Game Boy | `gbemu --audio --profile --frames 600 --display none /mnt/sd/gb/test-rom-2.gb`             | Пройдено: `audio=1`, `audio frames queued/written=221517/221517`, `wall-ms=9888`, `fps=60.67`, `realtime-x=1.01`, `status=ok`                                                           |
+| Звук в меню Game Boy     | `gbemu-config --show-defaults`, проверка кода                                              | Пройдено: по умолчанию `[audio] enabled = true`; старые настройки без секции используют это значение, меню передаёт `--audio`                                                           |
+| Слоты планировщика       | 14 интерактивных команд, включая `cat`, `gbemu`, `mic`, `tasks`                            | Пройдено: 14 интерактивных команд, нет `task-create-failed`; остались только `console-mirror`, `console`, `cardputer-input`, `system-events`                                            |
+| Куча после Game Boy      | `mem`                                                                                      | Пройдено: после flash ROM, PCM и микрофона `68272 bytes`, минимум `47124 bytes`; лишних задач нет                                                                                       |
+| Очистка                  | `clear`, визуальная проверка                                                               | Пройдено в предыдущем прогоне того же дня: очищается вся область LCD под строкой состояния                                                                                              |
 
-## Audio / Microphone Notes
+## Аудио и микрофон
 
-Cardputer-Adv PCM regression was compared with `temp/temp/NormalTest.wav`, recorded from PicoCalc before the M5 audio
-fixes. The 2026-07-13 Game Boy audio pass also recorded through macOS `ffmpeg` from `Wireless GO RX` to
-`/tmp/audio-test.wav` while running `gbemu --audio --profile --frames 600`; the capture had peak `23226`
-and low RMS, consistent with a quiet/sparse captured line-level signal or gain chain rather than an acoustic distance
-effect. Serial counters confirmed `221517/221517` PCM frames written.
+Для сравнения PCM использовали запись с PicoCalc до исправлений M5.
+В прогоне Game Boy 13.07.2026 звук записывался
+на macOS через `ffmpeg` с `Wireless GO RX` при
+`gbemu --audio --profile --frames 600`. Пик — `23226`, RMS низкий: это
+согласуется с тихим/редким линейным сигналом или настройкой усиления,
+а не эффектом расстояния до источника. UART подтвердил запись `221517/221517` кадров.
 
-The microphone is exposed separately as `cardputer-adv-mic`, but uses the same ES8311/I2S hardware path. `mic loopback`
-is a short audible test: it captures 512-frame chunks and sends them to the primary `AudioDevice`. ES8311 output now
-releases I2S/DMA after `drainPcmOutput()`/`stopPcmOutput()`, and the registry lazily reinitializes the codec for the
-next audio or microphone request.
+Микрофон `cardputer-adv-mic` использует тот же ES8311/I2S. `mic loopback`
+захватывает блоки по 512 кадров и передаёт основному `AudioDevice`.
+После `drainPcmOutput()`/`stopPcmOutput()` ES8311 освобождает I2S/DMA;
+реестр повторно инициализирует кодек по следующему запросу аудио/микрофона.
 
-## Power Notes
+## Питание
 
-M5Stack Cardputer/Cardputer-Adv аппаратно не предоставляют достоверный charging status или current reading. LexxOS
-читает только ADC-напряжение батареи на GPIO10 и оценивает процент. Поэтому:
+Cardputer/Cardputer-Adv не предоставляют достоверных аппаратных измерений
+тока или состояния зарядки. LexxOS читает напряжение ADC на GPIO10 и оценивает процент:
 
-- `power` должен печатать `charging=unavailable`;
-- статус-бар должен показывать процент, но не charging icon;
-- при USB-питании процент может быть завышен из-за измеряемого напряжения;
+- `power` выводит `charging=unavailable`;
+- строка состояния показывает процент без значка зарядки;
+- USB-питание может завышать процент из-за напряжения;
 - для зарядки Cardputer-Adv боковой выключатель должен быть в положении `ON`.
 
-## Sensor / IR / Game Boy Notes
+## Датчик, ИК и Game Boy
 
-Cardputer-Adv BMI270 answers at I2C address `0x69` on the shared system/debug I2C bus (`G8/G9`). LexxOS uploads the
-Bosch BMI270 config file during board-device registration; without that upload the chip id is readable, but accel/gyro
-data remains zero/invalid.
+BMI270 отвечает по I2C `0x69` на общей системной/отладочной шине `G8/G9`.
+При регистрации загружается конфигурация Bosch; без неё ID читается,
+но показания акселерометра/гироскопа нулевые или недействительные.
 
-Cardputer-Adv IR is registered as `cardputer-ir` on GPIO44. `ir samsung-power` sends a 38 kHz Samsung power test frame
-with code `0xE0E040BF`; `samsung-on`, `samsung-off` and `samsung-code -c <hex>` are available for manual variants.
-Serial smoke verifies transmit completion only.
+ИК `cardputer-ir` на GPIO44 передаёт Samsung с несущей 38 кГц:
+`ir samsung-power` — `0xE0E040BF`; доступны `samsung-on`, `samsung-off`,
+`samsung-code -c <hex>`. UART подтверждает только завершение передачи.
 
-Game Boy on Cardputer-Adv depends on the ESP-IDF component receiving the ROM cache compile definitions. Without them
-the workspace/cache path stayed too large for internal RAM. The current preset uses `8Kx6=48K` dynamic cache and, for
-playable runs, mapped flash staging in the ESP-IDF `storage` partition at `0x300000` with 1 MiB capacity. First use
-copies and verifies the ROM; repeated runs print `reused mapped flash ROM bytes=524288` and avoid SD/FAT cache misses.
+Game Boy требует передачи определений кеша ROM компоненту ESP-IDF;
+без них рабочая область слишком велика для внутренней RAM. Используются
+динамический кеш `8Kx6=48K` и раздел `storage` по `0x300000`, 1 МиБ,
+с отображением ROM во flash. Первый запуск копирует и проверяет ROM;
+повторный сообщает `reused mapped flash ROM bytes=524288`, избегая
+промахов кеша SD/FAT.

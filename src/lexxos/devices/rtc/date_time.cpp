@@ -3,6 +3,7 @@
 #include <limits>
 
 namespace lexxos::devices::rtc {
+
 namespace {
 
 	std::int64_t daysFromCivil(std::uint16_t year, std::uint8_t month, std::uint8_t day) {
@@ -24,11 +25,11 @@ bool isLeapYear(std::uint16_t year) {
 
 std::uint8_t daysInMonth(std::uint16_t year, std::uint8_t month) {
 	switch (month) {
-		case 1:
-		case 3:
-		case 5:
-		case 7:
-		case 8:
+		case 1 :
+		case 3 :
+		case 5 :
+		case 7 :
+		case 8 :
 		case 10:
 		case 12:
 			return 31;
@@ -48,18 +49,23 @@ bool isValidDate(DateTime const& value) {
 	if (value.year < 2000U || value.year > 2199U) {
 		return false;
 	}
+
 	if (value.month < 1U || value.month > 12U) {
 		return false;
 	}
+
 	if (value.day < 1U || value.day > daysInMonth(value.year, value.month)) {
 		return false;
 	}
+
 	if (value.weekday > 7U) {
 		return false;
 	}
+
 	if (value.hour > 23U || value.minute > 59U || value.second > 59U) {
 		return false;
 	}
+
 	return true;
 }
 
@@ -78,9 +84,11 @@ std::uint8_t weekdayIso(DateTime const& value) {
 	if (h == 0U) {
 		return 6U;
 	}
+
 	if (h == 1U) {
 		return 7U;
 	}
+
 	return static_cast<std::uint8_t>(h - 1U); // ISO-like: Monday=1, Sunday=7.
 }
 

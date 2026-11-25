@@ -1,7 +1,7 @@
-#include <lexxos/app/program_input.h>
-
 #include <cstdlib>
 #include <iostream>
+
+#include <lexxos/app/program_input.h>
 
 namespace {
 
@@ -67,10 +67,30 @@ void checkStaleCursorSkipsToOldestAvailableEvent() {
 	expect(event.timestampMs > 100, "recovered event should skip overwritten entries");
 }
 
+void checkProcessInputModes() {
+	using lexxos::app::program_input::inputMode;
+	using lexxos::app::program_input::InputMode;
+	using lexxos::app::program_input::releaseInputMode;
+	using lexxos::app::program_input::setInputMode;
+	expect(inputMode(101U) == InputMode::Terminal, "unregistered process defaults to Terminal");
+	expect(setInputMode(101U, InputMode::Events), "register events mode");
+	expect(setInputMode(102U, InputMode::Terminal), "register independent terminal mode");
+	expect(inputMode(101U) == InputMode::Events, "events mode retained");
+	expect(inputMode(102U) == InputMode::Terminal, "other process remains terminal");
+	expect(setInputMode(102U, InputMode::Events), "runtime mode switch");
+	expect(inputMode(102U) == InputMode::Events, "runtime switch takes effect");
+	releaseInputMode(101U);
+	expect(inputMode(101U) == InputMode::Terminal, "terminated process resets to default");
+	expect(inputMode(102U) == InputMode::Events, "other process mode persists");
+	releaseInputMode(102U);
+	expect(!setInputMode(0U, InputMode::Events), "shell process cannot claim guest mode");
+}
+
 } // namespace
 
 void checkProgramInput() {
 	checkPublishAndPollOrder();
 	checkLatestEvent();
 	checkStaleCursorSkipsToOldestAvailableEvent();
+	checkProcessInputModes();
 }

@@ -1,7 +1,7 @@
-# LexxOS Game Boy emulator
+# Эмулятор Game Boy в LexxOS
 
 Документ фиксирует текущее состояние `gbemu` как основную документацию. Живой backlog следующего этапа находится в
-[`docs/todo/gameboy.md`](todo/gameboy.md).
+[дорожную карту](../roadmap.md#game-boy-дальнейшее-развитие).
 
 ## Статус
 
@@ -31,7 +31,7 @@ bring-up preset. В standard PicoCalc release Game Boy отключён, пот�
   fast timing/halt и debug flags;
 - realtime limiter через `--sync-realtime`;
 - bounded runs через `--frames`, unlimited runs через `frames = 0`, `--cycles-per-frame`, `--max-cycles`;
-- Start+Select exit combo during emulation;
+- выход из эмуляции сочетанием Start+Select;
 - опциональный Game Boy APU PCM output через `--audio`; прямой ESP-IDF/Cardputer-Adv shell-запуск без `--audio`
   остаётся тихим, а TUI launcher включает звук через `[audio] enabled = true`;
 - diagnostic flags: `--profile`, `--fault-trace`, `--watch-blank`, `--break-pc`, `--break-pc-from`,
@@ -44,7 +44,7 @@ bring-up preset. В standard PicoCalc release Game Boy отключён, пот�
 Найденная ранее проблема зависания Zelda после первого нажатия закрыта: причина была в неточном `STAT` behavior при
 `--fast-timing`, а не в неизвестной CPU-инструкции.
 
-## Playable profile
+## Игровой профиль
 
 Рекомендуемый текущий запуск:
 
@@ -74,7 +74,7 @@ sync-realtime=on
 `render-every=3` остаётся экспериментальным: картинка плавнее, но производительность не всегда держит realtime на
 текущем display/CPU path.
 
-## Settings
+## Настройки
 
 `gbemu-config --init`, первый прямой запуск `gbemu <rom>` и первый запуск launcher используют общий defaults-шаблон:
 
@@ -120,8 +120,8 @@ rom_storage = auto           # auto, file-cache, flash, flash-reuse, psram, psra
 no_ppu = false
 ```
 
-`frames = 0` запускает ROM без ограничения числа кадров; выйти можно через Start+Select hold
-(`Tab+Backspace` на клавиатурном управлении), cancel или ошибку
+`frames = 0` запускает ROM без ограничения числа кадров; выйти можно через Start+Select hold (`Tab+Backspace` на
+клавиатурном управлении), cancel или ошибку
 эмуляции. Для максимальной скорости на Pico/Pico 2 W лучше тестировать `rom_storage = flash-reuse`, чтобы убрать
 FAT/SD cache misses из hot path; `psram-reuse` безопаснее для flash, но обычно медленнее. На Cardputer-Adv playable
 режим автоматически использует mapped flash staging даже если старый settings-файл содержит `rom_storage = file-cache`.
@@ -151,7 +151,7 @@ rom-cache=8Kx6=48K
 Если старый `settings.ini` ещё не содержит секцию `[audio]`, parser использует target default: на Cardputer-Adv это
 `enabled = true`, и launcher сохранит новый ключ при следующем запуске/изменении настроек.
 
-## Palettes
+## Палитры
 
 `gbemu` поддерживает named RGB565 palettes на этапе преобразования 2-bit framebuffer в display output:
 
@@ -192,7 +192,7 @@ Zelda-class ROM:
 - не зависает в старом `STAT` polling loop;
 - в основном игровом режиме работает достаточно быстро для playable prototype.
 
-Pokémon-class ROM:
+ROM класса Pokémon:
 
 - запускается;
 - проходит длинные bounded tests;

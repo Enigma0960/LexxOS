@@ -1,6 +1,6 @@
 # `ysend`
 
-send a VFS file over YMODEM/CRC.
+Передаёт файл VFS LexxOS по YMODEM.
 
 ## Справка shell
 

@@ -12,6 +12,7 @@ void SysTick_Handler(void);
 }
 
 namespace {
+
 using ExceptionHandler = void (*)();
 constexpr std::uintptr_t scbVtorAddress = 0xE000ED08U;
 constexpr std::size_t svcVectorIndex = 11;
@@ -29,6 +30,7 @@ void installExceptionHandler(std::size_t vectorIndex, ExceptionHandler handler) 
 	__asm volatile("dsb" ::: "memory");
 	__asm volatile("isb" ::: "memory");
 }
+
 } // namespace
 #endif
 

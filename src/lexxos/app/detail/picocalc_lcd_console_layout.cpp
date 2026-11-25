@@ -18,6 +18,7 @@ bool LcdConsoleLayout::configure(lexxos::devices::DisplayDevice const& display) 
 	if (_visibleColumns > maxVisibleColumns) {
 		_visibleColumns = maxVisibleColumns;
 	}
+
 	_columns = maxColumns;
 
 	auto const consoleHeightPixels = display.height() > statusBarHeightPixels ? display.height() - statusBarHeightPixels : 0;
@@ -30,6 +31,7 @@ bool LcdConsoleLayout::configure(lexxos::devices::DisplayDevice const& display) 
 		reset();
 		return false;
 	}
+
 	return true;
 }
 

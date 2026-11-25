@@ -8,16 +8,17 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec arguments[] = {
 	    {
-         .name = "state",
-         .valueName = "on|off",
-         .help = "enable or disable CMD18 multi-block reads",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "state",
+	     .valueName = "on|off",
+	     .help = "enable or disable CMD18 multi-block reads",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 

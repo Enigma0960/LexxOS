@@ -1,6 +1,4 @@
 #include <lexxos/app/runtime_tasks.h>
-#include <lexxos/app/software_rtc_task.h>
-#include <lexxos/app/wifi_autoconnect.h>
 
 #include <array>
 #include <atomic>
@@ -11,8 +9,12 @@
 #include <lexxos/app/console_mirror.h>
 #include <lexxos/app/console_output.h>
 #include <lexxos/app/detail/lcd_console_target.h>
+#include <lexxos/app/guest_graphics_mode.h>
 #include <lexxos/app/program_input.h>
+#include <lexxos/app/software_rtc_task.h>
 #include <lexxos/app/system_event_service.h>
+#include <lexxos/app/wifi_autoconnect.h>
+#include <lexxos/composition/board_runtime.h>
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/devices/rtc/software_rtc.h>
 #include <lexxos/feature.h>
@@ -24,10 +26,17 @@
 #include <lexxos/program/program.h>
 #include <lexxos/program/program_supervisor.h>
 #include <lexxos/runtime/capabilities.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 #include <lexxos/shell/shell.h>
+#include <lexxos/shortcuts/shortcut.h>
 
-#if FEATURE_ENABLED(PICO_CALC) || FEATURE_ENABLED(CARDPUTER) || (LEXXOS_BOARD_FAMILY_JC_ESP32P4_M3_DEV == 1)
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	#include <lexxos/app/rk3506/picosd_storage_service.h>
+	#include <lexxos/composition/products/lyra_storage_service.h>
+	#include <lexxos/composition/products/picocalc_lyra_device_providers.h>
+#endif
+
+#if FEATURE_ENABLED(PICO_CALC) || FEATURE_ENABLED(CARDPUTER) || (LEXXOS_BOARD_FAMILY_JC_ESP32P4_M3_DEV == 1) || (defined(LEXXOS_PLATFORM_SIM) && FEATURE_ENABLED(KEYBOARD))
 	#define LEXXOS_LOCAL_CONSOLE_INPUT 1
 #else
 	#define LEXXOS_LOCAL_CONSOLE_INPUT 0
@@ -78,8 +87,11 @@ std::atomic<std::uint32_t> g_appliedFocusProcessId{unappliedFocusProcessId};
 
 constexpr std::uint32_t consoleTaskStackSizeBytes =
     lexxos::runtime::standardRuntimeProfile.taskStacks.consoleTaskBytes;
+
+#if !defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY)
 constexpr std::uint32_t systemEventStackSizeBytes =
     lexxos::runtime::standardRuntimeProfile.taskStacks.systemEventTaskBytes;
+#endif
 
 #if FEATURE_ENABLED(HEALTH)
 constexpr std::uint32_t healthTaskStackSizeBytes =
@@ -92,21 +104,18 @@ constexpr std::uint32_t debugDisplayTaskStackSizeBytes =
 #endif
 
 #if FEATURE_ENABLED(DISPLAY)
-	#if FEATURE_ENABLED(PICO_CALC) && defined(PICO_RP2350) && PICO_RP2350
-// PicoCalc ILI9488 text rendering uses wider RGB888 transfer buffers and nested
-// display/resource-lock calls. Keep a larger stack margin for Debug builds and
-// for stack high-water diagnostics after large console dumps such as `help`.
-constexpr std::uint32_t consoleMirrorStackSizeBytes = 8192;
-	#elif LEXXOS_LCD_CONSOLE_TARGET_ENABLED && defined(LEXXOS_PLATFORM_ESPIDF)
-constexpr std::uint32_t consoleMirrorStackSizeBytes = 8192;
-	#else
 constexpr std::uint32_t consoleMirrorStackSizeBytes =
     lexxos::runtime::standardRuntimeProfile.taskStacks.consoleMirrorTaskBytes;
-	#endif
 constexpr std::uint32_t consoleMirrorFlushIntervalMs = 8;
 constexpr std::uint32_t startupConsoleMirrorFlushPasses = 48;
+	#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+// Rendering shares CPU0 with input/programs; shell UART remains priority 2.
+constexpr std::uint32_t lcdConsoleMirrorTaskPriority = 1;
+	#else
 constexpr std::uint32_t lcdConsoleMirrorTaskPriority = 2;
-constexpr std::uint32_t displayPowerTaskStackSizeBytes = 3072;
+	#endif
+constexpr std::uint32_t displayPowerTaskStackSizeBytes =
+    lexxos::runtime::standardRuntimeProfile.taskStacks.displayPowerTaskBytes;
 constexpr std::uint32_t displayPowerTaskPollIntervalMs = 50;
 constexpr std::string_view displayPowerPointerOwner = "display-power-pointer";
 
@@ -134,6 +143,7 @@ void flushConsoleMirrorForStartup() {
 	if (lexxos::app::console_mirror::mode() != lexxos::app::ConsoleMirrorMode::Text) {
 		return;
 	}
+
 	for (std::uint32_t pass = 0; pass < startupConsoleMirrorFlushPasses; ++pass) {
 		lexxos::app::console_mirror::flush();
 		lexxos::app::console_mirror::refresh();
@@ -142,9 +152,9 @@ void flushConsoleMirrorForStartup() {
 #endif
 }
 
-void resetConsoleForShellStartup(lexxos::platform::PlatformServices const& platform) {
+void resetConsoleForShellStartup(lexxos::app::ConsoleInputService& input, lexxos::platform::PlatformServices const& platform) {
 #if FEATURE_ENABLED(DISPLAY)
-	lexxos::app::console_input::setMode(lexxos::app::console_input::Mode::Shell);
+	input.setMode(lexxos::app::console_input::Mode::Shell);
 	lexxos::app::console_mirror::setMode(lexxos::app::ConsoleMirrorMode::Text);
 	lexxos::app::console_output::clear(platform);
 #else
@@ -156,6 +166,7 @@ lexxos::platform::PlatformServices const& platformServices(lexxos::app::RuntimeT
 	if (context.operatingSystem != nullptr) {
 		return context.operatingSystem->platform();
 	}
+
 	return lexxos::platform::services();
 }
 
@@ -168,15 +179,9 @@ bool hasRuntimeCapability(lexxos::app::RuntimeTaskContext const& context, lexxos
 	return context.operatingSystem != nullptr && context.operatingSystem->capabilities().has(capability);
 }
 
-lexxos::platform::BoardDescriptor const& activeBoard(lexxos::app::RuntimeTaskContext const& context) {
-	auto const& platform = platformServices(context);
-	auto const& board = platform.board;
-	return board.current != nullptr ? board.current() : lexxos::platform::board();
-}
-
 #if defined(LEXXOS_PLATFORM_PICO) || defined(LEXXOS_PLATFORM_STM32F4)
-void discardPendingConsoleInput(lexxos::platform::PlatformServices const& platform) {
-	lexxos::app::console_input::clearInjected();
+void discardPendingConsoleInput(lexxos::app::ConsoleInputService& input, lexxos::platform::PlatformServices const& platform) {
+	input.clearInjected();
 	if (platform.console.readChar == nullptr) {
 		return;
 	}
@@ -194,27 +199,33 @@ std::size_t readPhysicalConsoleInput(
 	if (buffer == nullptr || capacity == 0) {
 		return 0;
 	}
+
 	if (platform.console.readAvailable != nullptr) {
 		return platform.console.readAvailable(buffer, capacity);
 	}
+
 	if (platform.console.readChar != nullptr && platform.console.readChar(buffer[0])) {
 		return 1;
 	}
+
 	return 0;
 }
 
-void applyTaskFocus(lexxos::program::ProgramFocusSnapshot const& focus) {
+void applyTaskFocus(lexxos::app::ConsoleInputService& input, lexxos::program::ProgramFocusSnapshot const& focus) {
 	auto const target = static_cast<std::uint8_t>(focus.target);
 	auto const previousTarget = g_appliedFocusTarget.load(std::memory_order_acquire);
 	auto const previousProcessId = g_appliedFocusProcessId.load(std::memory_order_acquire);
 	auto const expectedInputMode = focus.programFocused()
 	    ? lexxos::app::console_input::Mode::Program
 	    : lexxos::app::console_input::Mode::Shell;
-	auto const currentInputMode = lexxos::app::console_input::mode();
+	auto const currentInputMode = input.mode();
 	auto const inputModeMatches = currentInputMode == expectedInputMode
 	    || (focus.programFocused() && currentInputMode == lexxos::app::console_input::Mode::RawProgram);
+
 #if FEATURE_ENABLED(DISPLAY)
-	auto const expectedMirrorMode = focus.graphicalProgramFocused()
+	auto const guestOwnsGraphics = focus.programFocused()
+	    && lexxos::app::guest_graphics_mode::owns(focus.processId);
+	auto const expectedMirrorMode = focus.graphicalProgramFocused() || guestOwnsGraphics
 	    ? lexxos::app::ConsoleMirrorMode::Graphics
 	    : lexxos::app::ConsoleMirrorMode::Text;
 	auto const mirrorModeMatches = lexxos::app::console_mirror::mode() == expectedMirrorMode;
@@ -229,7 +240,9 @@ void applyTaskFocus(lexxos::program::ProgramFocusSnapshot const& focus) {
 
 	g_appliedFocusTarget.store(target, std::memory_order_release);
 	g_appliedFocusProcessId.store(focus.processId, std::memory_order_release);
-	lexxos::app::console_input::setMode(expectedInputMode);
+	if (!inputModeMatches) {
+		input.setMode(expectedInputMode);
+	}
 
 #if FEATURE_ENABLED(DISPLAY)
 	lexxos::app::console_mirror::setMode(expectedMirrorMode);
@@ -241,9 +254,9 @@ void applyTaskFocus(lexxos::program::ProgramFocusSnapshot const& focus) {
 #endif
 }
 
-lexxos::program::ProgramFocusSnapshot currentTaskFocus() {
+lexxos::program::ProgramFocusSnapshot currentTaskFocus(lexxos::app::ConsoleInputService& input) {
 	auto focus = lexxos::program::supervisor().focus();
-	applyTaskFocus(focus);
+	applyTaskFocus(input, focus);
 	return focus;
 }
 
@@ -264,6 +277,7 @@ bool lcdConsoleStatusBarPollDue(lexxos::app::RuntimeTaskContext& context, std::u
 	if (nextStatusPollMs != 0 && static_cast<std::int32_t>(now - nextStatusPollMs) < 0) {
 		return false;
 	}
+
 	nextStatusPollMs = now + lcdConsoleStatusBarPollIntervalMs;
 	return true;
 }
@@ -344,7 +358,8 @@ void updateLcdConsoleWifiStatus(
     lexxos::app::RuntimeTaskContext& context,
     lexxos::app::picocalc_lcd_console::StatusBarInfo& status) {
 	#if LEXXOS_LCD_CONSOLE_WIFI_STATUS_BAR
-	auto const& board = activeBoard(context);
+	auto const& boardServices = platformServices(context).board;
+	auto const& board = boardServices.current != nullptr ? boardServices.current() : lexxos::platform::board();
 	auto const wifi = lexxos::apps::network_programs::detail::readWifiRuntimeStatus(board);
 	status.wifiValid = board.wireless.wifi;
 	if (wifi.supported && wifi.initialized) {
@@ -379,6 +394,7 @@ void updateLcdConsoleStatusBar(lexxos::app::RuntimeTaskContext& context) {
 	if (!status.timeValid) {
 		updateLcdConsoleSoftwareRtcStatus(context, status);
 	}
+
 	updateLcdConsoleWifiStatus(context, status);
 
 	lexxos::app::picocalc_lcd_console::setStatusBarInfo(status);
@@ -400,6 +416,9 @@ constexpr std::string_view picoCalcConsoleInputOwner = "cardputer-console-input"
 	#elif LEXXOS_BOARD_FAMILY_JC_ESP32P4_M3_DEV == 1
 constexpr std::string_view picoCalcKeyboardDeviceName = "usb-keyboard";
 constexpr std::string_view picoCalcConsoleInputOwner = "usb-console-input";
+	#elif defined(LEXXOS_PLATFORM_SIM)
+constexpr std::string_view picoCalcKeyboardDeviceName = "sim-keyboard";
+constexpr std::string_view picoCalcConsoleInputOwner = "sim-console-input";
 	#else
 constexpr std::string_view picoCalcKeyboardDeviceName = "picocalc-keyboard";
 constexpr std::string_view picoCalcConsoleInputOwner = "console-input";
@@ -413,20 +432,20 @@ bool timeReached(std::uint32_t now, std::uint32_t target) {
 	return static_cast<std::int32_t>(now - target) >= 0;
 }
 
-bool injectConsoleInput(std::string_view text) {
-	return lexxos::app::console_input::inject(text);
+bool injectConsoleInput(lexxos::app::ConsoleInputService& input, std::string_view text) {
+	return input.inject(text);
 }
 
-bool injectConsoleEscapeSequence(char finalByte) {
+bool injectConsoleEscapeSequence(lexxos::app::ConsoleInputService& input, char finalByte) {
 	char sequence[] = {'\x1B', '[', finalByte};
-	return injectConsoleInput({sequence, sizeof(sequence)});
+	return injectConsoleInput(input, {sequence, sizeof(sequence)});
 }
 
-bool injectConsoleDeleteSequence() {
-	return injectConsoleInput("\x1B[3~");
+bool injectConsoleDeleteSequence(lexxos::app::ConsoleInputService& input) {
+	return injectConsoleInput(input, "\x1B[3~");
 }
 
-bool injectConsoleCharacter(lexxos::devices::InputEvent const& event) {
+bool injectConsoleCharacter(lexxos::app::ConsoleInputService& input, lexxos::devices::InputEvent const& event) {
 	if (event.character == 0) {
 		return false;
 	}
@@ -441,7 +460,7 @@ bool injectConsoleCharacter(lexxos::devices::InputEvent const& event) {
 	}
 
 	char const sequence[] = {value};
-	return injectConsoleInput({sequence, sizeof(sequence)});
+	return injectConsoleInput(input, {sequence, sizeof(sequence)});
 }
 
 bool hasShiftModifier(lexxos::devices::InputEvent const& event) {
@@ -466,12 +485,20 @@ bool isTaskSwitchInput(lexxos::devices::InputEvent const& event) {
 	    && hasAltModifier(event);
 }
 
-bool handleTaskSwitchInput(lexxos::devices::InputEvent const& event, lexxos::program::ProgramFocusSnapshot& focus) {
+bool handleTaskSwitchInput(lexxos::app::ConsoleInputService& input, lexxos::devices::InputEvent const& event, lexxos::program::ProgramFocusSnapshot& focus) {
 	if (!isTaskSwitchInput(event)) {
 		return false;
 	}
+
+	#if defined(LEXXOS_PLATFORM_SIM)
+	// Клавиатура дисплея передаёт ввод активной гостевой программе в режиме событий.
+	// Сохраняем её фокус, поскольку Alt+Tab не сможет вернуть его из shell.
+	(void) input;
+	(void) focus;
+	#else
 	focus = lexxos::program::supervisor().focusNext();
-	applyTaskFocus(focus);
+	applyTaskFocus(input, focus);
+	#endif
 	return true;
 }
 
@@ -505,66 +532,79 @@ bool handleConsoleScrollbackInput(lexxos::devices::InputEvent const& event) {
 				lexxos::app::picocalc_lcd_console::scrollbackUp(picoCalcScrollbackLineStep);
 				return true;
 			}
+
 			if (hasSymModifier(event) || hasAltModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackUp(picoCalcScrollbackPageLines());
 				return true;
 			}
+
 			break;
 		case lexxos::devices::KeyCode::Down:
 			if (hasShiftModifier(event) || hasCtrlModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackDown(picoCalcScrollbackLineStep);
 				return true;
 			}
+
 			if (hasSymModifier(event) || hasAltModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackDown(picoCalcScrollbackPageLines());
 				return true;
 			}
+
 			break;
 		case lexxos::devices::KeyCode::Left:
 			if (hasShiftModifier(event) || hasCtrlModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackLeft(picoCalcHorizontalScrollColumnStep);
 				return true;
 			}
+
 			if (hasSymModifier(event) || hasAltModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackLeft(picoCalcHorizontalScrollPageColumns());
 				return true;
 			}
+
 			break;
 		case lexxos::devices::KeyCode::Right:
 			if (hasShiftModifier(event) || hasCtrlModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackRight(picoCalcHorizontalScrollColumnStep);
 				return true;
 			}
+
 			if (hasSymModifier(event) || hasAltModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackRight(picoCalcHorizontalScrollPageColumns());
 				return true;
 			}
+
 			break;
 		case lexxos::devices::KeyCode::Home:
 			if (hasShiftModifier(event) || hasCtrlModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackLeftEdge();
 				return true;
 			}
+
 			if (hasSymModifier(event) || hasAltModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackHome();
 				return true;
 			}
+
 			break;
 		case lexxos::devices::KeyCode::End:
 			if (hasShiftModifier(event) || hasCtrlModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackRightEdge();
 				return true;
 			}
+
 			if (hasSymModifier(event) || hasAltModifier(event)) {
 				lexxos::app::picocalc_lcd_console::scrollbackEnd();
 				return true;
 			}
+
 			break;
 		case lexxos::devices::KeyCode::Escape:
 			if (lexxos::app::picocalc_lcd_console::isScrollbackActive()) {
 				lexxos::app::picocalc_lcd_console::scrollbackResetView();
 				return true;
 			}
+
 			break;
 		default:
 			break;
@@ -585,7 +625,7 @@ void leaveConsoleScrollbackForInput(lexxos::devices::InputEvent const& event) {
 	#endif
 }
 
-bool injectPicoCalcInputEvent(lexxos::devices::InputEvent const& event) {
+bool injectPicoCalcInputEvent(lexxos::app::ConsoleInputService& input, lexxos::devices::InputEvent const& event) {
 	if (event.type != lexxos::devices::InputEventType::KeyDown) {
 		return false;
 	}
@@ -593,37 +633,39 @@ bool injectPicoCalcInputEvent(lexxos::devices::InputEvent const& event) {
 	if (handleConsoleScrollbackInput(event)) {
 		return true;
 	}
+
 	leaveConsoleScrollbackForInput(event);
 
 	switch (event.key) {
 		case lexxos::devices::KeyCode::Up:
-			return injectConsoleEscapeSequence('A');
+			return injectConsoleEscapeSequence(input, 'A');
 		case lexxos::devices::KeyCode::Down:
-			return injectConsoleEscapeSequence('B');
+			return injectConsoleEscapeSequence(input, 'B');
 		case lexxos::devices::KeyCode::Right:
-			return injectConsoleEscapeSequence('C');
+			return injectConsoleEscapeSequence(input, 'C');
 		case lexxos::devices::KeyCode::Left:
-			return injectConsoleEscapeSequence('D');
+			return injectConsoleEscapeSequence(input, 'D');
 		case lexxos::devices::KeyCode::Home:
-			return injectConsoleEscapeSequence('H');
+			return injectConsoleEscapeSequence(input, 'H');
 		case lexxos::devices::KeyCode::End:
-			return injectConsoleEscapeSequence('F');
+			return injectConsoleEscapeSequence(input, 'F');
 		case lexxos::devices::KeyCode::Delete:
-			return injectConsoleDeleteSequence();
+			return injectConsoleDeleteSequence(input);
 		case lexxos::devices::KeyCode::Backspace:
-			return injectConsoleInput("\b");
+			return injectConsoleInput(input, "\b");
 		case lexxos::devices::KeyCode::Escape:
-			if (lexxos::app::console_input::mode() == lexxos::app::console_input::Mode::Shell) {
-				return injectConsoleInput("\x03");
+			if (input.mode() == lexxos::app::console_input::Mode::Shell) {
+				return injectConsoleInput(input, "\x03");
 			}
-			return injectConsoleInput("\x1B");
+
+			return injectConsoleInput(input, "\x1B");
 		case lexxos::devices::KeyCode::Break:
-			return injectConsoleInput("\x03");
+			return injectConsoleInput(input, "\x03");
 		default:
 			break;
 	}
 
-	return injectConsoleCharacter(event);
+	return injectConsoleCharacter(input, event);
 }
 
 bool wakePicoCalcDisplayForInput(lexxos::app::RuntimeTaskContext& context, lexxos::devices::InputEvent const& event) {
@@ -671,9 +713,11 @@ void recordPicoCalcDisplayConsoleActivity(lexxos::os::AppContext& context) {
 
 lexxos::devices::InputDevice* picoCalcKeyboard(lexxos::devices::DeviceManager& devices) {
 	auto* input = devices.inputDevice(picoCalcKeyboardDeviceName);
-	if (input == nullptr || !input->isReady()) {
+	// pollEvent drives the keyboard retry policy even while isReady() is false.
+	if (input == nullptr) {
 		return nullptr;
 	}
+
 	return input;
 }
 
@@ -688,10 +732,15 @@ bool pollPicoCalcConsoleInput(lexxos::app::RuntimeTaskContext& context) {
 	if (context.operatingSystem == nullptr) {
 		return false;
 	}
+
 	if (!hasRuntimeCapability(context, lexxos::runtime::Capability::InputKeyboard)) {
 		return false;
 	}
 
+	auto& consoleInput = context.operatingSystem->consoleInput();
+	if (consoleInput.mode() == lexxos::app::console_input::Mode::RawProgram) {
+		return false;
+	}
 	auto& devices = context.operatingSystem->devices();
 	auto* input = picoCalcKeyboard(devices);
 	if (input == nullptr) {
@@ -708,36 +757,54 @@ bool pollPicoCalcConsoleInput(lexxos::app::RuntimeTaskContext& context) {
 	if (nextPollMs != 0 && !timeReached(now, nextPollMs)) {
 		return false;
 	}
+
 	nextPollMs = now + picoCalcConsoleInputPollIntervalMs;
 
 	bool consumed = false;
 	lexxos::devices::InputEvent event;
 	for (std::uint32_t index = 0; index < maxPicoCalcConsoleInputEventsPerPoll; ++index) {
+	#if defined(LEXXOS_PLATFORM_SIM)
+		// Оставляем сырые события для диагностики, а терминальный ввод поступает через UART.
+		auto focus = currentTaskFocus(consoleInput);
+		if (!focus.programFocused()
+		    || context.operatingSystem->programInput().inputMode(focus.processId) != lexxos::app::program_input::InputMode::Events) {
+			break;
+		}
+	#endif
 		if (!input->pollEvent(event)) {
 			break;
 		}
+
 		recordPicoCalcDisplayActivity(context, event);
 		if (wakePicoCalcDisplayForInput(context, event)) {
 			consumed = true;
 			continue;
 		}
 
-		auto focus = currentTaskFocus();
-		if (handleTaskSwitchInput(event, focus)) {
+	#if !defined(LEXXOS_PLATFORM_SIM)
+		auto focus = currentTaskFocus(consoleInput);
+	#endif
+		if (handleTaskSwitchInput(consoleInput, event, focus)) {
 			consumed = true;
 			continue;
 		}
 
 		if (focus.programFocused()) {
-			lexxos::app::program_input::publish(event);
-			// Keep console_input fed for terminal-style foreground programs, but
-			// shellProgram will not read it while a program owns focus.
-			consumed = injectPicoCalcInputEvent(event) || consumed;
+			context.operatingSystem->programInput().publish(event);
+			// Event-only guests must not receive a second copy via read_char().
+			// Terminal-style/legacy guests still receive ANSI and text bytes.
+			if (context.operatingSystem->programInput().inputMode(focus.processId)
+			    == lexxos::app::program_input::InputMode::Terminal) {
+				(void) injectPicoCalcInputEvent(consoleInput, event);
+			}
+
+			consumed = true;
 			continue;
 		}
 
-		consumed = injectPicoCalcInputEvent(event) || consumed;
+		consumed = injectPicoCalcInputEvent(consoleInput, event) || consumed;
 	}
+
 	return consumed;
 }
 
@@ -779,14 +846,16 @@ void picoCalcInputTask(void* userData) {
 #endif
 
 int shellProgram(lexxos::os::AppContext& context, lexxos::program::ProgramInvocation const&, lexxos::program::ParsedArguments const&) {
+	auto& input = context.consoleInput();
 	auto* shellPointer = context.shell();
 	if (shellPointer == nullptr) {
 		context.writeLine("shell: missing shell context");
 		return 1;
 	}
+
 	auto& shell = *shellPointer;
-	currentTaskFocus();
-	resetConsoleForShellStartup(context.platform());
+	currentTaskFocus(input);
+	resetConsoleForShellStartup(input, context.platform());
 	shell.printBanner();
 
 	if (context.owner() == lexxos::os::AppContextOwner::Shell) {
@@ -795,7 +864,7 @@ int shellProgram(lexxos::os::AppContext& context, lexxos::program::ProgramInvoca
 	}
 
 #if defined(LEXXOS_PLATFORM_PICO) || defined(LEXXOS_PLATFORM_STM32F4)
-	discardPendingConsoleInput(context.platform());
+	discardPendingConsoleInput(input, context.platform());
 #endif
 
 #if LEXXOS_LOCAL_CONSOLE_INPUT
@@ -804,10 +873,34 @@ int shellProgram(lexxos::os::AppContext& context, lexxos::program::ProgramInvoca
 
 	shell.printPrompt();
 	flushConsoleMirrorForStartup();
+
+#if defined(LEXXOS_PLATFORM_RK3506) && defined(LEXXOS_KERNEL_FREERTOS)
+	// Reclaim completed FreeRTOS tasks even when no new program is launched.
+	// RK3506 currently uses a single scheduler core; defer SMP maintenance.
+	constexpr std::uint32_t taskReapIntervalMs = 100;
+	std::uint32_t nextTaskReapMs = platformUptimeMs(context.platform());
+#endif
+
 	while (!shell.shouldStop() && !lexxos::kernel::isShutdownRequested()) {
+		lexxos::shortcuts::pollBoot(context);
+
+#if defined(LEXXOS_PLATFORM_RK3506) && defined(LEXXOS_KERNEL_FREERTOS)
+		auto const now = platformUptimeMs(context.platform());
+		if (static_cast<std::int32_t>(now - nextTaskReapMs) >= 0) {
+			(void) lexxos::kernel::reapFinishedTasks();
+			nextTaskReapMs = now + taskReapIntervalMs;
+		}
+#endif
+
 		bool consumedInput = false;
-		auto const focus = currentTaskFocus();
+		auto const focus = currentTaskFocus(input);
 		if (focus.programFocused()) {
+			// Сырой обмен читает UART напрямую. Shell не должен забирать часть пакета.
+			if (input.mode() == lexxos::app::console_input::Mode::RawProgram) {
+				lexxos::kernel::sleepMs(1);
+				continue;
+			}
+
 			// A foreground program owns the terminal input. Do not let the shell
 			// drain console_input while that program is focused; otherwise keys that
 			// were injected for terminal-style foreground programs can be consumed by
@@ -822,13 +915,16 @@ int shellProgram(lexxos::os::AppContext& context, lexxos::program::ProgramInvoca
 				lexxos::kernel::yield();
 				continue;
 			}
+
 			lexxos::kernel::sleepMs(1);
 			continue;
 		}
+
 		shell.printPromptIfPending();
 
 		std::array<char, lexxos::runtime::standardRuntimeProfile.shell.maxLineLength> inputBatch{};
-		auto const inputCount = lexxos::app::console_input::readAvailable(context.platform(), inputBatch.data(), inputBatch.size());
+		auto const inputCount = context.consoleInput().readAvailable(context.platform(), inputBatch.data(), inputBatch.size());
+
 		if (inputCount != 0) {
 #if LEXXOS_LCD_CONSOLE_TARGET_ENABLED
 			recordPicoCalcDisplayConsoleActivity(context);
@@ -836,22 +932,25 @@ int shellProgram(lexxos::os::AppContext& context, lexxos::program::ProgramInvoca
 			shell.feed(std::string_view(inputBatch.data(), inputCount));
 			consumedInput = true;
 		}
+
 		if (!consumedInput) {
 			lexxos::kernel::sleepMs(1);
 		} else {
 			lexxos::kernel::yield();
 		}
 	}
+
 	lexxos::kernel::requestShutdown();
 	return 0;
 }
 
 #if LEXXOS_LCD_CONSOLE_TARGET_ENABLED
 void finishLcdConsoleBootScreen(lexxos::app::RuntimeTaskContext& runtimeContext) {
+	auto& input = runtimeContext.operatingSystem->consoleInput();
 	g_runtimeBootComplete.store(true, std::memory_order_release);
 	updateLcdConsoleStatusBar(runtimeContext);
 	lexxos::app::picocalc_lcd_console::refreshStatusBar();
-	lexxos::app::console_input::setMode(lexxos::app::console_input::Mode::Shell);
+	input.setMode(lexxos::app::console_input::Mode::Shell);
 	lexxos::app::console_mirror::setMode(lexxos::app::ConsoleMirrorMode::Text);
 }
 #endif
@@ -859,16 +958,34 @@ void finishLcdConsoleBootScreen(lexxos::app::RuntimeTaskContext& runtimeContext)
 void consoleTask(void* userData) {
 	auto& runtimeContext = *static_cast<lexxos::app::RuntimeTaskContext*>(userData);
 	auto const& platform = platformServices(runtimeContext);
+
 	if (runtimeContext.operatingSystem == nullptr) {
 		writeConsoleLine(platform, "console task: missing operating system");
 		lexxos::kernel::requestShutdown();
 		return;
 	}
+
 	if (runtimeContext.shell == nullptr) {
 		writeConsoleLine(platform, "console task: missing shell");
 		lexxos::kernel::requestShutdown();
 		return;
 	}
+
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	// Finish the initial sd1 probe/mount before the hotplug task can
+	// invalidate a volume, then start the board's LCD and hotplug workers.
+	writeConsoleLine(platform, "FreeRTOS: mounting PicoCalc sd1...");
+	if (!lexxos::composition::products::lyraStorageService()
+	        .mountAtBoot(*runtimeContext.operatingSystem)) {
+		writeConsoleLine(platform, "FreeRTOS: continuing without mounted SD");
+	}
+
+	if (!lexxos::composition::startBoardRuntimeTasks(*runtimeContext.operatingSystem)) {
+		writeConsoleLine(platform, "FreeRTOS: failed to start PicoCalc board tasks");
+		lexxos::kernel::requestShutdown();
+		return;
+	}
+#endif
 
 	auto& shell = *runtimeContext.shell;
 
@@ -890,11 +1007,13 @@ void consoleTask(void* userData) {
 	    .argc = 1,
 	    .argv = argv,
 	});
+
 	if (result.launchStatus != lexxos::program::ProgramLaunchStatus::Available) {
 		writeConsole(platform, "failed to launch shell program: ");
 		writeConsole(platform, lexxos::program::toString(result.launchStatus));
 		writeConsole(platform, "\r\n");
 	}
+
 	lexxos::kernel::requestShutdown();
 }
 
@@ -912,17 +1031,21 @@ void healthTask(void* userData) {
 		gpio.setStatusLed(ledEnabled);
 		lexxos::kernel::sleepMs(500);
 	}
+
 	gpio.setStatusLed(false);
 }
 #endif
 
+#if !defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY)
 void systemEventTask(void* userData) {
 	auto& runtimeContext = *static_cast<lexxos::app::RuntimeTaskContext*>(userData);
 	if (runtimeContext.systemEvents == nullptr) {
 		return;
 	}
+
 	runtimeContext.systemEvents->run();
 }
+#endif
 
 #if FEATURE_ENABLED(DISPLAY)
 struct PointerActivitySnapshot {
@@ -942,6 +1065,7 @@ bool pointerStateChanged(
 	if (!previous.valid) {
 		return false;
 	}
+
 	return state.reportCount != previous.reportCount
 	    && (state.x != previous.x
 	        || state.y != previous.y
@@ -1006,6 +1130,7 @@ bool displayPowerPollDue(lexxos::app::RuntimeTaskContext& runtimeContext) {
 	if (nextDisplayPowerPollMs != 0 && static_cast<std::int32_t>(now - nextDisplayPowerPollMs) < 0) {
 		return false;
 	}
+
 	nextDisplayPowerPollMs = now + displayPowerTaskPollIntervalMs;
 	return true;
 }
@@ -1038,6 +1163,7 @@ void consoleMirrorTask(void* userData) {
 		if (lexxos::app::console_mirror::mode() == lexxos::app::ConsoleMirrorMode::Text) {
 			lexxos::app::console_mirror::flush();
 		}
+
 		if (runtimeContext != nullptr) {
 			updateDisplayPowerIdle(*runtimeContext);
 		}
@@ -1059,6 +1185,7 @@ void debugDisplayTask(void* userData) {
 	if (runtimeContext.debugDisplay == nullptr) {
 		return;
 	}
+
 	auto& debugDisplay = *runtimeContext.debugDisplay;
 
 	debugDisplay.drawStatic();
@@ -1085,7 +1212,9 @@ void lexxos::app::registerShellProgram(lexxos::program::ProgramManager& programs
 
 bool lexxos::app::startRuntimeTasks(RuntimeTaskContext& context) {
 	auto const& platform = platformServices(context);
+#if FEATURE_ENABLED(DISPLAY)
 	bool displayPowerHandledByConsoleMirror = false;
+#endif
 
 #if FEATURE_ENABLED(DISPLAY)
 	// Start the mirror before the interactive console. On preemptive targets the
@@ -1126,6 +1255,8 @@ bool lexxos::app::startRuntimeTasks(RuntimeTaskContext& context) {
 	                                                                        "cardputer-input",
 	#elif LEXXOS_BOARD_FAMILY_JC_ESP32P4_M3_DEV == 1
 	                                                                        "usb-hid-input",
+	#elif defined(LEXXOS_PLATFORM_SIM)
+	                                                                        "sim-input",
 	#else
 	                                                                        "picocalc-input",
 	#endif
@@ -1133,7 +1264,7 @@ bool lexxos::app::startRuntimeTasks(RuntimeTaskContext& context) {
 	                                                                    .priority = 1,
 	                                                                    .executionClass = lexxos::kernel::TaskExecutionClass::Driver,
 	                                                                })) {
-		writeConsoleLine(platform, "failed to create picocalc input task");
+		writeConsoleLine(platform, "failed to create local console input task");
 		return false;
 	}
 #endif
@@ -1165,6 +1296,7 @@ bool lexxos::app::startRuntimeTasks(RuntimeTaskContext& context) {
 	}
 #endif
 
+#if !defined(LEXXOS_RK3506_FREERTOS_CONSOLE_ONLY)
 	if (!lexxos::kernel::createTask(systemEventTask, &context, {
 	                                                               .name = "system-events",
 	                                                               .stackSizeBytes = systemEventStackSizeBytes,
@@ -1175,12 +1307,18 @@ bool lexxos::app::startRuntimeTasks(RuntimeTaskContext& context) {
 		return false;
 	}
 
+	if (!lexxos::composition::startBoardRuntimeTasks(*context.operatingSystem)) {
+		writeConsoleLine(platform, "failed to create board runtime tasks");
+		return false;
+	}
+
 	if (!lexxos::app::startSoftwareRtcTask(context)) {
 		writeConsoleLine(platform, "failed to create software RTC task");
 		return false;
 	}
 
 	lexxos::app::startWifiAutoconnectTask(context);
+#endif
 
 #if FEATURE_ENABLED(DEBUG_DISPLAY)
 	if (context.debugDisplayReady && !lexxos::kernel::createTask(debugDisplayTask, &context, {

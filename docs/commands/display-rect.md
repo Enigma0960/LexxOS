@@ -1,6 +1,6 @@
 # `display-rect`
 
-draw a filled rectangle.
+Рисует заполненный прямоугольник.
 
 ## Справка shell
 

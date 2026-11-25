@@ -15,11 +15,13 @@ bool lexxos::vfs::Vfs::isTmpFilePath(std::string_view path) const {
 	if (!detail::startsWith(path, prefix) || path.size() <= prefix.size()) {
 		return false;
 	}
+
 	for (std::size_t index = prefix.size(); index < path.size(); ++index) {
 		if (path[index] == '/') {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -34,6 +36,7 @@ lexxos::vfs::detail::TmpFile* lexxos::vfs::Vfs::findTmpFileByName(std::string_vi
 			return &file;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -50,6 +53,7 @@ std::size_t lexxos::vfs::Vfs::tmpFileIndex(detail::TmpFile const* target) const 
 			return index;
 		}
 	}
+
 	return _tmpFiles.size();
 }
 
@@ -57,20 +61,25 @@ lexxos::vfs::detail::TmpFile* lexxos::vfs::Vfs::ensureTmpFile(std::string_view n
 	if (name.empty() || name.size() + 1 > maxNameLength) {
 		return nullptr;
 	}
+
 	if (auto* existing = findTmpFileByName(name); existing != nullptr) {
 		return existing;
 	}
+
 	for (auto& file : _tmpFiles) {
 		if (file.used) {
 			continue;
 		}
+
 		if (!detail::copyText(name, file.name.data(), file.name.size())) {
 			return nullptr;
 		}
+
 		file.used = true;
 		file.size = 0;
 		return &file;
 	}
+
 	return nullptr;
 }
 
@@ -78,6 +87,7 @@ bool lexxos::vfs::Vfs::statTmpFile(std::string_view path, Stat& output) {
 	if (!isTmpFilePath(path)) {
 		return false;
 	}
+
 	auto const name = tmpFileName(path);
 	auto const* file = findTmpFileByName(name);
 	if (file == nullptr) {
@@ -95,10 +105,12 @@ bool lexxos::vfs::Vfs::listTmp(DirectoryVisitor visitor, void* userData) {
 		if (!file.used) {
 			continue;
 		}
+
 		if (!detail::visitEntry(visitor, userData, file.name.data(), NodeType::RegularFile, file.size)) {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -109,11 +121,13 @@ lexxos::vfs::ReadStatus lexxos::vfs::Vfs::readTmpText(
 	if (!isTmpFilePath(path)) {
 		return ReadStatus::NotFound;
 	}
+
 	auto const name = tmpFileName(path);
 	auto const* file = findTmpFileByName(name);
 	if (file == nullptr) {
 		return ReadStatus::NotFound;
 	}
+
 	writer(std::string_view{file->data.data(), file->size}, userData);
 	return ReadStatus::Ok;
 }
@@ -139,21 +153,26 @@ lexxos::vfs::RenameStatus lexxos::vfs::Vfs::renameTmpFile(
 	if (!isTmpFilePath(source) || !isTmpFilePath(target)) {
 		return RenameStatus::CrossFilesystem;
 	}
+
 	auto const sourceName = tmpFileName(source);
 	auto const targetName = tmpFileName(target);
 	if (sourceName.empty() || targetName.empty() || targetName.size() + 1 > maxNameLength) {
 		return RenameStatus::InvalidPath;
 	}
+
 	if (detail::equals(sourceName, targetName)) {
 		return RenameStatus::Ok;
 	}
+
 	auto* sourceFile = findTmpFileByName(sourceName);
 	if (sourceFile == nullptr) {
 		return RenameStatus::SourceNotFound;
 	}
+
 	if (findTmpFileByName(targetName) != nullptr) {
 		return RenameStatus::TargetExists;
 	}
+
 	return detail::copyText(targetName, sourceFile->name.data(), sourceFile->name.size())
 	    ? RenameStatus::Ok
 	    : RenameStatus::InvalidPath;

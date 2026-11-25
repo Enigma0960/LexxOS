@@ -9,16 +9,17 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec arguments[] = {
 	    {
-         .name = "hz",
-         .valueName = "safe|default|performance|hz",
-         .help = "SPI baud rate/profile to set: safe, default, performance or Hz; without argument prints active rate",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "hz",
+	     .valueName = "safe|default|performance|hz",
+	     .help = "SPI baud rate/profile to set: safe, default, performance or Hz; without argument prints active rate",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 

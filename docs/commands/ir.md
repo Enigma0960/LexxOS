@@ -1,6 +1,6 @@
 # `ir`
 
-Shows or tests the primary IR transmitter.
+Показывает или проверяет основной ИК-передатчик.
 
 ## Справка shell
 
@@ -32,10 +32,10 @@ lexx:/> ir samsung-code -c E0E040BF
 
 ## Cardputer-Adv
 
-Cardputer-Adv exposes the built-in IR transmitter as `cardputer-ir` on GPIO44 with a 38 kHz carrier. The ESP-IDF
-implementation uses RMT with carrier modulation instead of software bit-banging.
+Cardputer-Adv регистрирует встроенный ИК-передатчик как `cardputer-ir`
+на GPIO44 с несущей 38 кГц. ESP-IDF использует RMT с модуляцией несущей.
 
-Built-in Samsung TV test codes:
+Встроенные тестовые коды телевизора Samsung:
 
 ```text
 samsung-power  0xE0E040BF
@@ -43,9 +43,10 @@ samsung-on     0xE0E09966
 samsung-off    0xE0E019E6
 ```
 
-`samsung-power` matches the common Samsung BN59-class power toggle frame used for a quick line-of-sight smoke test.
-Serial smoke can only verify that the frame was queued and transmitted; real TV response remains a manual check.
-Use `samsung-code -c <hex>` to try another 32-bit Samsung code without rebuilding.
+`samsung-power` соответствует распространённому коду переключения питания
+Samsung BN59. Проверка через UART подтверждает отправку кадра; реакция
+телевизора проверяется вручную при прямой видимости. Для другого 32-битного
+кода без пересборки используйте `samsung-code -c <hex>`.
 
 ## Доступность
 

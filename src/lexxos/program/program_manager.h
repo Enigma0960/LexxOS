@@ -6,7 +6,7 @@
 #include <string_view>
 
 #include <lexxos/program/program.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 #include <lexxos/shell/command.h>
 
 namespace lexxos::os {

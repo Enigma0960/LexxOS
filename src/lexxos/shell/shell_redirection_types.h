@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string_view>
 
+#include <lexxos/io/input_stream.h>
 #include <lexxos/io/output_stream.h>
 #include <lexxos/vfs/vfs.h>
 

@@ -9,6 +9,7 @@
 #include <lexxos/platform/pico/pico_platform_types.h>
 
 namespace lexxos::platform::pico::detail {
+
 namespace {
 
 	constexpr std::size_t maxGpioInterruptRegistrations = 8;
@@ -27,6 +28,7 @@ namespace {
 			case lexxos::platform::GpioInterruptEdge::Both:
 				return GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL;
 		}
+
 		return GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL;
 	}
 
@@ -36,6 +38,7 @@ namespace {
 				return &registration;
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -49,6 +52,7 @@ namespace {
 				return &registration;
 			}
 		}
+
 		return nullptr;
 	}
 

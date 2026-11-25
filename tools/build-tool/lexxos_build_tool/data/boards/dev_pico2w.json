@@ -1,0 +1,19 @@
+{
+  "id": "dev_pico2w",
+  "name": "LexxOS Pico 2 W dev board",
+  "platform": "pico",
+  "preset": "debug-pico",
+  "buildDir": "build/configurator/pico2w",
+  "userPresetName": "user-pico-dev_pico2w",
+  "cmakeDefaults": {
+    "PICO_BOARD": "pico2_w"
+  },
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_DEBUG_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_FEATURE_DS3231_RTC": "ON"
+  }
+}

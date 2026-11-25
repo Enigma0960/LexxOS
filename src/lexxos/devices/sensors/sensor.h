@@ -24,6 +24,7 @@ enum class SensorState : std::uint8_t {
 		case SensorState::Fault:
 			return "fault";
 	}
+
 	return "unknown";
 }
 
@@ -46,38 +47,18 @@ class Sensor : public Device {
 public:
 	virtual ~Sensor() = default;
 
-	[[nodiscard]] DeviceKind kind() const override {
-		return DeviceKind::Sensor;
-	}
+	[[nodiscard]] DeviceKind kind() const override;
 
-	[[nodiscard]] bool isReady() const override {
-		return state() == SensorState::Ready;
-	}
+	[[nodiscard]] bool isReady() const override;
 
 	[[nodiscard]] virtual SensorState state() const = 0;
 	virtual bool poll() = 0;
 
-	[[nodiscard]] virtual MotionSensor* asMotionSensor() {
-		return nullptr;
-	}
+	[[nodiscard]] virtual MotionSensor* asMotionSensor();
 
-	[[nodiscard]] virtual MotionSensor const* asMotionSensor() const {
-		return nullptr;
-	}
-};
-
-class MotionSensor : public Sensor {
-public:
-	[[nodiscard]] MotionSensor* asMotionSensor() override {
-		return this;
-	}
-
-	[[nodiscard]] MotionSensor const* asMotionSensor() const override {
-		return this;
-	}
-
-	[[nodiscard]] virtual MotionSensorSample lastSample() const = 0;
-	virtual bool readSample(MotionSensorSample& sample) = 0;
+	[[nodiscard]] virtual MotionSensor const* asMotionSensor() const;
 };
 
 } // namespace lexxos::devices
+
+#include <lexxos/devices/sensors/motion_sensor.h>

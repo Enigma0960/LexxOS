@@ -16,4 +16,5 @@ inline constexpr std::uint32_t maxBeepDurationMs = 5000;
     lexxos::platform::AudioBeepPins const& config,
     std::uint32_t frequencyHz,
     std::uint32_t durationMs);
+
 } // namespace lexxos::apps::picocalc_programs::detail

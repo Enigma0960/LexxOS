@@ -13,6 +13,7 @@ void LcdConsoleCharacterQueue::enqueue(char value) {
 		_tail = (_tail + 1U) % _buffer.size();
 		--_count;
 	}
+
 	_buffer[_head] = value;
 	_head = (_head + 1U) % _buffer.size();
 	++_count;

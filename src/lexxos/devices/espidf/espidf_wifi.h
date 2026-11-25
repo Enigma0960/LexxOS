@@ -54,16 +54,16 @@ struct Status {
 [[nodiscard]] char const* toString(AuthMode mode);
 [[nodiscard]] bool parseAuthMode(std::string_view text, AuthMode& output);
 
-[[nodiscard]] bool start(lexxos::platform::BoardDescriptor const& board);
+[[nodiscard]] bool start(lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] bool connect(
-    lexxos::platform::BoardDescriptor const& board,
+    lexxos::platform::LegacyBoardDescriptor const& board,
     std::string_view ssid,
     std::string_view password,
     AuthMode auth,
     std::uint32_t timeoutMs);
 [[nodiscard]] bool disconnect();
 [[nodiscard]] bool scan(
-    lexxos::platform::BoardDescriptor const& board,
+    lexxos::platform::LegacyBoardDescriptor const& board,
     std::uint32_t timeoutMs,
     ScanRecord* records,
     std::size_t capacity,

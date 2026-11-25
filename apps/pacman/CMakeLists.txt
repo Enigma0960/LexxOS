@@ -1,5 +1,5 @@
 lexxos_add_app(pacman
-        SOURCES pacman.cpp game.cpp runtime.cpp
+        SOURCES pacman.cpp game.cpp
         MANIFEST manifest.json
         MEMORY 65536
         STACK 4096

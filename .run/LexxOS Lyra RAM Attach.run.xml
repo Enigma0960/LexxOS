@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="LexxOS Lyra RAM Attach" type="CLion_Remote" version="1" remoteCommand="127.0.0.1:3333" symbolFile="$PROJECT_DIR$/build/picocalc-lyra-debug/lexxos.elf" sysroot="">
+    <method v="2" />
+  </configuration>
+</component>

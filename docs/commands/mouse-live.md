@@ -14,5 +14,5 @@ mouse-live [-s seconds] [-i milliseconds] [name]
 или поддержку всех операций конкретной конфигурацией. Подробности группировки:
 [матрица команд](../command-matrix.md).
 
-[Descriptor и реализация](../../src/lexxos/apps/devices/mouse_programs.cpp) — источник параметров;
+[Descriptor и реализация](../../src/lexxos/apps/devices/mouse_live_program.cpp) — источник параметров;
 `help mouse-live` показывает справку текущей сборки.

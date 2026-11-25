@@ -17,9 +17,10 @@
 #endif
 
 namespace lexxos::devices::audio {
+
 namespace {
 
-	[[nodiscard]] lexxos::platform::BoardDescriptor const& activeBoard(lexxos::platform::PlatformServices const& platform) {
+	[[nodiscard]] lexxos::platform::LegacyBoardDescriptor const& activeBoard(lexxos::platform::PlatformServices const& platform) {
 		auto const& board = platform.board;
 		return board.current != nullptr ? board.current() : lexxos::platform::board();
 	}
@@ -30,10 +31,12 @@ namespace {
 		if (board.audioCodec.codec != lexxos::platform::AudioCodecKind::Es8311 || !board.audioCodec.isValid()) {
 			return nullptr;
 		}
+
 		static EspIdfEs8311AudioDevice device{board.audioCodec, lexxos::devices::debugI2cBus(), platform};
 		if (!device.isReady()) {
 			(void) device.initialize();
 		}
+
 		return device.isReady() ? &device : nullptr;
 	}
 #endif
@@ -63,6 +66,7 @@ AudioDevice* primaryAudioDevice(lexxos::platform::PlatformServices const& platfo
 		(void) device.initialize();
 		initialized = true;
 	}
+
 	return device.isReady() ? &device : nullptr;
 #else
 	(void) platform;
@@ -76,6 +80,7 @@ MicrophoneDevice* primaryMicrophoneDevice(lexxos::platform::PlatformServices con
 	if (codec == nullptr || !codec->supportsPcmCapture()) {
 		return nullptr;
 	}
+
 	static EspIdfEs8311MicrophoneDevice microphone{*codec};
 	return microphone.isReady() ? &microphone : nullptr;
 #else

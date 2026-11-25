@@ -1,11 +1,10 @@
-#include <lexxos/shell/shell.h>
+#include <cstring>
+#include <string_view>
 
 #include <lexxos/os/operating_system.h>
 #include <lexxos/program/program_manager.h>
+#include <lexxos/shell/shell.h>
 #include <lexxos/shell/shell_history_policy.h>
-
-#include <cstring>
-#include <string_view>
 
 namespace {
 
@@ -52,6 +51,7 @@ void Shell::_putChar(char value) {
 		_redrawInputLine();
 		return;
 	}
+
 	write(std::string_view(&value, 1));
 }
 
@@ -77,9 +77,11 @@ void Shell::_eraseLastChar() {
 			_redrawInputLine();
 			return;
 		}
+
 		write("\b \b");
 		return;
 	}
+
 	_redrawInputLine();
 }
 
@@ -94,6 +96,7 @@ void Shell::_eraseCurrentChar() {
 		auto const tailLength = _lineLength - _cursorPosition - 1;
 		std::memmove(_lineBuffer.data() + _cursorPosition, _lineBuffer.data() + _cursorPosition + 1, tailLength);
 	}
+
 	--_lineLength;
 	_lineBuffer[_lineLength] = '\0';
 	_redrawInputLine();
@@ -103,6 +106,7 @@ void Shell::_insertText(std::string_view text) {
 	if (text.empty()) {
 		return;
 	}
+
 	if (_lineLength + text.size() >= _lineBuffer.size()) {
 		write("\a");
 		return;
@@ -129,6 +133,7 @@ void Shell::_insertText(std::string_view text) {
 		_redrawInputLine();
 		return;
 	}
+
 	write(text);
 }
 
@@ -151,6 +156,7 @@ void Shell::_replaceInputRange(std::size_t start, std::size_t end, std::string_v
 	if (text.size() != rangeLength && tailLength != 0) {
 		std::memmove(_lineBuffer.data() + start + text.size(), _lineBuffer.data() + end, tailLength);
 	}
+
 	if (!text.empty()) {
 		std::memcpy(_lineBuffer.data() + start, text.data(), text.size());
 	}
@@ -166,6 +172,7 @@ bool Shell::_historyLineAllowed(std::string_view text) const {
 		if (context == nullptr) {
 			return false;
 		}
+
 		auto const* os = static_cast<lexxos::os::OperatingSystem const*>(context);
 		auto const* descriptor = os->programs().find(name);
 		return descriptor != nullptr && detail::hasSensitiveArguments(descriptor->arguments);
@@ -185,6 +192,7 @@ void Shell::_addHistoryEntry() {
 	if (_historySize < maxHistoryEntries) {
 		++_historySize;
 	}
+
 	_markShellConfigDirty();
 }
 
@@ -192,6 +200,7 @@ void Shell::_clearHistory() {
 	for (auto& length : _historyLengths) {
 		length = 0;
 	}
+
 	_historyWriteIndex = 0;
 	_historySize = 0;
 	_historyBrowseOffset = 0;
@@ -288,6 +297,7 @@ bool Shell::_acceptAutosuggestion() {
 	if (suggestion.empty()) {
 		return false;
 	}
+
 	_insertText(suggestion);
 	return true;
 }
@@ -307,10 +317,12 @@ std::string_view Shell::_autosuggestionSuffix() const {
 		if (length <= _lineLength) {
 			continue;
 		}
+
 		if (std::memcmp(_history[index].data(), _lineBuffer.data(), _lineLength) == 0) {
 			return std::string_view{_history[index].data() + _lineLength, length - _lineLength};
 		}
 	}
+
 	return {};
 }
 
@@ -320,6 +332,7 @@ bool Shell::_lineIsBlank() const {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -375,6 +388,7 @@ void Shell::_redrawInputLine() {
 	} else {
 		_autosuggestionVisible = false;
 	}
+
 	write("\x1B[K");
 	_moveTerminalCursorLeft((_lineLength - _cursorPosition) + suggestion.size());
 }
@@ -383,11 +397,13 @@ void Shell::_moveCursorLeft() {
 	if (_cursorPosition == 0) {
 		return;
 	}
+
 	--_cursorPosition;
 	if (_autosuggestionVisible) {
 		_redrawInputLine();
 		return;
 	}
+
 	write("\x1B[D");
 }
 
@@ -396,13 +412,16 @@ void Shell::_moveCursorRight() {
 		if (_acceptAutosuggestion()) {
 			return;
 		}
+
 		return;
 	}
+
 	++_cursorPosition;
 	if (_shouldRedrawForAutosuggestion()) {
 		_redrawInputLine();
 		return;
 	}
+
 	write("\x1B[C");
 }
 
@@ -413,6 +432,7 @@ void Shell::_moveCursorHome() {
 		_redrawInputLine();
 		return;
 	}
+
 	_moveTerminalCursorLeft(offset);
 }
 
@@ -420,15 +440,18 @@ void Shell::_moveCursorEnd() {
 	if (_acceptAutosuggestion()) {
 		return;
 	}
+
 	if (_cursorPosition >= _lineLength) {
 		return;
 	}
+
 	auto const start = _cursorPosition;
 	_cursorPosition = _lineLength;
 	if (_shouldRedrawForAutosuggestion()) {
 		_redrawInputLine();
 		return;
 	}
+
 	write(std::string_view(_lineBuffer.data() + start, _lineLength - start));
 }
 

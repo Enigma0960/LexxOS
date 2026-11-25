@@ -1,6 +1,6 @@
 # `sd-bench`
 
-benchmark SD raw read and FAT read/write.
+Измеряет скорость секторного чтения SD и операций FAT согласно реализации платы.
 
 ## Справка shell
 

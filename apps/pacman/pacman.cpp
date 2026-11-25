@@ -1,6 +1,6 @@
-#include <lexx/lexx.h>
-
 #include "game.h"
+
+#include <lexx/lexx.h>
 
 namespace {
 
@@ -64,6 +64,7 @@ void draw() {
 	for (int x = 0; x < pacman::width; ++x) {
 		put('=');
 	}
+
 	append("\x1b[K\r\n");
 
 	for (int y = 0; y < pacman::height; ++y) {
@@ -76,21 +77,27 @@ void draw() {
 					tile = game.frightenedTicks != 0 ? 'm' : 'M';
 				}
 			}
+
 			if (game.player.x == x && game.player.y == y) {
 				tile = '@';
 			}
+
 			if (tile != previous) {
 				color(tile);
 				previous = tile;
 			}
+
 			put(tile);
 		}
+
 		append("\x1b[0m\x1b[K\r\n");
 	}
+
 	append("  ");
 	for (int x = 0; x < pacman::width; ++x) {
 		put('=');
 	}
+
 	append("\x1b[K\r\n");
 	append("  ");
 	switch (game.phase) {
@@ -120,6 +127,7 @@ bool playTone(lexx::uint32_t frequency, lexx::uint32_t duration, lexx::uint8_t v
 	if (!ok) {
 		++soundFailures;
 	}
+
 	return ok;
 }
 
@@ -127,6 +135,7 @@ void sound(pacman::Sound event) {
 	if (!soundEnabled || event == pacman::Sound::None) {
 		return;
 	}
+
 	lexx::uint32_t hz = 640;
 	lexx::uint32_t ms = 90;
 	lexx::uint8_t volume = 180;
@@ -156,6 +165,7 @@ void sound(pacman::Sound event) {
 		case pacman::Sound::None:
 			return;
 	}
+
 	(void) playTone(hz, ms, volume);
 }
 
@@ -163,6 +173,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting) {
 	if (key.type != static_cast<lexx::uint8_t>(lexx::KeyEventType::KeyDown)) {
 		return false;
 	}
+
 	pacman::Direction direction = pacman::Direction::None;
 	switch (key.key_code) {
 		case 1 : direction = pacman::Direction::Up; break;
@@ -172,6 +183,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting) {
 		case 6 : quitting = true; return false; // hardware Escape
 		default: break;
 	}
+
 	if (direction == pacman::Direction::None) {
 		char c = static_cast<char>(key.character);
 		// UART arrows arrive as ESC [ A/B/C/D when physical event codes are unavailable.
@@ -179,6 +191,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting) {
 			keyEscapeState = c == '[' ? 2U : 0U;
 			return false;
 		}
+
 		if (keyEscapeState == 2) {
 			keyEscapeState = 0;
 			switch (c) {
@@ -193,7 +206,7 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting) {
 			return false;
 		} else {
 			switch (c) {
-				case 'w':
+				case 'w' :
 				case 'W' : direction = pacman::Direction::Up; break;
 				case 's' :
 				case 'S' : direction = pacman::Direction::Down; break;
@@ -218,10 +231,12 @@ bool handleKey(lexx::KeyEvent const& key, bool& quitting) {
 			}
 		}
 	}
+
 	if (direction != pacman::Direction::None) {
 		game.turn(direction);
 		return true;
 	}
+
 	return false;
 }
 
@@ -235,6 +250,7 @@ int gameMain() {
 		lexx::write("\x1b[0m\x1b[?25h\x1b[2J\x1b[Hpacman: clock unavailable\r\n");
 		return 1;
 	}
+
 	while (!quitting) {
 		bool redraw = false;
 		lexx::KeyEvent event{};
@@ -245,20 +261,25 @@ int gameMain() {
 				break;
 			}
 		}
+
 		if (quitting) {
 			break;
 		}
+
 		lexx::uint32_t const now = lexx::milliseconds();
 		if (static_cast<lexx::uint32_t>(now - lastTick) >= tickMs) {
 			lastTick = now;
 			sound(game.step());
 			redraw = true;
 		}
+
 		if (redraw) {
 			draw();
 		}
+
 		lexx::yield();
 	}
+
 	lexx::write("\x1b[0m\x1b[?25h\x1b[2J\x1b[H");
 	return 0;
 }

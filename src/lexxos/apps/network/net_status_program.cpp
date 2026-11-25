@@ -12,6 +12,7 @@
 #endif
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::program::ProgramDescriptor;
@@ -24,6 +25,7 @@ namespace {
 			if (index != 0) {
 				context.write(":");
 			}
+
 			writeHexByte(context, mac[index]);
 		}
 	}
@@ -46,6 +48,7 @@ namespace {
 		} else {
 			context.writeLine("-");
 		}
+
 		context.write("hostname: ");
 		context.writeLine(status.hostname[0] != '\0' ? status.hostname : "-");
 		context.write("speed: ");
@@ -55,6 +58,7 @@ namespace {
 		} else {
 			context.writeLine("-");
 		}
+
 		context.write("duplex: ");
 		context.writeLine(status.duplexValid ? (status.fullDuplex ? "full" : "half") : "-");
 		context.write("ip: ");
@@ -68,23 +72,28 @@ namespace {
 		return status.supported && status.initialized && status.started && status.linkUp && status.gotIp;
 	}
 
-	int runEspIdfNetworkStatus(lexxos::os::AppContext& context, lexxos::platform::BoardDescriptor const& board) {
+	int runEspIdfNetworkStatus(lexxos::os::AppContext& context, lexxos::program::ParsedArguments const& arguments,
+	    lexxos::platform::LegacyBoardDescriptor const& board) {
 		bool anyReady = false;
 		bool wroteAny = false;
 		if (board.ethernet.enabled) {
 			anyReady = writeEspIdfEthernetStatus(context) || anyReady;
 			wroteAny = true;
 		}
+
 		if (board.wireless.wifi) {
 			if (wroteAny) {
 				context.writeLine("");
 			}
-			anyReady = detail::runWifiStatus(context, lexxos::program::ParsedArguments{}, board) == 0 || anyReady;
+
+			anyReady = detail::runWifiStatus(context, arguments, board) == 0 || anyReady;
 			wroteAny = true;
 		}
+
 		if (!wroteAny) {
 			context.writeErrorLine("net-status: no network interface is declared by this board profile");
 		}
+
 		return anyReady ? 0 : 1;
 	}
 #endif
@@ -100,7 +109,7 @@ ProgramDescriptor NetStatusProgram::descriptor() {
 	    .handler = run,
 	    .runtime = {
 	                .launchMode = ProgramLaunchMode::ForegroundTask,
-	                .stackSizeBytes = 4096,
+	                .stackSizeBytes = lexxos::runtime::standardRuntimeProfile.programs.networkStatusStackBytes,
 	                .priority = 1,
 	                .memoryClass = ProgramMemoryClass::InternalOnly,
 	                .externalMemoryQuotaBytes = 0,
@@ -116,8 +125,7 @@ int NetStatusProgram::run(lexxos::os::AppContext& context,
     lexxos::program::ProgramInvocation const&,
     lexxos::program::ParsedArguments const& arguments) {
 #if defined(LEXXOS_PLATFORM_ESPIDF)
-	(void) arguments;
-	return runEspIdfNetworkStatus(context, activeBoard(context));
+	return runEspIdfNetworkStatus(context, arguments, activeBoard(context));
 #elif defined(LEXXOS_PLATFORM_PICO) && defined(LEXXOS_PICO_CYW43_AVAILABLE) && defined(LEXXOS_PICO_CYW43_LWIP_AVAILABLE)
 	return detail::runWifiStatus(context, arguments, activeBoard(context));
 #else

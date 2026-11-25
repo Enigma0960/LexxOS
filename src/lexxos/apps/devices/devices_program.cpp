@@ -20,6 +20,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	struct DeviceTableContext {
@@ -63,6 +64,7 @@ namespace {
 			    descriptor.bus != nullptr && descriptor.bus->isReady(), devices.i2cBusStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.i2cBusCount();
 
 		if (rowIndex < devices.blockDeviceCount()) {
@@ -71,6 +73,7 @@ namespace {
 			    descriptor.device != nullptr && descriptor.device->isReady(), devices.blockDeviceStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.blockDeviceCount();
 
 		if (rowIndex < devices.displayDeviceCount()) {
@@ -79,6 +82,7 @@ namespace {
 			    descriptor.device != nullptr && descriptor.device->isReady(), devices.displayDeviceStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.displayDeviceCount();
 
 		if (rowIndex < devices.inputDeviceCount()) {
@@ -87,6 +91,7 @@ namespace {
 			    descriptor.device != nullptr && descriptor.device->isReady(), devices.inputDeviceStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.inputDeviceCount();
 
 		if (rowIndex < devices.pointingDeviceCount()) {
@@ -95,6 +100,7 @@ namespace {
 			    descriptor.device != nullptr && descriptor.device->isReady(), devices.pointingDeviceStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.pointingDeviceCount();
 
 		if (rowIndex < devices.gamepadDeviceCount()) {
@@ -103,6 +109,7 @@ namespace {
 			    descriptor.device != nullptr && descriptor.device->isReady(), devices.gamepadDeviceStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.gamepadDeviceCount();
 
 		if (rowIndex < devices.sensorDeviceCount()) {
@@ -111,6 +118,7 @@ namespace {
 			    descriptor.device != nullptr && descriptor.device->isReady(), devices.sensorDeviceStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.sensorDeviceCount();
 
 		if (rowIndex < devices.infraredDeviceCount()) {
@@ -119,6 +127,7 @@ namespace {
 			    descriptor.device != nullptr && descriptor.device->isReady(), devices.infraredDeviceStatusAt(rowIndex), descriptor.description);
 			return true;
 		}
+
 		rowIndex -= devices.infraredDeviceCount();
 
 		auto const audioCount = devices.audioDeviceCount(table.appContext.platform());
@@ -130,6 +139,7 @@ namespace {
 			    descriptor.description);
 			return true;
 		}
+
 		rowIndex -= audioCount;
 
 		auto const microphoneCount = devices.microphoneDeviceCount(table.appContext.platform());
@@ -141,6 +151,7 @@ namespace {
 			    descriptor.description);
 			return true;
 		}
+
 		rowIndex -= microphoneCount;
 
 		if (rowIndex < devices.picoCalcSouthbridgeServiceCount()) {

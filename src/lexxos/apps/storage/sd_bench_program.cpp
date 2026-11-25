@@ -1,350 +1,264 @@
 #include <lexxos/apps/storage/sd_bench_program.h>
 
-#include <array>
-#include <cstdint>
-#include <cstring>
-#include <new>
-#include <string_view>
-
 #include <lexxos/apps/common/core_programs_support.h>
-#include <lexxos/apps/storage/detail/storage_program_support.h>
-#include <lexxos/devices/sd_card.h>
-#include <lexxos/devices/storage/block_device.h>
+#include <lexxos/apps/storage/detail/block_read_benchmark.h>
+#include <lexxos/apps/storage/detail/file_benchmark.h>
+#include <lexxos/devices/device_manager.h>
+#include <lexxos/feature.h>
 #include <lexxos/os/app_context.h>
 #include <lexxos/program/program_memory_arena.h>
 #include <lexxos/vfs/vfs.h>
+#if FEATURE_ENABLED(FATFS)
+	#include <lexxos/fs/fat/fat_volume.h>
+#endif
+#include <algorithm>
+#include <array>
+#include <new>
 
 namespace lexxos::apps::storage_programs {
-
-using lexxos::program::ProgramDescriptor;
-using lexxos::program::ProgramLaunchMode;
-using lexxos::program::ProgramMemoryClass;
-
-using detail::elapsedMs;
-using detail::fillPattern;
-using detail::parseOptionalCount;
-using detail::sdBenchDefaultBlocks;
-using detail::sdBenchDefaultPath;
-using detail::sdBenchMaxBlocks;
-using detail::storageBlockSize;
-using detail::verifyPattern;
-using detail::writeThroughput;
 
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
-	using lexxos::program::ProgramArgumentSpec;
 	using lexxos::program::ProgramArgumentValueType;
-
-	constexpr ProgramArgumentSpec sdBenchArguments[] = {
-	    {
-         .name = "blocks",
-         .valueName = "blocks",
-         .help = "optional 512-byte block count, default: 128, max: 1024",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-	     },
-	    {
-         .name = "path",
-         .valueName = "path",
-         .help = "optional FAT benchmark file path, default: /mnt/sd/LEXBENCH.TXT",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Path,
-         .required = false,
-	     },
-	    {
-         .name = "delay-ms",
-         .shortName = 'd',
-         .valueName = "ms",
-         .help = "optional delay after each 512-byte block, default: 0, max: 1000",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0",
-	     },
+	constexpr std::size_t bufferBytes = 4096;
+	constexpr lexxos::program::ProgramArgumentSpec arguments[]{
+	    {.name = "blocks", .help = "raw blocks to compare, default 128, max 1024", .kind = ProgramArgumentKind::Positional, .valueType = ProgramArgumentValueType::Unsigned},
+	    {.name = "path", .help = "existing file to read, or NEW test directory with --write", .kind = ProgramArgumentKind::Positional, .valueType = ProgramArgumentValueType::Path},
+	    {.name = "device", .valueName = "name", .help = "registered block device, e.g. sd0 or /dev/sd1"},
+	    {.name = "start", .valueName = "lba", .help = "first raw block", .valueType = ProgramArgumentValueType::Unsigned, .defaultValue = "0"},
+	    {.name = "batch", .valueName = "blocks", .help = "blocks per request, 1..8", .valueType = ProgramArgumentValueType::Unsigned, .defaultValue = "8"},
+	    {.name = "write", .help = "create, verify and remove test data in a NEW directory", .kind = ProgramArgumentKind::Flag},
+	    {.name = "bytes", .valueName = "bytes", .help = "exact test file size, default 32658, max 16777216", .valueType = ProgramArgumentValueType::Unsigned, .defaultValue = "32658"},
+	    {.name = "delay-ms", .shortName = 'd', .valueName = "ms", .help = "delay after each I/O request, 0..1000", .valueType = ProgramArgumentValueType::Unsigned, .defaultValue = "0"},
 	};
 
-	bool allocateWorkspace(
-	    lexxos::os::AppContext& context,
-	    std::array<char, lexxos::vfs::maxPathLength>*& path,
-	    std::array<char, storageBlockSize>*& ioBuffer) {
-		auto* const arena = context.memoryArena();
-		if (arena == nullptr) {
-			context.writeLine("sd-bench: program memory arena is unavailable");
-			return false;
-		}
+	struct Workspace {
+		alignas(4) std::array<std::uint8_t, bufferBytes> reference{};
+		alignas(4) std::array<std::uint8_t, bufferBytes> transfer{};
+		std::array<char, lexxos::vfs::maxPathLength> path{};
+	};
 
-		auto* const pathMemory = arena->allocate(sizeof(std::array<char, lexxos::vfs::maxPathLength>), alignof(std::array<char, lexxos::vfs::maxPathLength>));
-		auto* const ioMemory = arena->allocate(sizeof(std::array<char, storageBlockSize>), alignof(std::array<char, storageBlockSize>));
-		if (pathMemory == nullptr || ioMemory == nullptr) {
-			context.writeLine("sd-bench: not enough program workspace memory");
-			return false;
-		}
+	struct MountLookup {
+		std::string_view path{};
+		std::string_view source{};
+		std::string_view target{};
+		bool readOnly{true};
+	};
 
-		path = new (pathMemory) std::array<char, lexxos::vfs::maxPathLength>{};
-		ioBuffer = new (ioMemory) std::array<char, storageBlockSize>{};
-		return true;
-	}
-
-	bool cancellationRequested(lexxos::os::AppContext& context) {
-		if (!context.cancellationRequested()) {
-			return false;
-		}
-
-		context.writeLine("sd-bench: cancelled");
-		return true;
-	}
-
-	bool parseDelayMs(
-	    lexxos::os::AppContext& context,
-	    lexxos::program::ParsedArguments const& arguments,
-	    std::uint32_t& delayMs) {
-		auto const value = arguments.valueOr("delay-ms", "0");
-		if (!parseUnsigned32(value, delayMs) || delayMs > 1000U) {
-			context.writeLine("sd-bench delay-ms: expected 0..1000");
-			return false;
+	bool findMount(lexxos::vfs::MountInfo const& mount, void* data) {
+		auto& lookup = *static_cast<MountLookup*>(data);
+		bool const matches = lookup.path == mount.target || (lookup.path.starts_with(mount.target) && (mount.target == "/" || (lookup.path.size() > mount.target.size() && lookup.path[mount.target.size()] == '/')));
+		if (matches && mount.target.size() > lookup.target.size()) {
+			lookup.source = mount.source;
+			lookup.target = mount.target;
+			lookup.readOnly = mount.readOnly;
 		}
 
 		return true;
 	}
 
-	bool waitAfterBlock(lexxos::os::AppContext& context, std::uint32_t delayMs) {
-		std::uint32_t remaining = delayMs;
-		while (remaining > 0) {
-			if (cancellationRequested(context)) {
-				return true;
+	std::string_view deviceName(std::string_view source) {
+		return source.starts_with("/dev/") ? source.substr(5) : source;
+	}
+
+	std::uint32_t clusterSize(MountLookup const& mount) {
+#if FEATURE_ENABLED(FATFS)
+		struct Lookup {
+			MountLookup const& mount;
+			std::uint32_t bytes{};
+		} lookup{mount};
+
+		lexxos::fs::fat::visitMountedVolumes([](lexxos::fs::fat::FatVolumeInfo const& volume, void* data) {
+			auto& state = *static_cast<Lookup*>(data);
+			if (volume.target == state.mount.target && deviceName(volume.source) == deviceName(state.mount.source)) {
+				state.bytes = volume.bytesPerCluster;
 			}
-			auto const slice = remaining > 25U ? 25U : remaining;
-			sleepMs(context, slice);
-			remaining -= slice;
+			return true;
+		},
+		    &lookup);
+		return lookup.bytes;
+#else
+		(void) mount;
+		return 0;
+#endif
+	}
+
+	bool unsignedOption(lexxos::os::AppContext& ctx, std::string_view text, std::uint32_t min,
+	    std::uint32_t max, std::uint32_t& value, std::string_view name) {
+		if (parseUnsigned32(text, value) && value >= min && value <= max) {
+			return true;
 		}
 
-		return cancellationRequested(context);
+		ctx.write("sd-bench: invalid ");
+		ctx.writeLine(name);
+		return false;
+	}
+
+	struct ReadContext {
+		lexxos::os::AppContext& ctx;
+		std::uint32_t delay;
+	};
+
+	bool isCancelled(void* data) {
+		return static_cast<ReadContext*>(data)->ctx.cancellationRequested();
+	}
+
+	void afterRead(void* data) {
+		auto& state = *static_cast<ReadContext*>(data);
+		auto left = state.delay;
+		while (left && !state.ctx.cancellationRequested()) {
+			auto const slice = std::min(left, static_cast<std::uint32_t>(25U));
+			sleepMs(state.ctx, slice);
+			left -= slice;
+		}
 	}
 
 } // namespace
 
-ProgramDescriptor SdBenchProgram::descriptor() {
+lexxos::program::ProgramDescriptor SdBenchProgram::descriptor() {
 	return {
 	    .name = "sd-bench",
-	    .help = "benchmark SD raw read and FAT read/write",
-	    .description = "Reads raw SD blocks, writes a temporary FAT file, reads it back and verifies a generated pattern.",
-	    .usage = "sd-bench [--delay-ms ms] [blocks] [path]",
-	    .arguments = argumentList(sdBenchArguments),
+	    .help = "verify block batches and file sector/cluster boundaries",
+	    .description = "Portable BlockDevice/VFS benchmark. Raw access is read-only. File writes require --write and a new test directory.",
+	    .usage = "sd-bench [--device name] [--start lba] [--batch 1..8] [--write] [--bytes n] [--delay-ms ms] [blocks] [path]",
+	    .arguments = argumentList(arguments),
 	    .handler = run,
-	    .runtime = {
-	                .launchMode = ProgramLaunchMode::ForegroundTask,
+	    .runtime = {.launchMode = lexxos::program::ProgramLaunchMode::ForegroundTask,
 	                .stackSizeBytes = 5120,
 	                .priority = 1,
-	                .memoryClass = ProgramMemoryClass::InternalOnly,
+	                .memoryClass = lexxos::program::ProgramMemoryClass::InternalOnly,
 	                .externalMemoryQuotaBytes = 0,
-	                .internalMemoryQuotaBytes = lexxos::vfs::maxPathLength + storageBlockSize,
+	                .internalMemoryQuotaBytes = sizeof(Workspace),
 	                .cancellable = true,
-	                .allowBackground = true,
-	                },
+	                .allowBackground = false},
 	};
 }
 
-int SdBenchProgram::run(
-    lexxos::os::AppContext& context,
-    lexxos::program::ProgramInvocation const&,
-    lexxos::program::ParsedArguments const& arguments) {
-	if (!ensureStorageReady(context)) {
+int SdBenchProgram::run(lexxos::os::AppContext& ctx, lexxos::program::ProgramInvocation const&,
+    lexxos::program::ParsedArguments const& args) {
+	// Проверяем весь запрос до выделения ресурсов и обращения к носителю.
+	std::uint32_t blocks{}, batch{}, bytes{}, delay{};
+	std::uint64_t first{};
+	if (!unsignedOption(ctx, args.positionalOr("blocks", "128"), 1, 1024, blocks, "blocks") || !unsignedOption(ctx, args.valueOr("batch", "8"), 1, 8, batch, "batch") || !unsignedOption(ctx, args.valueOr("bytes", "32658"), 1, 16777216, bytes, "bytes") || !unsignedOption(ctx, args.valueOr("delay-ms", "0"), 0, 1000, delay, "delay-ms")) {
 		return 1;
 	}
 
-	std::uint32_t blocks = 0;
-	if (!parseOptionalCount(context, arguments.positional("blocks"), sdBenchDefaultBlocks, sdBenchMaxBlocks, "sd-bench blocks", blocks)) {
+	if (!parseUnsigned64(args.valueOr("start", "0"), first)) {
+		ctx.writeLine("sd-bench: invalid start LBA");
 		return 1;
 	}
 
-	std::array<char, lexxos::vfs::maxPathLength>* path = nullptr;
-	std::array<char, storageBlockSize>* ioBuffer = nullptr;
-	if (!allocateWorkspace(context, path, ioBuffer)) {
+	bool const write = args.has("write");
+	bool const hasPath = !args.positional("path").empty();
+	if ((write && !hasPath) || (args.has("bytes") && !write)) {
+		ctx.writeLine("sd-bench: --write needs a new test directory; --bytes needs --write");
 		return 1;
 	}
 
-	if (!resolvePath(context, arguments.positionalOr("path", sdBenchDefaultPath), *path)) {
+	auto* arena = ctx.memoryArena();
+	auto* memory = arena ? arena->allocate(sizeof(Workspace), alignof(Workspace)) : nullptr;
+	if (!memory) {
+		ctx.writeLine("sd-bench: program workspace unavailable");
 		return 1;
 	}
 
-	std::uint32_t delayMs = 0;
-	if (!parseDelayMs(context, arguments, delayMs)) {
+	auto& workspace = *new (memory) Workspace{};
+	if (hasPath && !resolvePath(ctx, args.positional("path"), workspace.path)) {
 		return 1;
 	}
 
-	auto storageLock = lockSdBlockDevice(context, "sd-bench");
-	if (!storageLock) {
+	MountLookup mount{.path = hasPath ? std::string_view{workspace.path.data()} : std::string_view{"/mnt/sd"}};
+	ctx.vfs().visitMounts(findMount, &mount);
+	auto name = deviceName(args.valueOr("device", mount.source));
+	if (name.empty()) {
+		ctx.writeLine("sd-bench: select --device; no mounted default device at /mnt/sd");
 		return 1;
 	}
 
-	auto* device = sdBlockDevice(context);
-	if (device == nullptr || !device->isReady()) {
-		context.writeLine("sd-bench: sd0 is not ready");
+	auto* device = ctx.devices().blockDevice(name);
+	if (!device || !device->isReady() || ctx.vfs().blockDevice(name) != device) {
+		ctx.writeLine("sd-bench: device unavailable; use block-devs and mount first");
 		return 1;
 	}
 
-	context.write("sd-bench: active baud ");
-	writeUnsigned(context, lexxos::devices::sd_card::activeBaudRate());
-	context.writeLine(" Hz");
+	if (hasPath && (mount.source.empty() || ctx.vfs().blockDevice(mount.source) != device)) {
+		ctx.writeLine("sd-bench: file path must belong to the selected device");
+		return 1;
+	}
 
-	// Keep the benchmark task stack small enough for the supervisor path.  The
-	// same arena-backed 512-byte block buffer is reused for raw read, FAT write
-	// and FAT read verification instead of keeping block buffers on the stack.
-	std::uint32_t const rawBlocks = static_cast<std::uint32_t>(std::min<std::uint64_t>(blocks, device->blockCount()));
-	std::uint32_t const rawStartMs = uptimeMs(context);
-	for (std::uint32_t block = 0; block < rawBlocks; ++block) {
-		if (cancellationRequested(context)) {
+	if (write && (device->isReadOnly() || mount.readOnly)) {
+		ctx.writeLine("sd-bench: selected filesystem is read-only");
+		return 1;
+	}
+
+	// Общий тест не знает SPI/CMD18: backend сам выбирает реализацию пакетного чтения.
+	auto lock = ctx.devices().lockBlockDevice(name, lexxos::devices::DeviceResourcePriority::Interactive, "sd-bench");
+	if (!lock) {
+		ctx.writeLine("sd-bench: device is busy");
+		return 1;
+	}
+
+	ReadContext readContext{ctx, delay};
+	detail::BlockReadBenchmarkOptions const options{first, blocks, batch, isCancelled, afterRead, &readContext};
+	auto const started = uptimeMs(ctx);
+	auto const result = detail::BlockReadBenchmark::run(*device, options, workspace.reference, workspace.transfer);
+	lock.release();
+	if (result.status != detail::BlockReadBenchmarkStatus::Ok) {
+		if (result.status == detail::BlockReadBenchmarkStatus::Cancelled) {
+			ctx.writeLine("sd-bench: cancelled");
 			return 130;
 		}
 
-		if (!device->readBlocks(block, ioBuffer->data(), 1)) {
-			context.write("sd-bench: raw read failed at block ");
-			writeUnsigned(context, block);
-			context.writeLine("");
-			return 1;
-		}
-
-		if (waitAfterBlock(context, delayMs)) {
-			return 130;
-		}
-	}
-	std::uint32_t const rawElapsedMs = elapsedMs(rawStartMs, uptimeMs(context));
-
-	context.write("sd-bench: raw read ");
-	writeUnsigned64(context, static_cast<std::uint64_t>(rawBlocks) * storageBlockSize);
-	context.write(" bytes in ");
-	writeUnsigned(context, rawElapsedMs);
-	context.write(" ms, ");
-	writeThroughput(context, static_cast<std::uint64_t>(rawBlocks) * storageBlockSize, rawElapsedMs);
-	context.writeLine("");
-
-	context.write("sd-bench: active baud after raw read ");
-	writeUnsigned(context, lexxos::devices::sd_card::activeBaudRate());
-	context.writeLine(" Hz");
-
-	storageLock.release();
-
-	context.write("sd-bench: FAT file ");
-	context.write(path->data());
-	context.write(", blocks=");
-	writeUnsigned(context, blocks);
-	context.writeLine("");
-
-	lexxos::vfs::FileHandle output;
-	auto openStatus = lexxos::vfs::open(path->data(), lexxos::vfs::OpenMode::CreateTruncateWrite, output);
-	if (openStatus != lexxos::vfs::OpenStatus::Ok) {
-		context.write("sd-bench: open write failed: ");
-		context.writeLine(lexxos::vfs::toString(openStatus));
+		ctx.write("sd-bench: raw test failed at LBA ");
+		writeUnsigned64(ctx, result.failedBlock);
+		ctx.write(" status=");
+		ctx.writeLine(result.status == detail::BlockReadBenchmarkStatus::Mismatch ? "data-mismatch" : result.status == detail::BlockReadBenchmarkStatus::InvalidRange ? "invalid-range"
+		        : result.status == detail::BlockReadBenchmarkStatus::InvalidBuffer                                                                                    ? "unsupported-block/batch-size"
+		                                                                                                                                                              : "read-error");
 		return 1;
 	}
 
-	std::uint32_t const writeStartMs = uptimeMs(context);
-	for (std::uint32_t block = 0; block < blocks; ++block) {
-		if (cancellationRequested(context)) {
-			output.close();
-			(void) lexxos::vfs::remove(path->data());
-			return 130;
+	auto const elapsed = std::max(static_cast<std::uint32_t>(1U), uptimeMs(ctx) - started);
+	ctx.write("sd-bench: device=");
+	ctx.write(name);
+	ctx.write(" single/batch requests=");
+	writeUnsigned(ctx, result.singleRequests);
+	ctx.write("/");
+	writeUnsigned(ctx, result.batchRequests);
+	ctx.write(" verified bytes=");
+	writeUnsigned64(ctx, result.bytesRead);
+	ctx.write(" elapsed-ms=");
+	writeUnsigned(ctx, elapsed);
+	ctx.write(" KiB/s=");
+	writeUnsigned64(ctx, result.bytesRead * 1000ULL / (elapsed * 1024ULL));
+	ctx.writeLine(" (includes comparison and requested delays)");
+
+	// Файл проверяется через тот же экземпляр VFS, на выбранном томе.
+	if (hasPath) {
+		auto const cluster = clusterSize(mount);
+		auto buffer = std::span<char>{reinterpret_cast<char*>(workspace.transfer.data()), workspace.transfer.size()};
+		auto status = detail::FileBenchmark::run(ctx, workspace.path.data(), write, bytes, cluster, delay, buffer);
+		if (status) {
+			return status;
 		}
 
-		fillPattern(*ioBuffer, 17U, static_cast<std::uint64_t>(block) * storageBlockSize);
-		auto const writeStatus = output.write(std::string_view{ioBuffer->data(), ioBuffer->size()});
-		if (writeStatus != lexxos::vfs::WriteStatus::Ok) {
-			context.write("sd-bench: write failed: ");
-			context.writeLine(lexxos::vfs::toString(writeStatus));
-			return 1;
-		}
-
-		if (waitAfterBlock(context, delayMs)) {
-			output.close();
-			(void) lexxos::vfs::remove(path->data());
-			return 130;
-		}
-	}
-	output.close();
-
-	auto const syncStatus = lexxos::vfs::sync();
-	if (syncStatus != lexxos::vfs::SyncStatus::Ok) {
-		context.write("sd-bench: sync failed: ");
-		context.writeLine(lexxos::vfs::toString(syncStatus));
-		return 1;
-	}
-	std::uint32_t const writeElapsedMs = elapsedMs(writeStartMs, uptimeMs(context));
-
-	context.write("sd-bench: FAT write ");
-	writeUnsigned64(context, static_cast<std::uint64_t>(blocks) * storageBlockSize);
-	context.write(" bytes in ");
-	writeUnsigned(context, writeElapsedMs);
-	context.write(" ms, ");
-	writeThroughput(context, static_cast<std::uint64_t>(blocks) * storageBlockSize, writeElapsedMs);
-	context.writeLine("");
-
-	lexxos::vfs::FileHandle input;
-	openStatus = lexxos::vfs::open(path->data(), lexxos::vfs::OpenMode::Read, input);
-	if (openStatus != lexxos::vfs::OpenStatus::Ok) {
-		context.write("sd-bench: open read failed: ");
-		context.writeLine(lexxos::vfs::toString(openStatus));
-		return 1;
-	}
-
-	std::uint32_t const readStartMs = uptimeMs(context);
-	std::uint64_t offset = 0;
-	for (std::uint32_t block = 0; block < blocks; ++block) {
-		if (cancellationRequested(context)) {
-			input.close();
-			(void) lexxos::vfs::remove(path->data());
-			return 130;
-		}
-
-		std::size_t bytesRead = 0;
-		auto const readStatus = input.read(ioBuffer->data(), ioBuffer->size(), bytesRead);
-		if (readStatus != lexxos::vfs::ReadStatus::Ok || bytesRead != ioBuffer->size()) {
-			context.write("sd-bench: read failed at block ");
-			writeUnsigned(context, block);
-			context.write(": ");
-			if (readStatus == lexxos::vfs::ReadStatus::Ok) {
-				context.writeLine("short read");
-			} else {
-				context.writeLine(lexxos::vfs::toString(readStatus));
+		// 32658 не превышает кластер 32 KiB: дополнительный проход пересекает два кластера.
+		std::uint64_t const boundaryBytes = std::uint64_t(cluster) * 2U + 17U;
+		if (write && cluster && bytes <= std::uint64_t(cluster) * 2U) {
+			if (boundaryBytes > 16777216U) {
+				ctx.writeLine("sd-bench: cluster exceeds test size limit");
+				return 1;
 			}
-			return 1;
-		}
 
-		if (!verifyPattern(*ioBuffer, bytesRead, 17U, offset)) {
-			context.write("sd-bench: verify failed at block ");
-			writeUnsigned(context, block);
-			context.writeLine("");
-			return 1;
-		}
-
-		offset += bytesRead;
-
-		if (waitAfterBlock(context, delayMs)) {
-			input.close();
-			(void) lexxos::vfs::remove(path->data());
-			return 130;
+			status = detail::FileBenchmark::run(ctx, workspace.path.data(), true, static_cast<std::uint32_t>(boundaryBytes), cluster, delay, buffer);
+			if (status) {
+				return status;
+			}
 		}
 	}
-	std::uint32_t const readElapsedMs = elapsedMs(readStartMs, uptimeMs(context));
 
-	context.write("sd-bench: FAT read/verify ");
-	writeUnsigned64(context, offset);
-	context.write(" bytes in ");
-	writeUnsigned(context, readElapsedMs);
-	context.write(" ms, ");
-	writeThroughput(context, offset, readElapsedMs);
-	context.writeLine("");
-
-	input.close();
-	auto const removeStatus = lexxos::vfs::remove(path->data());
-	if (removeStatus != lexxos::vfs::RemoveStatus::Ok) {
-		context.write("sd-bench: cleanup failed: ");
-		context.writeLine(lexxos::vfs::toString(removeStatus));
-		return 1;
-	}
-
-	context.writeLine("sd-bench: ok");
+	ctx.writeLine("sd-bench: ok");
 	return 0;
 }
 

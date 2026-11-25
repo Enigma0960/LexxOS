@@ -13,6 +13,7 @@ CartridgeLifetimeGuard::~CartridgeLifetimeGuard() {
 	if (_bus != nullptr) {
 		_bus->attachCartridge(nullptr);
 	}
+
 	if (_cartridge != nullptr) {
 		_cartridge->close();
 	}

@@ -2,8 +2,8 @@
 
 namespace lexxos::platform {
 
-BoardDescriptor const& activeBoardDescriptor() {
-	static BoardDescriptor const descriptor{
+LegacyBoardDescriptor const& activeBoardDescriptor() {
+	static LegacyBoardDescriptor const descriptor{
 	    .boardId = "m5stack_basic_v1",
 	    .boardName = "M5Stack Basic Core v1",
 	    .vendor = "M5Stack",

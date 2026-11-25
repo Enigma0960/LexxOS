@@ -18,6 +18,7 @@ bool PicoCalcSouthbridgeRequests::requestLcdBacklight(
 	if (ok) {
 		snapshots.publishLcdBacklight(acceptedValue, nowMs);
 	}
+
 	commands.finish(state, acceptedValue, nowMs);
 	return ok;
 }
@@ -36,6 +37,7 @@ bool PicoCalcSouthbridgeRequests::requestKeyboardBacklight(
 	if (ok) {
 		snapshots.publishKeyboardBacklight(acceptedValue, nowMs);
 	}
+
 	commands.finish(state, acceptedValue, nowMs);
 	return ok;
 }

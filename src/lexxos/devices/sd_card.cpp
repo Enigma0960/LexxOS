@@ -4,7 +4,9 @@
 #include <lexxos/devices/storage/async_block_device.h>
 #include <lexxos/platform/platform_services.h>
 
-#if defined(LEXXOS_SD_BACKEND_SDIO)
+#if defined(LEXXOS_PLATFORM_RK3506)
+	#include <lexxos/app/rk3506/picosd_storage.h>
+#elif defined(LEXXOS_SD_BACKEND_SDIO)
 	#include <lexxos/devices/storage/sd_sdio_backend.h>
 #else
 	#include <lexxos/devices/storage/sd_spi_backend.h>
@@ -22,10 +24,11 @@ namespace {
 		case lexxos::platform::SdInterface::None:
 			break;
 	}
+
 	return lexxos::devices::SdCardInterface::Unknown;
 }
 
-[[nodiscard]] lexxos::platform::BoardDescriptor const& boardFor(lexxos::platform::PlatformServices const& platform) {
+[[nodiscard]] lexxos::platform::LegacyBoardDescriptor const& boardFor(lexxos::platform::PlatformServices const& platform) {
 	auto const& board = platform.board;
 	return board.current != nullptr ? board.current() : lexxos::platform::board();
 }
@@ -39,7 +42,12 @@ void sleepMs(lexxos::platform::PlatformServices const& platform, std::uint32_t m
 
 lexxos::devices::SdCardBackend& backend(lexxos::platform::PlatformServices const& platform) {
 	auto const& board = boardFor(platform);
-#if defined(LEXXOS_SD_BACKEND_SDIO)
+#if defined(LEXXOS_PLATFORM_RK3506)
+	// Use the very same PicoSdBlockDevice mounted as /dev/sd1.
+	// Never instantiate the generic SdSpiBackend on RK3506.
+	(void) board;
+	return lexxos::platform::rk3506::picoSdBackend();
+#elif defined(LEXXOS_SD_BACKEND_SDIO)
 	static lexxos::devices::SdSdioBackend storage{
 	    board.sdSdio,
 	    board.sdCardDetect,
@@ -95,14 +103,17 @@ bool lexxos::devices::sd_card::probe(lexxos::platform::PlatformServices const& p
 	if (attempts == 0) {
 		attempts = 1;
 	}
+
 	for (std::uint8_t attempt = 0; attempt < attempts; ++attempt) {
 		if (initialize(platform)) {
 			return true;
 		}
+
 		if (attempt + 1 < attempts) {
 			sleepMs(platform, static_cast<std::uint32_t>(100U + attempt * 100U));
 		}
 	}
+
 	return false;
 }
 

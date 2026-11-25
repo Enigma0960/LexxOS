@@ -55,6 +55,7 @@ namespace {
 			case 3:
 				return 256;
 		}
+
 		return 1024;
 	}
 
@@ -117,6 +118,7 @@ lexxos::vfs::ReadStatus Bus::read8(std::uint16_t address, std::uint8_t& value) {
 		if (_cartridge == nullptr) {
 			return lexxos::vfs::ReadStatus::NotReadable;
 		}
+
 		return _cartridge->read8(address, value);
 	}
 
@@ -130,6 +132,7 @@ lexxos::vfs::ReadStatus Bus::read8(std::uint16_t address, std::uint8_t& value) {
 			value = 0xFF;
 			return lexxos::vfs::ReadStatus::Ok;
 		}
+
 		return _cartridge->readExternalRam(address, value);
 	}
 
@@ -193,20 +196,26 @@ std::uint8_t Bus::read8Fast(std::uint16_t address) {
 			if (address < oamStart) {
 				return _wram[static_cast<std::size_t>(address - echoRamStart)];
 			}
+
 			if (address < unusableStart) {
 				return _oam[static_cast<std::size_t>(address - oamStart)];
 			}
+
 			if (address < ioStart) {
 				return 0xFF;
 			}
+
 			if (address < hramStart) {
 				return readIo(address);
 			}
+
 			if (address < interruptEnableAddress) {
 				return _hram[static_cast<std::size_t>(address - hramStart)];
 			}
+
 			return _interruptEnable;
 	}
+
 	return 0xFF;
 }
 
@@ -224,6 +233,7 @@ std::uint8_t Bus::readProgram8(std::uint16_t address) {
 			}
 		}
 	}
+
 	return read8Fast(address);
 }
 
@@ -242,6 +252,7 @@ std::uint16_t Bus::readProgram16(std::uint16_t address) {
 			}
 		}
 	}
+
 	auto const low = static_cast<std::uint16_t>(readProgram8(address));
 	auto const high = static_cast<std::uint16_t>(readProgram8(static_cast<std::uint16_t>(address + 1U)));
 	return static_cast<std::uint16_t>(low | (high << 8U));
@@ -268,6 +279,7 @@ void Bus::write8Fast(std::uint16_t address, std::uint8_t value) {
 			if (_cartridge != nullptr) {
 				_cartridge->write8(address, value);
 			}
+
 			return;
 		case 0x8:
 		case 0x9:
@@ -279,6 +291,7 @@ void Bus::write8Fast(std::uint16_t address, std::uint8_t value) {
 			if (_cartridge != nullptr) {
 				_cartridge->writeExternalRam(address, value);
 			}
+
 			return;
 		case 0xC:
 		case 0xD:
@@ -292,22 +305,27 @@ void Bus::write8Fast(std::uint16_t address, std::uint8_t value) {
 				_wram[static_cast<std::size_t>(address - echoRamStart)] = value;
 				return;
 			}
+
 			if (address < unusableStart) {
 				_oam[static_cast<std::size_t>(address - oamStart)] = value;
 				++_oamWriteCount;
 				return;
 			}
+
 			if (address < ioStart) {
 				return;
 			}
+
 			if (address < hramStart) {
 				writeIo(address, value);
 				return;
 			}
+
 			if (address < interruptEnableAddress) {
 				_hram[static_cast<std::size_t>(address - hramStart)] = value;
 				return;
 			}
+
 			_interruptEnable = value;
 			return;
 	}
@@ -370,6 +388,7 @@ void Bus::advanceCyclesFast(std::uint32_t cycles) {
 		} else if (ly >= 154U) {
 			ly = 0;
 		}
+
 		lyChanged = true;
 	}
 
@@ -421,9 +440,11 @@ std::uint8_t Bus::readIo(std::uint16_t address) const {
 		default:
 			break;
 	}
+
 	if (Apu::isAudioRegister(address)) {
 		return _apu.readRegister(address);
 	}
+
 	switch (address) {
 		case lcdStatusAddress: {
 			auto const stat = _io[static_cast<std::size_t>(lcdStatusAddress - ioStart)];
@@ -462,6 +483,7 @@ void Bus::writeIo(std::uint16_t address, std::uint8_t value) {
 				_serialTransferByte = _io[static_cast<std::size_t>(serialDataAddress - ioStart)];
 				_serialTransferCycles = serialInternalTransferCycles;
 			}
+
 			return;
 		case dividerAddress:
 			_dividerCounter = 0;
@@ -486,6 +508,7 @@ void Bus::writeIo(std::uint16_t address, std::uint8_t value) {
 				updatePpuCoincidence(true);
 				setPpuMode(ppuModeOam, true);
 			}
+
 			return;
 		}
 		case lcdStatusAddress:
@@ -505,6 +528,7 @@ void Bus::writeIo(std::uint16_t address, std::uint8_t value) {
 			for (std::uint16_t offset = 0; offset < oamSize; ++offset) {
 				_oam[static_cast<std::size_t>(offset)] = read8OrFF(static_cast<std::uint16_t>(sourceBase + offset));
 			}
+
 			_oamWriteCount += static_cast<std::uint32_t>(oamSize);
 			return;
 		}
@@ -521,12 +545,15 @@ std::uint8_t Bus::readJoypad() const {
 		if (_joypad.right) {
 			low &= static_cast<std::uint8_t>(~0x01U);
 		}
+
 		if (_joypad.left) {
 			low &= static_cast<std::uint8_t>(~0x02U);
 		}
+
 		if (_joypad.up) {
 			low &= static_cast<std::uint8_t>(~0x04U);
 		}
+
 		if (_joypad.down) {
 			low &= static_cast<std::uint8_t>(~0x08U);
 		}
@@ -536,12 +563,15 @@ std::uint8_t Bus::readJoypad() const {
 		if (_joypad.a) {
 			low &= static_cast<std::uint8_t>(~0x01U);
 		}
+
 		if (_joypad.b) {
 			low &= static_cast<std::uint8_t>(~0x02U);
 		}
+
 		if (_joypad.select) {
 			low &= static_cast<std::uint8_t>(~0x04U);
 		}
+
 		if (_joypad.start) {
 			low &= static_cast<std::uint8_t>(~0x08U);
 		}
@@ -607,6 +637,7 @@ void Bus::updatePpuCoincidence(bool allowStatInterrupt) {
 	} else {
 		stat = static_cast<std::uint8_t>(stat & static_cast<std::uint8_t>(~statCoincidenceFlag));
 	}
+
 	if (allowStatInterrupt && isCoincident && !wasCoincident && (stat & statLycInterruptEnable) != 0) {
 		requestInterrupt(interruptLcdStat);
 	}
@@ -622,12 +653,15 @@ std::uint8_t Bus::currentPpuMode() const {
 	if (ly >= 144U) {
 		return ppuModeVBlank;
 	}
+
 	if (_scanlineDots < 80U) {
 		return ppuModeOam;
 	}
+
 	if (_scanlineDots < 252U) {
 		return ppuModeTransfer;
 	}
+
 	return ppuModeHBlank;
 }
 
@@ -638,10 +672,12 @@ void Bus::setPpuMode(std::uint8_t mode, bool allowStatInterrupt) {
 	if (previousMode == mode) {
 		return;
 	}
+
 	stat = static_cast<std::uint8_t>((stat & static_cast<std::uint8_t>(~statModeMask)) | mode);
 	if (!allowStatInterrupt) {
 		return;
 	}
+
 	std::uint8_t interruptEnable = 0;
 	switch (mode) {
 		case ppuModeHBlank:
@@ -656,6 +692,7 @@ void Bus::setPpuMode(std::uint8_t mode, bool allowStatInterrupt) {
 		default:
 			break;
 	}
+
 	if (interruptEnable != 0 && (stat & interruptEnable) != 0) {
 		requestInterrupt(interruptLcdStat);
 	}
@@ -674,6 +711,7 @@ void Bus::updatePpuTiming(std::uint32_t cycles) {
 		resetPpuTiming();
 		return;
 	}
+
 	auto& ly = _io[static_cast<std::size_t>(lyAddress - ioStart)];
 
 	bool lyChanged = false;
@@ -686,8 +724,10 @@ void Bus::updatePpuTiming(std::uint32_t cycles) {
 		} else if (ly >= 154U) {
 			ly = 0;
 		}
+
 		lyChanged = true;
 	}
+
 	if (lyChanged) {
 		updatePpuCoincidence(true);
 	}
@@ -718,6 +758,7 @@ std::uint32_t Bus::nonZeroVramBytes() const {
 			++count;
 		}
 	}
+
 	return count;
 }
 
@@ -728,6 +769,7 @@ std::uint32_t Bus::nonZeroOamBytes() const {
 			++count;
 		}
 	}
+
 	return count;
 }
 

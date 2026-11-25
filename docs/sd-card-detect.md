@@ -34,7 +34,7 @@ Pico GPIO input ---- card-detect switch ---- GND
 
 В этом случае platform backend должен использовать internal pull-down.
 
-## Pinout development board
+## Распиновка отладочной платы
 
 Текущий `dev_pico` profile использует следующие pins:
 

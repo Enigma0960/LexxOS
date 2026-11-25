@@ -1,6 +1,6 @@
 # `devs`
 
-show registered devices.
+Показывает зарегистрированные устройства.
 
 ## Справка shell
 

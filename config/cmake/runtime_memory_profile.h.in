@@ -1,0 +1,17 @@
+#pragma once
+
+#include <lexxos/runtime/runtime_profile.h>
+@_includes@
+namespace lexxos::runtime {
+
+inline constexpr RuntimeProfile standardRuntimeProfile = [] {
+    RuntimeProfile profile{};
+@_apply@#if defined(LEXXOS_BOARD_NAME)
+    profile.origin.board = LEXXOS_BOARD_NAME;
+#endif
+    return profile;
+}();
+
+static_assert(validateRuntimeProfile(standardRuntimeProfile), "Invalid target memory profile");
+
+} // namespace lexxos::runtime

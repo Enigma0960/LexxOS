@@ -60,10 +60,11 @@ namespace detail {
 			case OpenStatus::InvalidPath:
 				return ReadStatus::InvalidPath;
 			case OpenStatus::ReadOnlyFilesystem:
-			case OpenStatus::NotWritable:
+			case OpenStatus::NotWritable       :
 			case OpenStatus::NoSpace:
 				return ReadStatus::NotReadable;
 		}
+
 		return ReadStatus::NotReadable;
 	}
 
@@ -148,7 +149,7 @@ namespace detail {
 		copyRawNumber(raw, output);
 	}
 
-} // namespace detail
+} // namespace lexxos::vfs::detail
 
 template <typename T>
 inline FileNumberReadResult readNumber(
@@ -198,6 +199,7 @@ inline FileNumberReadResult readNumber(
 		    .bytesRequested = sizeof(T),
 		};
 	}
+
 	if (!file.seek(offset)) {
 		return FileNumberReadResult{
 		    .status = ReadStatus::InvalidPath,
@@ -205,6 +207,7 @@ inline FileNumberReadResult readNumber(
 		    .bytesRequested = sizeof(T),
 		};
 	}
+
 	return readNumber(file, output, options);
 }
 

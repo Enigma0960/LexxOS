@@ -12,10 +12,14 @@ from typing import Iterable
 IMPLEMENTATION_SUFFIXES = {".cpp", ".cc", ".cxx"}
 DEFAULT_SCAN_ROOTS = (
     "src",
-    "emulator/native",
+    "apps",
+    "ce",
+    "ports",
+    "tools/emulator/native",
     "tests/cpp",
 )
 IGNORED_DIR_NAMES = {
+    "work",
     ".cache",
     ".git",
     ".idea",
@@ -62,7 +66,7 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help=(
             "Repository-relative directory to scan. Can be passed more than once. "
-            "Defaults to src, emulator/native and tests/cpp."
+            "Defaults to src, tools/emulator/native and tests/cpp."
         ),
     )
     parser.add_argument(
@@ -116,6 +120,36 @@ def implementation_files(root: Path, source_root: Path) -> Iterable[Path]:
     for path in source_root.rglob("*"):
         if path.is_file() and path.suffix in IMPLEMENTATION_SUFFIXES and not should_skip(path, root):
             yield path
+
+
+def check_header_classes(path: Path, root: Path) -> list[Finding]:
+    """Вложенные private-типы относятся к своему классу, forward declarations пропускаются."""
+    cleaned: list[str] = []
+    in_comment = False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line, in_comment = strip_comments_and_strings(line, in_comment)
+        cleaned.append(line)
+    source = "\n".join(cleaned)
+    pattern = re.compile(r"^\s*class\s+(\w+)\b[^;{}]*\{", re.MULTILINE)
+    classes: list[tuple[str, int]] = []
+    class_end = 0
+    for match in pattern.finditer(source):
+        if match.start() < class_end:
+            continue
+        name_offset = match.start(1)
+        classes.append((match.group(1), source.count("\n", 0, name_offset) + 1))
+        depth = 1
+        class_end = match.end()
+        while class_end < len(source) and depth:
+            if source[class_end] == "{":
+                depth += 1
+            elif source[class_end] == "}":
+                depth -= 1
+            class_end += 1
+    if len(classes) <= 1:
+        return []
+    names = ", ".join(name for name, _ in classes)
+    return [Finding(path.relative_to(root), classes[1][1], f"multiple independent classes in header: {names}")]
 
 
 def strip_comments_and_strings(line: str, in_block_comment: bool) -> tuple[str, bool]:
@@ -236,6 +270,10 @@ def main() -> int:
     findings: list[Finding] = []
 
     for source_root in scan_roots(root, args.scan_root):
+        headers = [source_root] if source_root.is_file() else source_root.rglob("*")
+        for path in headers:
+            if path.is_file() and path.suffix in {".h", ".hpp"} and not should_skip(path, root):
+                findings.extend(check_header_classes(path, root))
         for path in implementation_files(root, source_root):
             findings.extend(
                 check_file(

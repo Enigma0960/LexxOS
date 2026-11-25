@@ -12,6 +12,7 @@ bool PicoCalcScanCodeState::anyPressed() const {
 			return true;
 		}
 	}
+
 	return false;
 }
 

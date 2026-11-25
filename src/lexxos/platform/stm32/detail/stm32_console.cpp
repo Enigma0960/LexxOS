@@ -7,6 +7,7 @@
 #include <lexxos/platform/stm32/detail/stm32_gpio.h>
 
 namespace lexxos::platform::stm32::detail {
+
 namespace {
 
 	constexpr std::uint32_t peripheralBase = 0x40000000U;
@@ -153,6 +154,7 @@ std::size_t readConsoleAvailable(char* buffer, std::size_t capacity) {
 	while (count < capacity && popConsoleRxByte(buffer[count])) {
 		++count;
 	}
+
 	return count;
 }
 
@@ -162,10 +164,12 @@ extern "C" void USART1_IRQHandler(void) {
 		if ((status & (usartSrRxne | usartStatusRxErrorMask)) == 0U) {
 			return;
 		}
+
 		auto const data = static_cast<char>(USART_DR & 0xFFU);
 		if ((status & usartStatusRxErrorMask) != 0U) {
 			g_consoleRxErrors = g_consoleRxErrors + 1U;
 		}
+
 		if ((status & usartSrRxne) != 0U) {
 			pushConsoleRxByte(data);
 		}

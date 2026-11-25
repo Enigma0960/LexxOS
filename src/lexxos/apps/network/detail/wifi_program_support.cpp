@@ -15,6 +15,7 @@
 #endif
 
 namespace lexxos::apps::network_programs::detail {
+
 namespace {
 
 #if defined(LEXXOS_PLATFORM_ESPIDF) && defined(LEXXOS_ESPIDF_ENABLE_WIFI_BACKEND)
@@ -40,6 +41,7 @@ namespace {
 			if (index != 0) {
 				context.write(":");
 			}
+
 			writeHexByte(context, mac[index]);
 		}
 	}
@@ -53,6 +55,7 @@ namespace {
 		if (!ok) {
 			context.writeErrorLine("wifi-connect: invalid --auth, expected auto, open, wpa, wpa2 or mixed");
 		}
+
 		return auth;
 	}
 
@@ -75,6 +78,7 @@ namespace {
 		} else {
 			context.writeLine("-");
 		}
+
 		context.write("hostname: ");
 		context.writeLine(status.hostname[0] != '\0' ? status.hostname : "-");
 		context.write("ssid: ");
@@ -87,12 +91,14 @@ namespace {
 			} else {
 				writeUnsigned(context, static_cast<std::uint32_t>(status.rssi));
 			}
+
 			context.write(" dBm level=");
 			writeUnsigned(context, status.signalLevel);
 			context.writeLine("");
 		} else {
 			context.writeLine("-");
 		}
+
 		context.write("ip: ");
 		context.writeLine(status.gotIp ? status.ip : "-");
 		context.write("netmask: ");
@@ -123,6 +129,7 @@ namespace {
 		} else {
 			writeUnsigned(context, static_cast<std::uint32_t>(record.rssi));
 		}
+
 		context.write(" channel=");
 		writeUnsigned(context, record.channel);
 		context.write(" auth=");
@@ -131,13 +138,14 @@ namespace {
 			context.write(" bssid=");
 			writeMac(context, record.bssid);
 		}
+
 		context.writeLine("");
 	}
 #endif
 
 } // namespace
 
-WifiRuntimeStatus readWifiRuntimeStatus(lexxos::platform::BoardDescriptor const& board) {
+WifiRuntimeStatus readWifiRuntimeStatus(lexxos::platform::LegacyBoardDescriptor const& board) {
 #if defined(LEXXOS_PLATFORM_ESPIDF) && defined(LEXXOS_ESPIDF_ENABLE_WIFI_BACKEND)
 	(void) board;
 	auto const status = lexxos::devices::espidf_wifi::status();
@@ -175,7 +183,7 @@ WifiRuntimeStatus readWifiRuntimeStatus(lexxos::platform::BoardDescriptor const&
 int runWifiConnect(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!board.wireless.wifi) {
 		context.writeLine("wifi-connect: Wi-Fi is not declared by this board profile");
 		return 1;
@@ -187,25 +195,30 @@ int runWifiConnect(
 		context.writeErrorLine("wifi-connect: invalid --timeout");
 		return 2;
 	}
+
 	auto const ssid = arguments.positional("ssid");
 	auto const password = arguments.positionalOr("password", "");
 	if (ssid.empty()) {
 		context.writeErrorLine("wifi-connect: missing SSID");
 		return 2;
 	}
+
 	if (ssid.size() > 32U) {
 		context.writeErrorLine("wifi-connect: SSID is too long");
 		return 2;
 	}
+
 	if (password.size() > 64U) {
 		context.writeErrorLine("wifi-connect: password is too long");
 		return 2;
 	}
+
 	bool authOk = false;
 	auto const auth = parseAuthForEspIdf(context, arguments.valueOr("auth", "auto"), authOk);
 	if (!authOk) {
 		return 2;
 	}
+
 	if (auth != lexxos::devices::espidf_wifi::AuthMode::Open && password.size() < 8U) {
 		context.writeErrorLine("wifi-connect: password must contain at least 8 characters for WPA/WPA2");
 		return 2;
@@ -225,8 +238,10 @@ int runWifiConnect(
 			writeUnsigned(context, status.lastDisconnectReason);
 			context.writeErrorLine("");
 		}
+
 		return 1;
 	}
+
 	context.writeLine("wifi-connect: connected");
 	return 0;
 #elif defined(LEXXOS_PLATFORM_PICO) && defined(LEXXOS_PICO_CYW43_AVAILABLE) && defined(LEXXOS_PICO_CYW43_LWIP_AVAILABLE)
@@ -243,7 +258,7 @@ int runWifiConnect(
 int runWifiStatus(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!board.wireless.wifi) {
 		context.writeLine("wifi-status: Wi-Fi is not declared by this board profile");
 		return 1;
@@ -267,11 +282,12 @@ int runWifiStatus(
 int runWifiScan(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board) {
+    lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!board.wireless.wifi) {
 		context.writeLine("wifi-scan: Wi-Fi is not declared by this board profile");
 		return 1;
 	}
+
 	if (!board.wireless.scan) {
 		context.writeLine("wifi-scan: scan is disabled by this board profile");
 		return 1;
@@ -284,6 +300,7 @@ int runWifiScan(
 		context.writeErrorLine("wifi-scan: invalid --timeout");
 		return 2;
 	}
+
 	if (!parseOptionalUnsigned(arguments, "limit", limit) || limit == 0U || limit > wifiMaxResults) {
 		context.writeErrorLine("wifi-scan: invalid --limit");
 		return 2;
@@ -298,6 +315,7 @@ int runWifiScan(
 		context.writeErrorLine(status.lastErrorName[0] != '\0' ? status.lastErrorName : "unknown");
 		return 1;
 	}
+
 	context.write("networks: ");
 	writeUnsigned(context, static_cast<std::uint32_t>(count));
 	context.writeLine("");
@@ -305,6 +323,7 @@ int runWifiScan(
 	for (std::size_t index = 0; index < count; ++index) {
 		writeEspIdfScanRecord(context, records[index], showBssid);
 	}
+
 	return 0;
 #elif defined(LEXXOS_PLATFORM_PICO) && defined(LEXXOS_PICO_CYW43_AVAILABLE) && defined(LEXXOS_PICO_CYW43_LWIP_AVAILABLE)
 	return lexxos::apps::network_programs::pico_detail::runWifiScanOnPico(context, arguments, board);

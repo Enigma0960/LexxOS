@@ -1,6 +1,7 @@
 #include "game.h"
 
 namespace pacman {
+
 namespace {
 
 	constexpr char maze[height][width + 1] = {
@@ -29,6 +30,7 @@ namespace {
 			case Direction::Right: ++p.x; break;
 			case Direction::None : break;
 		}
+
 		return p;
 	}
 
@@ -52,9 +54,11 @@ namespace {
 		if (dx < 0) {
 			dx = -dx;
 		}
+
 		if (dy < 0) {
 			dy = -dy;
 		}
+
 		return dx + dy;
 	}
 
@@ -66,11 +70,11 @@ void Game::resetActors() {
 	requested = Direction::None;
 	ghosts[0] = {
 	    {11, 7},
-        Direction::Left, {11, 7}
+	    Direction::Left, {11, 7}
     };
 	ghosts[1] = {
 	    {13, 7},
-        Direction::Right, {13, 7}
+	    Direction::Right, {13, 7}
     };
 	frightenedTicks = 0;
 	ticks = 0;
@@ -89,12 +93,14 @@ void Game::reset() {
 			}
 		}
 	}
+
 	resetActors();
 	// The starting cell is occupied by the player, not a dot.
 	if (map[player.y][player.x] == '.') {
 		map[player.y][player.x] = ' ';
 		--remaining;
 	}
+
 	phase = Phase::Ready;
 }
 
@@ -106,6 +112,7 @@ void Game::turn(Direction value) {
 	if (value == Direction::None) {
 		return;
 	}
+
 	requested = value;
 	if (phase == Phase::Ready) {
 		phase = Phase::Playing;
@@ -143,20 +150,24 @@ void Game::moveGhost(Ghost& ghost) {
 		if (!walkable(target)) {
 			continue;
 		}
+
 		// Prefer not to reverse unless this is a dead end.
 		bool const reverse = choice == opposite(ghost.direction);
 		int cost = distance(target, player) * 8 + static_cast<int>(random() & 7U);
 		if (!hunt) {
 			cost = -cost;
 		}
+
 		if (reverse) {
 			cost += 100;
 		}
+
 		if (cost < bestCost || best == Direction::None) {
 			bestCost = cost;
 			best = choice;
 		}
 	}
+
 	if (best != Direction::None) {
 		ghost.position = adjacent(ghost.position, best);
 		ghost.direction = best;
@@ -168,19 +179,23 @@ Sound Game::collide() {
 		if (!same(player, ghost.position)) {
 			continue;
 		}
+
 		if (frightenedTicks != 0) {
 			score += 200;
 			ghost.position = ghost.home;
 			ghost.direction = Direction::None;
 			return Sound::Ghost;
 		}
+
 		if (lives > 0) {
 			--lives;
 		}
+
 		resetActors();
 		phase = lives == 0 ? Phase::Lost : Phase::Ready;
 		return Sound::Hit;
 	}
+
 	return Sound::None;
 }
 
@@ -188,10 +203,12 @@ Sound Game::step() {
 	if (phase != Phase::Playing) {
 		return Sound::None;
 	}
+
 	++ticks;
 	if (requested != Direction::None && walkable(adjacent(player, requested))) {
 		direction = requested;
 	}
+
 	if (direction != Direction::None && walkable(adjacent(player, direction))) {
 		player = adjacent(player, direction);
 	}
@@ -207,6 +224,7 @@ Sound Game::step() {
 			score += 10;
 			sound = Sound::Dot;
 		}
+
 		cell = ' ';
 		--remaining;
 	}
@@ -215,6 +233,7 @@ Sound Game::step() {
 	if (collision != Sound::None) {
 		return collision;
 	}
+
 	if (remaining == 0) {
 		phase = Phase::Won;
 		return Sound::Win;
@@ -231,9 +250,11 @@ Sound Game::step() {
 			}
 		}
 	}
+
 	if (frightenedTicks > 0) {
 		--frightenedTicks;
 	}
+
 	return sound;
 }
 

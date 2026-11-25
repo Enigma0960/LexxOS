@@ -19,6 +19,7 @@ void writeFixedHundredths(lexxos::os::AppContext& context, std::uint64_t hundred
 	if (fraction < 10U) {
 		context.write("0");
 	}
+
 	writeUnsigned(context, fraction);
 }
 
@@ -50,6 +51,7 @@ void writeGbEmuProfileLine(
 		context.write(" rendered=");
 		writeUnsigned(context, profile.renderedFrames);
 	}
+
 	context.write(" wall-ms=");
 	writeUnsigned(context, profile.wallMs);
 	context.write(" input-ms=");
@@ -70,11 +72,13 @@ void writeGbEmuProfileLine(
 		context.write(" fps=");
 		writeRatePerSecond(context, profile.frames, profile.wallMs);
 	}
+
 	if (cyclesPerFrame != 0 && profile.wallMs != 0) {
 		context.write(" realtime-x=");
 		auto const emulatedMs = (static_cast<std::uint64_t>(profile.cycles) * 1000U) / 4194304U;
 		writeFixedHundredths(context, (emulatedMs * 100U) / profile.wallMs);
 	}
+
 	context.write(" cache-fill=");
 	writeUnsigned(context, profile.cacheFills);
 	context.write(" cache-retry=");
@@ -85,10 +89,12 @@ void writeGbEmuProfileLine(
 		context.write(" cache-kib=");
 		writeUnsigned64(context, profile.cacheReadBytes / 1024U);
 	}
+
 	if (profile.cacheFillMs != 0) {
 		context.write(" cache-ms=");
 		writeUnsigned(context, profile.cacheFillMs);
 	}
+
 	context.writeLine("");
 }
 

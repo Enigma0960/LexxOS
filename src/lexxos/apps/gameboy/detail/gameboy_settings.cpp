@@ -34,10 +34,12 @@ namespace {
 		if (value.size() >= output.size()) {
 			return false;
 		}
+
 		std::memset(output.data(), 0, output.size());
 		if (!value.empty()) {
 			std::memcpy(output.data(), value.data(), value.size());
 		}
+
 		output[value.size()] = '\0';
 		return true;
 	}
@@ -52,10 +54,12 @@ namespace {
 		if (position + value.size() >= output.size()) {
 			return false;
 		}
+
 		if (!value.empty()) {
 			std::memcpy(output.data() + position, value.data(), value.size());
 			position += value.size();
 		}
+
 		output[position] = '\0';
 		return true;
 	}
@@ -74,6 +78,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -141,9 +146,11 @@ namespace {
 		while (!value.empty() && (value.front() == ' ' || value.front() == '\t' || value.front() == '\r')) {
 			value.remove_prefix(1);
 		}
+
 		while (!value.empty() && (value.back() == ' ' || value.back() == '\t' || value.back() == '\r')) {
 			value.remove_suffix(1);
 		}
+
 		return value;
 	}
 
@@ -151,17 +158,21 @@ namespace {
 		if (value.empty()) {
 			return false;
 		}
+
 		std::uint32_t result = 0;
 		for (char const character : value) {
 			if (character < '0' || character > '9') {
 				return false;
 			}
+
 			auto const digit = static_cast<std::uint32_t>(character - '0');
 			if (result > (0xFFFFFFFFU - digit) / 10U) {
 				return false;
 			}
+
 			result = result * 10U + digit;
 		}
+
 		output = result;
 		return true;
 	}
@@ -171,10 +182,12 @@ namespace {
 			output = true;
 			return true;
 		}
+
 		if (value == "false" || value == "off" || value == "no" || value == "0") {
 			output = false;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -186,9 +199,11 @@ namespace {
 		if (value == "native" || value == "center") {
 			return "1x";
 		}
+
 		if (value == "off") {
 			return "none";
 		}
+
 		return value;
 	}
 
@@ -212,27 +227,35 @@ namespace {
 		if (name == "general") {
 			return SettingsSection::General;
 		}
+
 		if (name == "video") {
 			return SettingsSection::Video;
 		}
+
 		if (name == "palette") {
 			return SettingsSection::Palette;
 		}
+
 		if (name == "input") {
 			return SettingsSection::Input;
 		}
+
 		if (name == "audio") {
 			return SettingsSection::Audio;
 		}
+
 		if (name == "performance") {
 			return SettingsSection::Performance;
 		}
+
 		if (name == "advanced" || name == "experimental") {
 			return SettingsSection::Experimental;
 		}
+
 		if (name == "debug") {
 			return SettingsSection::Debug;
 		}
+
 		return SettingsSection::Unknown;
 	}
 
@@ -242,132 +265,166 @@ namespace {
 				if (key == "rom_dir") {
 					return assignFixed(settings.romDirectory, value);
 				}
+
 				if (key == "last_rom") {
 					return assignFixed(settings.lastRom, value);
 				}
+
 				if (key == "profile") {
 					if (!(value.empty() || value == "none" || value == "playable")) {
 						return false;
 					}
+
 					if (!assignFixed(settings.playbackProfile, value)) {
 						return false;
 					}
+
 					if (value == "playable") {
 						return assignFixed(settings.speedMode, "playable");
 					}
+
 					return assignFixed(settings.speedMode, "manual");
 				}
+
 				return true;
 			case SettingsSection::Video:
 				if (key == "display") {
 					return isKnownDisplay(value) && assignFixed(settings.display, canonicalDisplay(value));
 				}
+
 				if (key == "render_every") {
 					return parseUnsigned(value, settings.renderEvery) && settings.renderEvery != 0;
 				}
+
 				if (key == "sync_realtime") {
 					return parseBool(value, settings.syncRealtime);
 				}
+
 				return true;
 			case SettingsSection::Palette:
 				if (key == "name") {
 					return isKnownPalette(value) && assignFixed(settings.palette, value);
 				}
+
 				return true;
 			case SettingsSection::Input:
 				if (key == "input_every") {
 					return parseUnsigned(value, settings.inputEvery) && settings.inputEvery != 0;
 				}
+
 				if (key == "exit_combo") {
 					return value == "start+select" || value == "select+start";
 				}
+
 				if (key == "exit_hold_ms") {
 					return parseUnsigned(value, settings.exitHoldMs);
 				}
+
 				return true;
 			case SettingsSection::Audio:
 				if (key == "enabled") {
 					return parseBool(value, settings.audioEnabled);
 				}
+
 				return true;
 			case SettingsSection::Performance:
 				if (key == "rom_flash_reuse") {
 					if (!parseBool(value, settings.romFlashReuse)) {
 						return false;
 					}
+
 					return settings.romFlashReuse ? assignFixed(settings.romStorage, "flash-reuse") : true;
 				}
+
 				if (key == "fast_timing") {
 					return parseBool(value, settings.fastTiming);
 				}
+
 				if (key == "fast_halt") {
 					return parseBool(value, settings.fastHalt);
 				}
+
 				return true;
 			case SettingsSection::Experimental:
 				if (key == "speed_mode") {
 					if (!isKnownSpeedMode(value) || !assignFixed(settings.speedMode, value)) {
 						return false;
 					}
+
 					return assignFixed(settings.playbackProfile, value == "playable" ? "playable" : "none");
 				}
+
 				if (key == "frames") {
 					return parseUnsigned(value, settings.frames);
 				}
+
 				if (key == "steps_per_frame") {
 					return parseUnsigned(value, settings.stepsPerFrame) && settings.stepsPerFrame != 0;
 				}
+
 				if (key == "cycles_per_frame") {
 					return parseUnsigned(value, settings.cyclesPerFrame);
 				}
+
 				if (key == "warmup") {
 					return isKnownWarmupMode(value) && assignFixed(settings.warmupMode, value);
 				}
+
 				if (key == "max_cycles") {
 					return parseUnsigned(value, settings.maxWarmupCycles) && settings.maxWarmupCycles != 0;
 				}
+
 				if (key == "min_tile_data") {
 					return parseUnsigned(value, settings.minTileData) && settings.minTileData != 0;
 				}
+
 				if (key == "rom_storage") {
 					if (!isKnownRomStorage(value) || !assignFixed(settings.romStorage, value)) {
 						return false;
 					}
+
 					settings.romFlashReuse = value == "flash-reuse";
 					return true;
 				}
+
 				if (key == "no_ppu") {
 					return parseBool(value, settings.noPpu);
 				}
+
 				return true;
 			case SettingsSection::Debug:
 				if (key == "profile") {
 					return parseBool(value, settings.debugProfile);
 				}
+
 				if (key == "profile_every") {
 					return parseUnsigned(value, settings.profileEvery) && settings.profileEvery != 0;
 				}
+
 				if (key == "fault_trace") {
 					return parseBool(value, settings.faultTrace);
 				}
+
 				return true;
 			case SettingsSection::Unknown:
 				return true;
 		}
+
 		return true;
 	}
 
-	bool ensureDirectory(std::string_view path) {
+	bool ensureDirectory(lexxos::vfs::Vfs& vfs, std::string_view path) {
 		lexxos::vfs::Stat node{};
-		if (lexxos::vfs::stat(path, node)) {
+		if (vfs.stat(path, node)) {
 			return node.type == lexxos::vfs::NodeType::Directory;
 		}
-		auto const status = lexxos::vfs::createDirectory(path);
+
+		auto const status = vfs.createDirectory(path);
 		return status == lexxos::vfs::WriteStatus::Ok || status == lexxos::vfs::WriteStatus::IsDirectory;
 	}
 
-	bool ensureDefaultDirectories() {
-		return ensureDirectory(gbEmuSettingsRootDirectory) && ensureDirectory(gbEmuSettingsDirectory);
+	bool ensureDefaultDirectories(lexxos::vfs::Vfs& vfs) {
+		return ensureDirectory(vfs, gbEmuSettingsRootDirectory) && ensureDirectory(vfs, gbEmuSettingsDirectory);
 	}
 
 } // namespace
@@ -453,6 +510,7 @@ bool parseGbEmuSettings(std::string_view text, GbEmuSettings& settings) {
 		if (comment != std::string_view::npos) {
 			line = line.substr(0, comment);
 		}
+
 		line = trim(line);
 		if (line.empty()) {
 			continue;
@@ -467,11 +525,13 @@ bool parseGbEmuSettings(std::string_view text, GbEmuSettings& settings) {
 		if (separator == std::string_view::npos) {
 			return false;
 		}
+
 		auto const key = trim(line.substr(0, separator));
 		auto const value = trim(line.substr(separator + 1));
 		if (key.empty() || !applySetting(settings, section, key, value)) {
 			return false;
 		}
+
 		sawAssignment = true;
 	}
 
@@ -486,17 +546,18 @@ bool setGbEmuLastRom(GbEmuSettings& settings, std::string_view value) {
 	return assignFixed(settings.lastRom, value);
 }
 
-GbEmuSettingsLoadResult loadOrCreateGbEmuSettings() {
+GbEmuSettingsLoadResult loadOrCreateGbEmuSettings(lexxos::vfs::Vfs& vfs) {
 	GbEmuSettingsLoadResult result{};
 	result.settings = defaultGbEmuSettings();
 
 	lexxos::vfs::Stat stat{};
-	if (!lexxos::vfs::stat(gbEmuSettingsPath, stat) || stat.type == lexxos::vfs::NodeType::Missing) {
-		if (!ensureDefaultDirectories()) {
+	if (!vfs.stat(gbEmuSettingsPath, stat) || stat.type == lexxos::vfs::NodeType::Missing) {
+		if (!ensureDefaultDirectories(vfs)) {
 			result.status = GbEmuSettingsStatus::StorageUnavailable;
 			return result;
 		}
-		result.writeStatus = lexxos::vfs::writeText(
+
+		result.writeStatus = vfs.writeText(
 		    gbEmuSettingsPath,
 		    gbEmuDefaultSettingsContent,
 		    lexxos::vfs::WriteMode::CreateTruncate);
@@ -504,11 +565,13 @@ GbEmuSettingsLoadResult loadOrCreateGbEmuSettings() {
 			result.status = GbEmuSettingsStatus::WriteFailed;
 			return result;
 		}
-		result.syncStatus = lexxos::vfs::sync();
+
+		result.syncStatus = vfs.sync();
 		if (result.syncStatus != lexxos::vfs::SyncStatus::Ok) {
 			result.status = GbEmuSettingsStatus::SyncFailed;
 			return result;
 		}
+
 		result.status = GbEmuSettingsStatus::CreatedDefault;
 		return result;
 	}
@@ -519,7 +582,7 @@ GbEmuSettingsLoadResult loadOrCreateGbEmuSettings() {
 	}
 
 	lexxos::vfs::FileHandle file;
-	result.openStatus = lexxos::vfs::open(gbEmuSettingsPath, lexxos::vfs::OpenMode::Read, file);
+	result.openStatus = vfs.open(gbEmuSettingsPath, lexxos::vfs::OpenMode::Read, file);
 	if (result.openStatus != lexxos::vfs::OpenStatus::Ok) {
 		result.status = GbEmuSettingsStatus::ReadFailed;
 		return result;
@@ -544,9 +607,9 @@ GbEmuSettingsLoadResult loadOrCreateGbEmuSettings() {
 	return result;
 }
 
-GbEmuSettingsSaveResult saveGbEmuSettings(GbEmuSettings const& settings) {
+GbEmuSettingsSaveResult saveGbEmuSettings(lexxos::vfs::Vfs& vfs, GbEmuSettings const& settings) {
 	GbEmuSettingsSaveResult result{};
-	if (!ensureDefaultDirectories()) {
+	if (!ensureDefaultDirectories(vfs)) {
 		result.status = GbEmuSettingsStatus::StorageUnavailable;
 		return result;
 	}
@@ -560,7 +623,7 @@ GbEmuSettingsSaveResult saveGbEmuSettings(GbEmuSettings const& settings) {
 		return result;
 	}
 
-	result.writeStatus = lexxos::vfs::writeText(
+	result.writeStatus = vfs.writeText(
 	    gbEmuSettingsPath,
 	    std::string_view{content.data(), position},
 	    lexxos::vfs::WriteMode::CreateTruncate);
@@ -569,7 +632,7 @@ GbEmuSettingsSaveResult saveGbEmuSettings(GbEmuSettings const& settings) {
 		return result;
 	}
 
-	result.syncStatus = lexxos::vfs::sync();
+	result.syncStatus = vfs.sync();
 	if (result.syncStatus != lexxos::vfs::SyncStatus::Ok) {
 		result.status = GbEmuSettingsStatus::SyncFailed;
 		return result;

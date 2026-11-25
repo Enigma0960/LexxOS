@@ -2,6 +2,10 @@
 
 namespace lexxos::devices {
 
+bool DisplayDevice::waitIdle() {
+	return true;
+}
+
 DeviceKind DisplayDevice::kind() const {
 	return DeviceKind::Display;
 }
@@ -47,6 +51,10 @@ bool DisplayDevice::setBacklight(std::uint8_t) {
 }
 
 bool DisplayDevice::fillRgb565(Rect const&, std::uint16_t) {
+	return false;
+}
+
+bool DisplayDevice::prefersRgb565Stream() const {
 	return false;
 }
 

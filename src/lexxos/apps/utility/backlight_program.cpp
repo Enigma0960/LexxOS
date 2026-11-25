@@ -19,6 +19,7 @@
 #endif
 
 namespace lexxos::apps::utility_programs {
+
 namespace {
 
 	using detail::BacklightSelection;
@@ -26,20 +27,20 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec backlightArguments[] = {
 	    {
-         .name = "target",
-         .valueName = "lcd|kbd|save|restore",
-         .help = "backlight target or action",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "target",
+	     .valueName = "lcd|kbd|save|restore",
+	     .help = "backlight target or action",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "value",
-         .valueName = "0..255|lcd|kbd|all",
-         .help = "brightness or save/restore target",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "value",
+	     .valueName = "0..255|lcd|kbd|all",
+	     .help = "brightness or save/restore target",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -70,12 +71,15 @@ namespace {
 		if (value.empty() || value == "all") {
 			return fallback;
 		}
+
 		if (isLcdTarget(value)) {
 			return BacklightSelection::Lcd;
 		}
+
 		if (isKeyboardTarget(value)) {
 			return BacklightSelection::Keyboard;
 		}
+
 		return BacklightSelection::Invalid;
 	}
 
@@ -84,6 +88,7 @@ namespace {
 		if (!lexxos::apps::parseUnsigned32(text, parsed) || parsed > 255U) {
 			return false;
 		}
+
 		value = static_cast<std::uint8_t>(parsed);
 		return true;
 	}
@@ -92,9 +97,11 @@ namespace {
 		while (!value.empty() && (value.front() == ' ' || value.front() == '\t' || value.front() == '\r')) {
 			value.remove_prefix(1);
 		}
+
 		while (!value.empty() && (value.back() == ' ' || value.back() == '\t' || value.back() == '\r')) {
 			value.remove_suffix(1);
 		}
+
 		return value;
 	}
 
@@ -110,9 +117,11 @@ namespace {
 		if (text.size() > buffer.size() - offset) {
 			return false;
 		}
+
 		for (char const character : text) {
 			buffer[offset++] = character;
 		}
+
 		return true;
 	}
 
@@ -130,6 +139,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -141,12 +151,14 @@ namespace {
 		        || !appendChar(buffer, size, '\n'))) {
 			return false;
 		}
+
 		if (settings.hasKeyboard
 		    && (!appendText(buffer, size, "keyboard=")
 		        || !appendUnsigned(buffer, size, settings.keyboard)
 		        || !appendChar(buffer, size, '\n'))) {
 			return false;
 		}
+
 		return settings.hasLcd || settings.hasKeyboard;
 	}
 
@@ -184,6 +196,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return settings.hasLcd || settings.hasKeyboard;
 	}
 
@@ -200,6 +213,7 @@ namespace {
 		if (readStatus != lexxos::vfs::ReadStatus::Ok) {
 			return false;
 		}
+
 		return parseConfigText(std::string_view{buffer.data(), bytesRead}, settings);
 	}
 
@@ -218,10 +232,12 @@ namespace {
 		if (path.empty()) {
 			return true;
 		}
+
 		lexxos::vfs::Stat node{};
 		if (lexxos::vfs::stat(path, node)) {
 			return node.type == lexxos::vfs::NodeType::Directory;
 		}
+
 		auto const status = lexxos::vfs::createDirectory(path);
 		return status == lexxos::vfs::WriteStatus::Ok || status == lexxos::vfs::WriteStatus::IsDirectory;
 	}
@@ -244,6 +260,7 @@ namespace {
 		if (writeStatus != lexxos::vfs::WriteStatus::Ok) {
 			return writeStatus;
 		}
+
 		return lexxos::vfs::sync() == lexxos::vfs::SyncStatus::Ok
 		    ? lexxos::vfs::WriteStatus::Ok
 		    : lexxos::vfs::WriteStatus::NotWritable;
@@ -260,6 +277,7 @@ namespace {
 			context.writeLine("unavailable");
 			return;
 		}
+
 		lexxos::apps::writeUnsigned(context, value);
 		context.write(" (");
 		lexxos::apps::writeHex8(context, value);
@@ -272,10 +290,12 @@ namespace {
 			context.write(" lcd=");
 			lexxos::apps::writeUnsigned(context, settings.lcd);
 		}
+
 		if (settings.hasKeyboard) {
 			context.write(" keyboard=");
 			lexxos::apps::writeUnsigned(context, settings.keyboard);
 		}
+
 		context.write(" path=");
 		context.writeLine(backlightConfigPath);
 	}
@@ -290,16 +310,20 @@ namespace {
 			context.write(" lcd=");
 			lexxos::apps::writeUnsigned(context, restored.lcd);
 		}
+
 		if (failed.hasLcd) {
 			context.write(" lcd=failed");
 		}
+
 		if (restored.hasKeyboard) {
 			context.write(" keyboard=");
 			lexxos::apps::writeUnsigned(context, restored.keyboard);
 		}
+
 		if (failed.hasKeyboard) {
 			context.write(" keyboard=failed");
 		}
+
 		context.write(" path=");
 		context.writeLine(backlightConfigPath);
 	}
@@ -371,11 +395,13 @@ namespace {
 			settings.lcd = snapshot.lcdBacklight;
 			settings.hasLcd = true;
 		}
+
 		if ((selection == BacklightSelection::All || selection == BacklightSelection::Keyboard)
 		    && snapshot.has(lexxos::devices::PicoCalcSouthbridgeSnapshot::validKeyboardBacklight)) {
 			settings.keyboard = snapshot.keyboardBacklight;
 			settings.hasKeyboard = true;
 		}
+
 		if (!settings.hasLcd && !settings.hasKeyboard) {
 			context.writeErrorLine("backlight: selected backlight level unavailable");
 			return 1;
@@ -404,11 +430,13 @@ namespace {
 			context.writeErrorLine(backlightConfigPath);
 			return 1;
 		}
+
 		if (selection == BacklightSelection::Lcd) {
 			settings.hasKeyboard = false;
 		} else if (selection == BacklightSelection::Keyboard) {
 			settings.hasLcd = false;
 		}
+
 		if (!settings.hasLcd && !settings.hasKeyboard) {
 			context.writeErrorLine("backlight: selected saved level is unavailable");
 			return 1;
@@ -430,6 +458,7 @@ namespace {
 			restored.lcd = settings.lcd;
 			restored.hasLcd = true;
 		}
+
 		if (settings.hasKeyboard && !service.requestKeyboardBacklight(settings.keyboard, nowMs)) {
 			failed.keyboard = settings.keyboard;
 			failed.hasKeyboard = true;
@@ -475,22 +504,27 @@ int BacklightProgram::run(
 	if (target.empty()) {
 		return showPicoCalcBacklight(context, *service);
 	}
+
 	if (isSaveAction(target)) {
 		auto const selection = parseSelection(valueText, BacklightSelection::All);
 		if (selection == BacklightSelection::Invalid) {
 			context.writeErrorLine("backlight: invalid save target, expected lcd, kbd or all");
 			return 2;
 		}
+
 		return savePicoCalcBacklight(context, *service, selection);
 	}
+
 	if (isRestoreAction(target)) {
 		auto const selection = parseSelection(valueText, BacklightSelection::All);
 		if (selection == BacklightSelection::Invalid) {
 			context.writeErrorLine("backlight: invalid restore target, expected lcd, kbd or all");
 			return 2;
 		}
+
 		return restorePicoCalcBacklight(context, *service, selection);
 	}
+
 	if (valueText.empty()) {
 		context.writeErrorLine("backlight: missing brightness value");
 		return 2;
@@ -548,14 +582,17 @@ int BacklightProgram::run(
 		context.writeLine("");
 		return 0;
 	}
+
 	if (isSaveAction(target) || isRestoreAction(target)) {
 		context.writeErrorLine("backlight: save/restore is unsupported for this board");
 		return 1;
 	}
+
 	if (!isLcdTarget(target)) {
 		context.writeErrorLine("backlight: unknown target, expected lcd");
 		return 2;
 	}
+
 	if (valueText.empty()) {
 		context.writeErrorLine("backlight: missing brightness value");
 		return 2;
@@ -575,6 +612,7 @@ int BacklightProgram::run(
 		context.writeErrorLine("backlight: display device is busy");
 		return 1;
 	}
+
 	if (!display->setBacklight(value)) {
 		context.writeErrorLine("backlight: lcd request failed");
 		return 1;

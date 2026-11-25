@@ -4,6 +4,7 @@
 #include <array>
 
 namespace lexxos::devices {
+
 SdSpiProtocol::SdSpiProtocol(SdSpiTransport& transport)
     : _transport(transport) {
 }
@@ -16,8 +17,10 @@ bool SdSpiProtocol::clockIdle(std::size_t byteCount) {
 		if (!_transport.read(0xFF, buffer.data(), chunk)) {
 			return false;
 		}
+
 		remaining -= chunk;
 	}
+
 	return true;
 }
 
@@ -35,10 +38,12 @@ bool SdSpiProtocol::waitReady(std::uint32_t attempts) {
 		if (!readByte(value)) {
 			return false;
 		}
+
 		if (value == 0xFF) {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -48,10 +53,12 @@ bool SdSpiProtocol::waitDataToken(std::uint32_t attempts) {
 		if (!readByte(value)) {
 			return false;
 		}
+
 		if (value == dataStartToken) {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -103,6 +110,7 @@ SdSpiCommandResult SdSpiProtocol::sendCommand(
 			    .error = SdSpiProtocolError::CommandResponseReadFailed,
 			};
 		}
+
 		if ((r1 & 0x80U) == 0) {
 			break;
 		}
@@ -127,6 +135,7 @@ SdSpiCommandResult SdSpiProtocol::sendCommand(
 	if (!keepSelected) {
 		endTransaction();
 	}
+
 	return {
 	    .r1 = r1,
 	    .diagnosticR1 = r1,

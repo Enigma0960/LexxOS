@@ -52,11 +52,11 @@ board descriptor + processor family
     не добавлять новые обращения к singleton/global API.
 
 Нарушение этих правил допустимо только как осознанный transitional debt, связанный с конкретным пунктом
-[`docs/architecture-roadmap.md`](architecture-roadmap.md) или активного [`docs/todo/roadmap.md`](todo/roadmap.md).
+[`docs/architecture-roadmap.md`](architecture-roadmap.md) или активного [дорожную карту](../roadmap.md).
 
 ## Базовые понятия
 
-### Processor family
+### Семейство процессоров
 
 Processor family описывает семейство MCU или среду выполнения:
 
@@ -67,12 +67,12 @@ Processor family описывает семейство MCU или среду в�
 
 Эта сущность нужна для capability checks, low-level startup assumptions и будущего architecture-specific кода.
 
-### Platform backend
+### Реализация платформы
 
 Platform backend описывает слой интеграции с SDK/runtime:
 
 - `host` — локальная desktop/host simulation;
-- `pico` — Raspberry Pi Pico SDK backend;
+- `pico` — реализация на Raspberry Pi Pico SDK;
 - `espidf` — ESP-IDF backend для ESP32-плат, первый рабочий board profile: `m5stack_basic_v1`.
 
 Platform backend должен оставаться небольшим. Его зона ответственности:
@@ -91,7 +91,7 @@ Platform backend должен оставаться небольшим. Его з
 Конкретные устройства — display, SD card, keyboard, sensors, PSRAM, audio, wireless — должны жить в
 `src/lexxos/devices/`, а не в `src/lexxos/platform/`.
 
-### Board profile
+### Профиль платы
 
 Board profile описывает конкретную плату и pinout:
 
@@ -161,7 +161,7 @@ Service entry не заменяет `InputDevice`, `DisplayDevice` или `Block
 создавший composite controller, регистрирует все публичные contracts для одного владельца, а runtime clients не обходят
 его через raw register access.
 
-## Kernel/runtime layer
+## Уровень ядра и среды выполнения
 
 Текущий runtime layer минимален и скрывает FreeRTOS/host threads за LexxOS API:
 
@@ -180,7 +180,7 @@ Bootstrap fallback доступен через `LEXXOS_PICO_USE_FREERTOS=OFF`, �
 
 Application code не должен напрямую включать FreeRTOS headers.
 
-## OS context
+## Контекст ОС
 
 `OperatingSystem` и `AppContext` связывают основные подсистемы:
 
@@ -197,10 +197,12 @@ Application code не должен напрямую включать FreeRTOS he
 Этот слой должен оставаться точкой сборки зависимостей, но не должен превращаться в место реализации команд,
 filesystem operations или hardware polling.
 
-## Runtime profile
+## Профиль выполнения
 
 `lexxos::runtime::RuntimeProfile` из `src/lexxos/runtime/runtime_profile.h` является единым источником фиксированных
-лимитов portable runtime. Профиль сейчас представлен как `standardRuntimeProfile`: он `constexpr`, поэтому может
+лимитов portable runtime. Выбор chip/platform/board выполняет target-local CMake composition;
+`selected_runtime_profile.h` предоставляет полученный `standardRuntimeProfile`.
+Он `constexpr`, поэтому может
 использоваться для размеров `std::array` без heap allocation и без дополнительной инициализации на MCU.
 
 В профиль вынесены:
@@ -213,11 +215,12 @@ filesystem operations или hardware polling.
 - stack sizes системных runtime tasks: console, system-events, console mirror, local console input, health и debug
   display.
 
-`OperatingSystem::runtimeProfile()` возвращает активный профиль. На `0.0.7` все board profiles используют стандартный
-набор лимитов; будущие `minimal`/`full`/Game Boy варианты должны появляться как profile selection, а не как новые
-разрозненные константы в подсистемах.
+`OperatingSystem::runtimeProfile()` возвращает активный профиль. Чипы, платформы и продукты
+переопределяют базовые лимиты слоями `config/memory/`. `minimal`, `standard` и `full`
+сохраняют одинаковые бюджеты выбранной платы; изменение бюджетов оформляется в профиле,
+а не отдельными константами в подсистемах. Подробности — в [описании профилей](runtime-memory-profiles.md).
 
-## Runtime capabilities
+## Возможности среды выполнения
 
 `lexxos::runtime::CapabilitySet` из `src/lexxos/runtime/capabilities.h` является runtime snapshot возможностей текущего
 `OperatingSystem`. Он собирается из двух источников:
@@ -231,12 +234,13 @@ filesystem operations или hardware polling.
 `AppContext::capabilities()` отдаёт тот же snapshot приложениям. Команда `board` печатает строку `capabilities: ...`,
 чтобы на устройстве можно было проверить, какие portable contracts видит runtime.
 
-Compile-time feature flags остаются границей компоновки: они исключают исходники, драйверы и экспериментальные команды из
+Compile-time feature flags остаются границей компоновки: они исключают исходники, драйверы и экспериментальные команды
+из
 firmware. Внутри переносимого runtime feature flag больше не является главным API для orchestration: console mirror,
 local keyboard input task, SD automount/hot-plug, PicoCalc boot finish/backlight restore и Wi-Fi autoconnect проверяют
 capability текущего OS instance.
 
-## Program layer
+## Уровень программ
 
 Пользовательские команды shell уже представлены как программы и регистрируются в `ProgramManager`.
 
@@ -277,7 +281,7 @@ ASCII-таблицы без Qt/STL stream formatting, держит один boun
 одинаковый текстовый вывод для UART, LCD mirror и emulator tests. Псевдо-файлы VFS могут оставаться простым
 line-oriented text API, если их формат важен как машинно-читаемый интерфейс.
 
-## VFS layer
+## Уровень VFS
 
 VFS находится в `src/lexxos/vfs/`. Shell programs работают с путями и file handles, а не с внутренностями конкретного
 filesystem backend.
@@ -319,7 +323,7 @@ Filesystem factories регистрируются на конкретном `Vfs
 `BlockDevice` и mount context из выбранного экземпляра VFS. Contract tests создают два изолированных `Vfs` объекта и
 проверяют, что tmpfs и factory registry не протекают между ними.
 
-## FAT backend
+## Реализация FAT
 
 Текущий FatFs backend поддерживает практическую работу с FAT32 SD-картой:
 
@@ -392,7 +396,26 @@ platform backend. Если смешать эти понятия, код быст
 singleton/global API и центральные feature-условия. Архитектурный контекст перехода к explicit composition root,
 service contracts, driver providers, экземпляру VFS и модульной регистрации программ находится в
 [`docs/architecture-roadmap.md`](architecture-roadmap.md). Активные задачи сведены в
-[`docs/todo/roadmap.md`](todo/roadmap.md).
+[дорожную карту](../roadmap.md).
 
 Изменения должны выполняться маленькими совместимыми патчами. Динамические plugins и external programs допустимы
 только после стабилизации контрактов и удаления process-global state из переносимых модулей.
+
+## PicoCalc / Luckfox Lyra M (RK3506)
+
+RK3506 использует общий runtime, shell, VFS и FatFs. Политика ручного mount передаётся
+через `OperatingSystem::setStorageMountPolicy()` и `AppContext::storageMountPolicy()`;
+команды не вызывают платформенные функции напрямую. Подключение расширений выполняет
+`composition/board_runtime`, а SPI1/PL330 и BlockDevice находятся в `devices/rk3506`.
+
+Подробные границы, защита системного носителя, проверки и незавершённые части унификации
+описаны в [ревизии RK3506](boards/picocalc_lyra_m.md#архитектура-порта).
+
+Для Lyra доступны FreeRTOS CPU0,
+managed MMU/D-cache, SPI0 LCD + SPI1 SD PL330 DMA через некешируемый пул
+и FAT RW для `/dev/sd1` по штатной политике платы. Аппаратный журнал
+подтверждает предыдущую сборку с явным включением RW; новая политика
+автомонтирования требует отдельного протокола проверки. Старый кооперативный запуск
+сохранён как отдельная историческая конфигурация. Полная
+[сводка состояния и измерений на 04.11.2026](boards/picocalc_lyra_m.md#аппаратные-результаты)
+содержит необходимые feature flags и границы аппаратной приёмки.

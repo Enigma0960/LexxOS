@@ -56,6 +56,7 @@ static void uart_write(char const* text) {
 		if (*text == '\n') {
 			uart_write_char('\r');
 		}
+
 		uart_write_char(*text++);
 	}
 }

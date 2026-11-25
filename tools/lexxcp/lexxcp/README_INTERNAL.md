@@ -1,18 +1,19 @@
-# Implementation notes
+# Устройство реализации
 
-This directory is intentionally independent from the LexxOS firmware build.
+Этот каталог не зависит от сборки прошивки LexxOS.
 
-Host side:
+На стороне компьютера:
 
-- `gui.py` contains the PySide6 file-manager UI.
-- `serial_shell.py` wraps the LexxOS shell over UART.
-- `ymodem.py` implements the small YMODEM/CRC subset used by `yrx` and `ysend`.
+- `gui.py` — интерфейс файлового менеджера на PySide6;
+- `serial_shell.py` — обёртка над shell LexxOS через UART;
+- `ymodem.py` — используемое командами `yrx`/`ysend` подмножество YMODEM/CRC.
 
-Firmware side expectations:
+Ожидания от прошивки:
 
-- LexxOS shell prompt format: `lexx:<cwd>> `.
-- Directory listing through `ls <path>`.
-- Upload command: `yrx <remote-path>`.
-- Download command: `ysend <remote-path> <suggested-name>`.
+- приглашение shell: `lexx:<cwd>> `;
+- просмотр каталога: `ls <path>`;
+- загрузка на устройство: `yrx <remote-path>`;
+- скачивание: `ysend <remote-path> <suggested-name>`.
 
-The UI currently transfers one regular file at a time.  Directory recursion and multi-selection are intentionally left for a later iteration.
+Интерфейс передаёт один обычный файл за раз. Рекурсивный обход каталогов
+и множественный выбор оставлены на следующий этап.

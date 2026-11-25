@@ -7,7 +7,7 @@
 namespace lexxos::app::picocalc_lcd_console::detail {
 
 #ifndef LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH
-	#if defined(PICO_RP2350) && PICO_RP2350
+	#if (defined(PICO_RP2350) && PICO_RP2350) || defined(LEXXOS_PLATFORM_RK3506)
 		#define LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH 1
 	#else
 		#define LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH 0
@@ -28,8 +28,13 @@ constexpr int scrollbackRows = 32;
 constexpr int maxColumns = 256;
 constexpr int maxVisibleColumns = 160;
 constexpr int maxRows = 64;
+	#if defined(LEXXOS_PLATFORM_RK3506)
+constexpr std::size_t queueCapacity = 32768;
+constexpr int scrollbackRows = 256;
+	#else
 constexpr std::size_t queueCapacity = 8192;
 constexpr int scrollbackRows = 96;
+	#endif
 #endif
 constexpr int maxScrollbackColumns = maxVisibleColumns;
 constexpr int glyphWidth = 5;
@@ -97,16 +102,40 @@ constexpr std::uint16_t statusLowBatteryColor = 0xF800;
 constexpr std::uint16_t statusMediumBatteryColor = 0xFFE0;
 constexpr std::uint8_t lowBatteryPercent = 20;
 constexpr std::uint8_t mediumBatteryPercent = 50;
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+// New output updates the logical tail. Publish a complete visible page when
+// its row mapping changes; navigation is independent of output ingestion.
+constexpr int maxDirtyCellsPerRefresh = 128;
+constexpr int maxCharactersPerFlush = 1024;
+constexpr int maxDirtyRowsPerFlush = 4;
+constexpr int maxScrollRowsPerFlush = maxRows;
+#elif defined(LEXXOS_PLATFORM_RK3506)
+constexpr int maxDirtyCellsPerRefresh = 128;
+constexpr int maxCharactersPerFlush = 2048;
+constexpr int maxDirtyRowsPerFlush = 24;
+constexpr int maxScrollRowsPerFlush = 32;
+#elif LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH
 constexpr int maxDirtyCellsPerRefresh = 64;
-#if LEXXOS_PICOCALC_LCD_RGB888_FAST_PATH
 constexpr int maxCharactersPerFlush = 1024;
 constexpr int maxDirtyRowsPerFlush = 12;
 constexpr int maxScrollRowsPerFlush = 16;
 #else
+constexpr int maxDirtyCellsPerRefresh = 64;
 constexpr int maxCharactersPerFlush = 512;
 constexpr int maxDirtyRowsPerFlush = 8;
 constexpr int maxScrollRowsPerFlush = 12;
 #endif
+constexpr int charactersPerFlush(std::size_t queued, bool scrollRepaintPending) {
+#if defined(LEXXOS_RK3506_FREERTOS_PERIPHERALS)
+	(void) scrollRepaintPending;
+	return queued > maxCharactersPerFlush ? 4096 : maxCharactersPerFlush;
+#else
+	(void) queued;
+	(void) scrollRepaintPending;
+	return maxCharactersPerFlush;
+#endif
+}
+
 constexpr int invalidRow = -1;
 constexpr int fullRowPixelCount = maxVisibleColumns * cellWidth * cellHeight;
 constexpr int rowPixelCount = maxVisibleColumns * cellWidth;

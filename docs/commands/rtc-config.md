@@ -1,6 +1,6 @@
 # `rtc-config`
 
-save RTC settings for boot restore.
+Сохраняет настройки RTC для восстановления при загрузке.
 
 ## Синтаксис
 

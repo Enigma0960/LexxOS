@@ -33,6 +33,7 @@
 #endif
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr std::size_t maxChannels = lexxos::platform::maxBoardUserGpioPins;
@@ -60,60 +61,60 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec gpioAnalyzerArguments[] = {
 	    {
-         .name = "in",
-         .shortName = 'i',
-         .valueName = "pins",
-         .help = "experimental: comma separated input pins or labels, for example GP8,GP9 or 8,9",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "in",
+	     .shortName = 'i',
+	     .valueName = "pins",
+	     .help = "experimental: comma separated input pins or labels, for example GP8,GP9 or 8,9",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "out",
-         .shortName = 'o',
-         .valueName = "assignments",
-         .help = "comma separated output assignments, for example GP12=1,GP28=0",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "out",
+	     .shortName = 'o',
+	     .valueName = "assignments",
+	     .help = "comma separated output assignments, for example GP12=1,GP28=0",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "sample",
-         .shortName = 's',
-         .valueName = "milliseconds",
-         .help = "initial sampling period in milliseconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "20",
+	     .name = "sample",
+	     .shortName = 's',
+	     .valueName = "milliseconds",
+	     .help = "initial sampling period in milliseconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "20",
 	     },
 	    {
-         .name = "window",
-         .shortName = 'w',
-         .valueName = "milliseconds",
-         .help = "initial time window shown on screen in milliseconds",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "5000",
+	     .name = "window",
+	     .shortName = 'w',
+	     .valueName = "milliseconds",
+	     .help = "initial time window shown on screen in milliseconds",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "5000",
 	     },
 	    {
-         .name = "pull",
-         .shortName = 'p',
-         .valueName = "board|none|up|down",
-         .help = "pull mode applied to selected inputs; board uses each pin default",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "board",
+	     .name = "pull",
+	     .shortName = 'p',
+	     .valueName = "board|none|up|down",
+	     .help = "pull mode applied to selected inputs; board uses each pin default",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "board",
 	     },
 	    {
-         .name = "display",
-         .valueName = "name",
-         .help = "display device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "display",
+	     .valueName = "name",
+	     .help = "display device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -157,7 +158,7 @@ namespace {
 		bool psram{false};
 		lexxos::platform::PsramPins const* psramPins{nullptr};
 
-		[[nodiscard]] bool initialize(lexxos::os::AppContext& context, lexxos::platform::BoardDescriptor const& board) {
+		[[nodiscard]] bool initialize(lexxos::os::AppContext& context, lexxos::platform::LegacyBoardDescriptor const& board) {
 			psram = false;
 			psramPins = nullptr;
 			capacity = internalSampleCapacity;
@@ -175,6 +176,7 @@ namespace {
 					context.writeLine("gpio-analyzer: history storage=psram samples=4096");
 					return true;
 				}
+
 				psramPins = nullptr;
 				context.writeLine("gpio-analyzer: PSRAM history unavailable, using internal history");
 			}
@@ -193,6 +195,7 @@ namespace {
 					mask = 0;
 				}
 			}
+
 			writeIndex = 0;
 			count = 0;
 		}
@@ -210,6 +213,7 @@ namespace {
 			if (psramPins == nullptr || index >= psramSampleCapacity) {
 				return false;
 			}
+
 			std::uint8_t bytes[2]{
 			    static_cast<std::uint8_t>(mask & 0xFFU),
 			    static_cast<std::uint8_t>((mask >> 8U) & 0xFFU),
@@ -225,6 +229,7 @@ namespace {
 			if (psramPins == nullptr || index >= psramSampleCapacity) {
 				return false;
 			}
+
 			std::uint8_t bytes[2]{};
 			if (!lexxos::apps::picocalc_programs::detail::readPsramMemory(
 			        *psramPins,
@@ -233,6 +238,7 @@ namespace {
 			        sizeof(bytes))) {
 				return false;
 			}
+
 			mask = static_cast<std::uint16_t>(bytes[0] | (static_cast<std::uint16_t>(bytes[1]) << 8U));
 			return true;
 		}
@@ -242,6 +248,7 @@ namespace {
 			if (index >= capacity) {
 				return false;
 			}
+
 			if (psram) {
 #if FEATURE_ENABLED(PSRAM) && FEATURE_ENABLED(PICO_CALC) && defined(LEXXOS_PLATFORM_PICO)
 				return writePsramMask(index, mask);
@@ -249,6 +256,7 @@ namespace {
 				return false;
 #endif
 			}
+
 			masks[index] = mask;
 			return true;
 		}
@@ -257,6 +265,7 @@ namespace {
 			if (index >= capacity) {
 				return false;
 			}
+
 			if (psram) {
 #if FEATURE_ENABLED(PSRAM) && FEATURE_ENABLED(PICO_CALC) && defined(LEXXOS_PLATFORM_PICO)
 				return readPsramMask(index, mask);
@@ -264,6 +273,7 @@ namespace {
 				return false;
 #endif
 			}
+
 			mask = masks[index];
 			return true;
 		}
@@ -293,6 +303,7 @@ namespace {
 			if (count < capacity) {
 				++count;
 			}
+
 			return true;
 		}
 
@@ -300,6 +311,7 @@ namespace {
 			if (count == 0 || sampleOffsetFromOldest >= count) {
 				return false;
 			}
+
 			auto const oldest = (writeIndex + capacity - count) % capacity;
 			auto const index = (oldest + sampleOffsetFromOldest) % capacity;
 			return loadMask(index, mask);
@@ -329,8 +341,10 @@ namespace {
 				if (size + 1U >= sizeof(data)) {
 					break;
 				}
+
 				data[size++] = character;
 			}
+
 			data[size] = '\0';
 		}
 
@@ -480,6 +494,7 @@ namespace {
 		if (!lock) {
 			return false;
 		}
+
 		return service->readJcsRtcDateTime(output) && lexxos::devices::rtc::isValidDate(output);
 #else
 		(void) context;
@@ -524,7 +539,7 @@ namespace {
 		RecordingStartTime start{};
 		lexxos::platform::PsramPins const* psramPins{nullptr};
 
-		[[nodiscard]] bool initialize(lexxos::os::AppContext& context, lexxos::platform::BoardDescriptor const& board) {
+		[[nodiscard]] bool initialize(lexxos::os::AppContext& context, lexxos::platform::LegacyBoardDescriptor const& board) {
 			psram = false;
 			psramPins = nullptr;
 			capacity = internalRecordingSampleCapacity;
@@ -542,6 +557,7 @@ namespace {
 					context.writeLine("gpio-analyzer: recording storage=psram samples=4096");
 					return true;
 				}
+
 				psramPins = nullptr;
 				context.writeLine("gpio-analyzer: PSRAM recording unavailable, using internal recording buffer");
 			}
@@ -560,6 +576,7 @@ namespace {
 					sample = {};
 				}
 			}
+
 			count = 0;
 			active = false;
 			overflowed = false;
@@ -586,6 +603,7 @@ namespace {
 			if (psramPins == nullptr || index >= psramSampleCapacity) {
 				return false;
 			}
+
 			std::uint8_t bytes[psramRecordingSampleBytes]{
 			    static_cast<std::uint8_t>(sample.offsetMs & 0xFFU),
 			    static_cast<std::uint8_t>((sample.offsetMs >> 8U) & 0xFFU),
@@ -609,6 +627,7 @@ namespace {
 			if (psramPins == nullptr || index >= psramSampleCapacity) {
 				return false;
 			}
+
 			std::uint8_t bytes[psramRecordingSampleBytes]{};
 			if (!lexxos::apps::picocalc_programs::detail::readPsramMemory(
 			        *psramPins,
@@ -617,6 +636,7 @@ namespace {
 			        sizeof(bytes))) {
 				return false;
 			}
+
 			sample.offsetMs = static_cast<std::uint32_t>(bytes[0])
 			    | (static_cast<std::uint32_t>(bytes[1]) << 8U)
 			    | (static_cast<std::uint32_t>(bytes[2]) << 16U)
@@ -634,6 +654,7 @@ namespace {
 			if (index >= capacity) {
 				return false;
 			}
+
 			if (psram) {
 #if FEATURE_ENABLED(PSRAM) && FEATURE_ENABLED(PICO_CALC) && defined(LEXXOS_PLATFORM_PICO)
 				return writePsramSample(index, sample);
@@ -641,6 +662,7 @@ namespace {
 				return false;
 #endif
 			}
+
 			samples[index] = sample;
 			return true;
 		}
@@ -649,6 +671,7 @@ namespace {
 			if (index >= count || index >= capacity) {
 				return false;
 			}
+
 			if (psram) {
 #if FEATURE_ENABLED(PSRAM) && FEATURE_ENABLED(PICO_CALC) && defined(LEXXOS_PLATFORM_PICO)
 				return readPsramSample(index, sample);
@@ -656,6 +679,7 @@ namespace {
 				return false;
 #endif
 			}
+
 			sample = samples[index];
 			return true;
 		}
@@ -664,11 +688,13 @@ namespace {
 			if (!active) {
 				return true;
 			}
+
 			if (count >= capacity) {
 				overflowed = true;
 				active = false;
 				return false;
 			}
+
 			RecordingSample sample{
 			    .offsetMs = nowMs - start.uptimeMs,
 			    .uptimeMs = nowMs,
@@ -679,6 +705,7 @@ namespace {
 				active = false;
 				return false;
 			}
+
 			++count;
 			return true;
 		}
@@ -692,11 +719,13 @@ namespace {
 		if (left.size() != right.size()) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < left.size(); ++index) {
 			if (asciiLower(left[index]) != asciiLower(right[index])) {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -704,9 +733,11 @@ namespace {
 		while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) {
 			value.remove_prefix(1);
 		}
+
 		while (!value.empty() && (value.back() == ' ' || value.back() == '\t')) {
 			value.remove_suffix(1);
 		}
+
 		return value;
 	}
 
@@ -717,16 +748,18 @@ namespace {
 		} else if (text.size() >= 2 && asciiLower(text[0]) == 'g' && asciiLower(text[1]) == 'p') {
 			text.remove_prefix(2);
 		}
+
 		std::uint32_t value = 0;
 		if (!parseUnsigned32(text, value) || value > 255U) {
 			return false;
 		}
+
 		number = static_cast<int>(value);
 		return true;
 	}
 
 	[[nodiscard]] lexxos::platform::BoardUserGpioPin const* findUserGpioPin(
-	    lexxos::platform::BoardDescriptor const& board,
+	    lexxos::platform::LegacyBoardDescriptor const& board,
 	    std::string_view text) {
 		text = trim(text);
 		if (text.empty()) {
@@ -744,12 +777,14 @@ namespace {
 		if (!parseUnsignedPinNumber(text, number)) {
 			return nullptr;
 		}
+
 		for (std::uint8_t index = 0; index < board.userGpio.count && index < lexxos::platform::maxBoardUserGpioPins; ++index) {
 			auto const& pin = board.userGpio.pins[index];
 			if (pin.isValid() && pin.pin.number == number) {
 				return &pin;
 			}
 		}
+
 		return nullptr;
 	}
 
@@ -762,6 +797,7 @@ namespace {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -774,6 +810,7 @@ namespace {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -792,21 +829,25 @@ namespace {
 			selection = PullSelection{};
 			return true;
 		}
+
 		if (equalsIgnoreCase(text, "none")) {
 			selection.useBoardDefault = false;
 			selection.overridePull = lexxos::platform::GpioPull::None;
 			return true;
 		}
+
 		if (equalsIgnoreCase(text, "up")) {
 			selection.useBoardDefault = false;
 			selection.overridePull = lexxos::platform::GpioPull::Up;
 			return true;
 		}
+
 		if (equalsIgnoreCase(text, "down")) {
 			selection.useBoardDefault = false;
 			selection.overridePull = lexxos::platform::GpioPull::Down;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -814,20 +855,23 @@ namespace {
 		if (offset >= list.size()) {
 			return {};
 		}
+
 		auto const start = offset;
 		while (offset < list.size() && list[offset] != ',') {
 			++offset;
 		}
+
 		auto token = list.substr(start, offset - start);
 		if (offset < list.size() && list[offset] == ',') {
 			++offset;
 		}
+
 		return trim(token);
 	}
 
 	[[nodiscard]] bool parseInputChannels(
 	    lexxos::os::AppContext& context,
-	    lexxos::platform::BoardDescriptor const& board,
+	    lexxos::platform::LegacyBoardDescriptor const& board,
 	    std::string_view text,
 	    InputChannel* channels,
 	    std::size_t& channelCount) {
@@ -838,12 +882,14 @@ namespace {
 				if (!pin.isValid() || !pin.inputAllowed || !pin.defaultVisible) {
 					continue;
 				}
+
 				channels[channelCount] = {.descriptor = &pin, .color = palette[channelCount % std::size(palette)], .visible = true};
 				++channelCount;
 				if (channelCount >= maxChannels) {
 					break;
 				}
 			}
+
 			return channelCount > 0;
 		}
 
@@ -853,33 +899,39 @@ namespace {
 			if (token.empty()) {
 				continue;
 			}
+
 			auto const* pin = findUserGpioPin(board, token);
 			if (pin == nullptr) {
 				context.writeError("gpio-analyzer: unknown user gpio pin: ");
 				context.writeLine(token);
 				return false;
 			}
+
 			if (!pin->inputAllowed) {
 				context.writeError("gpio-analyzer: pin is not input-capable: ");
 				context.writeLine(pin->label);
 				return false;
 			}
+
 			if (channelAlreadySelected(channels, channelCount, pin)) {
 				continue;
 			}
+
 			if (channelCount >= maxChannels) {
 				context.writeErrorLine("gpio-analyzer: too many input channels");
 				return false;
 			}
+
 			channels[channelCount] = {.descriptor = pin, .color = palette[channelCount % std::size(palette)], .visible = true};
 			++channelCount;
 		}
+
 		return channelCount > 0;
 	}
 
 	[[nodiscard]] bool parseOutputChannels(
 	    lexxos::os::AppContext& context,
-	    lexxos::platform::BoardDescriptor const& board,
+	    lexxos::platform::LegacyBoardDescriptor const& board,
 	    std::string_view text,
 	    OutputChannel* channels,
 	    std::size_t& channelCount) {
@@ -894,6 +946,7 @@ namespace {
 			if (token.empty()) {
 				continue;
 			}
+
 			auto const separator = token.find('=');
 			if (separator == std::string_view::npos) {
 				context.writeError("gpio-analyzer: output assignment must use pin=value: ");
@@ -909,16 +962,19 @@ namespace {
 				context.writeLine(pinName);
 				return false;
 			}
+
 			if (!pin->outputAllowed) {
 				context.writeError("gpio-analyzer: pin is not output-capable: ");
 				context.writeLine(pin->label);
 				return false;
 			}
+
 			if (outputAlreadySelected(channels, channelCount, pin)) {
 				context.writeError("gpio-analyzer: duplicate output pin: ");
 				context.writeLine(pin->label);
 				return false;
 			}
+
 			if (channelCount >= maxChannels) {
 				context.writeErrorLine("gpio-analyzer: too many output channels");
 				return false;
@@ -938,6 +994,7 @@ namespace {
 			channels[channelCount] = {.descriptor = pin, .value = value};
 			++channelCount;
 		}
+
 		return true;
 	}
 
@@ -949,6 +1006,7 @@ namespace {
 				}
 			}
 		}
+
 		return false;
 	}
 
@@ -956,6 +1014,7 @@ namespace {
 		if (character >= 'a' && character <= 'z') {
 			character = static_cast<char>(character - 'a' + 'A');
 		}
+
 		auto set = [&](std::uint8_t r0, std::uint8_t r1, std::uint8_t r2, std::uint8_t r3, std::uint8_t r4, std::uint8_t r5, std::uint8_t r6) {
 			rows[0] = r0;
 			rows[1] = r1;
@@ -1029,6 +1088,7 @@ namespace {
 		if (scale <= 0 || y < textY || y >= textY + 7 * scale || textX >= lineWidth) {
 			return;
 		}
+
 		auto const sourceRow = (y - textY) / scale;
 		int x = textX;
 		for (char const character : text) {
@@ -1041,9 +1101,11 @@ namespace {
 					if (lit && x >= 0 && x < lineWidth) {
 						line[x] = color;
 					}
+
 					++x;
 				}
 			}
+
 			x += scale;
 			if (x >= lineWidth) {
 				break;
@@ -1058,6 +1120,7 @@ namespace {
 				++count;
 			}
 		}
+
 		return count;
 	}
 
@@ -1091,6 +1154,7 @@ namespace {
 		if (samples > capacity) {
 			samples = capacity;
 		}
+
 		return samples;
 	}
 
@@ -1119,12 +1183,15 @@ namespace {
 			if (offsetInAvailable >= availableSamples) {
 				offsetInAvailable = availableSamples - 1U;
 			}
+
 			auto const sampleOffsetFromOldest = samples.count - availableSamples + offsetInAvailable;
 			if (!samples.maskAt(sampleOffsetFromOldest, cache.masks[x])) {
 				return false;
 			}
+
 			cache.valid[x] = true;
 		}
+
 		return true;
 	}
 
@@ -1221,6 +1288,7 @@ namespace {
 					if (!channel.visible) {
 						continue;
 					}
+
 					auto const laneTop = graphTop + static_cast<int>(visibleIndex) * laneHeight;
 					auto const laneBottom = visibleIndex + 1U == visibleCount ? graphBottom : std::min(graphBottom, laneTop + laneHeight);
 					if (y == laneTop) {
@@ -1241,11 +1309,13 @@ namespace {
 							if (cacheX >= graphCache.width || !graphCache.valid[cacheX]) {
 								continue;
 							}
+
 							auto const value = graphCache.value(channelIndex, cacheX);
 							auto const sampleY = value ? highY : lowY;
 							if (y == sampleY) {
 								line[leftMargin + x] = channel.color;
 							}
+
 							if (cacheX > 0 && graphCache.valid[cacheX - 1U]) {
 								auto const previousValue = graphCache.value(channelIndex, cacheX - 1U);
 								if (previousValue != value) {
@@ -1259,6 +1329,7 @@ namespace {
 							}
 						}
 					}
+
 					++visibleIndex;
 				}
 			}
@@ -1287,6 +1358,7 @@ namespace {
 				context.write(")");
 			}
 		}
+
 		context.write(" outputs=");
 		if (outputCount == 0) {
 			context.write("none");
@@ -1295,10 +1367,12 @@ namespace {
 				if (index != 0) {
 					context.write(",");
 				}
+
 				context.write(outputs[index].descriptor != nullptr && outputs[index].descriptor->label != nullptr ? outputs[index].descriptor->label : "?");
 				context.write(outputs[index].value ? "=1" : "=0");
 			}
 		}
+
 		context.writeLine("");
 	}
 
@@ -1313,6 +1387,7 @@ namespace {
 			context.writeErrorLine(gpioAnalyzerRecordingDirectory);
 			return false;
 		}
+
 		return true;
 	}
 
@@ -1329,6 +1404,7 @@ namespace {
 			path.appendUnsigned(recording.start.uptimeMs);
 			path.append("ms");
 		}
+
 		path.append(".txt");
 		return !path.full();
 	}
@@ -1342,6 +1418,7 @@ namespace {
 		if (status == lexxos::vfs::WriteStatus::Ok) {
 			return true;
 		}
+
 		context.writeError("gpio-analyzer: ");
 		context.writeError(path);
 		context.writeError(": ");
@@ -1373,6 +1450,7 @@ namespace {
 			line.appendUnsigned(recording.start.uptimeMs);
 			line.append(" ms");
 		}
+
 		line.append("\n");
 		if (!writeFileChunk(context, path, file, line.view())) {
 			return false;
@@ -1398,6 +1476,7 @@ namespace {
 			line.append(",");
 			line.append(inputs[index].descriptor != nullptr && inputs[index].descriptor->label != nullptr ? inputs[index].descriptor->label : "?");
 		}
+
 		line.append("\n");
 		return writeFileChunk(context, path, file, line.view());
 	}
@@ -1450,16 +1529,23 @@ namespace {
 				line.append(",");
 				line.append((sample.mask & static_cast<std::uint16_t>(1U << channelIndex)) != 0 ? "1" : "0");
 			}
+
 			line.append("\n");
 			if (!writeFileChunk(context, path.view(), file, line.view())) {
 				return false;
 			}
 		}
 
-		file.close();
-		(void) lexxos::vfs::sync();
+		auto const finishStatus = file.finish();
+		if (finishStatus != lexxos::vfs::WriteStatus::Ok
+		    || lexxos::vfs::sync() != lexxos::vfs::SyncStatus::Ok) {
+			context.writeErrorLine("gpio-analyzer: recording sync/close failed");
+			return false;
+		}
+
 		context.writeLine("gpio-analyzer: recording saved");
 		context.writeLine(path.view());
+
 		return true;
 	}
 
@@ -1467,6 +1553,7 @@ namespace {
 		if (event.type != lexxos::devices::InputEventType::KeyDown) {
 			return controlNone;
 		}
+
 		if (event.character != 0) {
 			return static_cast<char>(event.character);
 		}
@@ -1550,15 +1637,19 @@ namespace {
 		if (key == controlNone) {
 			return ControlDispatchResult::Continue;
 		}
+
 		if (key == controlExit || key == 'Q' || key == controlEscape) {
 			return ControlDispatchResult::Exit;
 		}
+
 		if (key == controlCancel) {
 			return ControlDispatchResult::Cancel;
 		}
+
 		if (key == controlToggleRecording || key == 'R') {
 			return ControlDispatchResult::ToggleRecording;
 		}
+
 		if (key == controlPause) {
 			paused = !paused;
 			redraw = true;
@@ -1581,6 +1672,7 @@ namespace {
 			} else {
 				index = 9U + static_cast<std::size_t>(asciiLower(key) - 'a');
 			}
+
 			if (index < inputCount) {
 				inputs[index].visible = !inputs[index].visible;
 				redraw = true;
@@ -1594,8 +1686,10 @@ namespace {
 			if (output.descriptor != nullptr) {
 				(void) lexxos::platform::writeGpio(output.descriptor->pin, output.value);
 			}
+
 			redraw = true;
 		}
+
 		return ControlDispatchResult::Continue;
 	}
 
@@ -1644,6 +1738,7 @@ int GpioAnalyzerProgram::run(
 		context.writeErrorLine("gpio-analyzer: invalid sample period");
 		return 1;
 	}
+
 	if (!parseUnsigned32(arguments.valueOr("window", "5000"), windowMs) || windowMs < minimumWindowMs || windowMs > maximumWindowMs) {
 		context.writeErrorLine("gpio-analyzer: invalid time window");
 		return 1;
@@ -1663,9 +1758,11 @@ int GpioAnalyzerProgram::run(
 		context.writeErrorLine("gpio-analyzer: no input channels selected");
 		return 1;
 	}
+
 	if (!parseOutputChannels(context, board, arguments.valueOr("out", ""), outputs, outputCount)) {
 		return 1;
 	}
+
 	if (inputOutputOverlap(inputs, inputCount, outputs, outputCount)) {
 		context.writeErrorLine("gpio-analyzer: the same pin cannot be input and output in one session");
 		return 1;
@@ -1677,6 +1774,7 @@ int GpioAnalyzerProgram::run(
 			return 1;
 		}
 	}
+
 	for (std::size_t index = 0; index < inputCount; ++index) {
 		auto const* descriptor = inputs[index].descriptor;
 		auto const pull = descriptor != nullptr ? pullSelection.forPin(*descriptor) : lexxos::platform::GpioPull::None;
@@ -1698,7 +1796,7 @@ int GpioAnalyzerProgram::run(
 	context.writeLine("gpio-analyzer: controls: space pause, +/- sample, [] window, r record, 1-9/a-f toggle inputs, t toggle output, n next output, q exit");
 
 	lexxos::app::program_input::EventCursor inputCursor;
-	lexxos::app::program_input::reset(inputCursor);
+	context.programInput().reset(inputCursor);
 	context.writeLine("gpio-analyzer: input=program-input event queue");
 
 	static SampleBuffer samples;
@@ -1729,7 +1827,7 @@ int GpioAnalyzerProgram::run(
 			char key = 0;
 
 			lexxos::devices::InputEvent inputEvent;
-			while (lexxos::app::program_input::pollEvent(inputCursor, inputEvent)) {
+			while (context.programInput().pollEvent(inputCursor, inputEvent)) {
 				auto const result = dispatchControlChar(
 				    controlCharForInputEvent(inputEvent), inputs, inputCount, outputs, outputCount, selectedOutput, sampleMs, windowMs, paused, redraw);
 
@@ -1763,12 +1861,14 @@ int GpioAnalyzerProgram::run(
 					context.writeErrorLine("gpio-analyzer: failed to store sample");
 					return 1;
 				}
+
 				if (recording.active && !recording.push(nowMs, sampleMask)) {
 					context.writeErrorLine("gpio-analyzer: recording buffer full, saving capture");
 					if (!saveRecording(context, recording, inputs, inputCount, sampleMs)) {
 						return 1;
 					}
 				}
+
 				nextSampleMs = nowMs + sampleMs;
 				redraw = true;
 			}
@@ -1785,6 +1885,7 @@ int GpioAnalyzerProgram::run(
 					lexxos::kernel::sleepMs(5);
 					continue;
 				}
+
 				redraw = true;
 			}
 
@@ -1793,6 +1894,7 @@ int GpioAnalyzerProgram::run(
 					context.writeErrorLine("gpio-analyzer: failed to render frame");
 					return 1;
 				}
+
 				redraw = false;
 			}
 

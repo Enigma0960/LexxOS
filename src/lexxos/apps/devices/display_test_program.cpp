@@ -1,10 +1,12 @@
 #include <lexxos/apps/devices/display_test_program.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
+#include <memory>
 #include <string_view>
 
 #include <lexxos/apps/common/core_programs_support.h>
@@ -13,6 +15,17 @@
 #include <lexxos/feature.h>
 #include <lexxos/kernel/scheduler.h>
 #include <lexxos/os/app_context.h>
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+	#include <lexxos/composition/products/lyra_spi_queues.h>
+	#include <lexxos/composition/products/picocalc_lyra_device_providers.h>
+	#include <lexxos/devices/bus/bus_transaction.h>
+#endif
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+	#include <lexxos/devices/rk3506/picocalc_lcd_dma_pl330.h>
+	#include <lexxos/devices/rk3506/picocalc_lcd_spi0.h>
+#endif
 
 #if FEATURE_ENABLED(PICO_CALC)
 	#include <lexxos/apps/picocalc/detail/psram_diagnostics_support.h>
@@ -23,7 +36,13 @@
 	#include <portable.h>
 #endif
 
+#if defined(LEXXOS_PLATFORM_RK3506)
+extern "C" void* rk3506_heap_allocate(std::size_t bytes);
+extern "C" void rk3506_heap_release(void* pointer);
+#endif
+
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	constexpr int maxBenchmarkWidth = detail::displayScratchLinePixels;
@@ -40,6 +59,7 @@ namespace {
 		Stream,
 		DoubleBuffer,
 		CachedCopy,
+		CachedNative,
 		Psram,
 		All,
 	};
@@ -81,6 +101,11 @@ namespace {
 		std::uint32_t elapsedMs{0};
 		std::uint64_t logicalBytes{0};
 		std::uint64_t wireBytes{0};
+#if defined(LEXXOS_PLATFORM_RK3506)
+		lexxos::platform::rk3506::LcdSpi0Statistics spi{};
+		lexxos::devices::DoubleBufferedDisplayTiming frameTiming{};
+		lexxos::devices::Ili9488DisplayTiming panelTiming{};
+#endif
 	};
 
 	struct BenchmarkWorkspace {
@@ -104,124 +129,144 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec displayTestArguments[] = {
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "bench",
-         .help = "run display throughput benchmark instead of the visual gradient",
-         .kind = lexxos::program::ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "bench",
+	     .help = "run display throughput benchmark instead of the visual gradient",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
+	     },
+#if defined(LEXXOS_PLATFORM_RK3506)
+	    {
+	     .name = "lcd-dma",
+	     .help = "report and enable PL330 SPI0 TX DMA during benchmark",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "matrix",
-         .help = "run standard benchmark matrix: full, gb2, gb240 and gb1 sizes",
-         .kind = lexxos::program::ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "lcd-direct16",
+	     .help = "force native RGB565 halfword DMA for this benchmark",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "rows-scan",
-         .help = "scan double-buffer rows-per-chunk values for the selected benchmark size",
-         .kind = lexxos::program::ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "lcd-packed8",
+	     .help = "temporarily use 8-bit packed RGB565 instead of board default direct16",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
+	     },
+#endif
+	    {
+	     .name = "matrix",
+	     .help = "run standard benchmark matrix: full, gb2, gb240 and gb1 sizes",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "transport",
-         .valueName = "mode",
-         .help = "benchmark transport: row, stream, double, cached, psram or all",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "stream",
+	     .name = "rows-scan",
+	     .help = "scan double-buffer rows-per-chunk values for the selected benchmark size",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "size",
-         .valueName = "name",
-         .help = "benchmark size: full, gb2, gb240, gb1 or custom",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "full",
+	     .name = "transport",
+	     .valueName = "mode",
+	     .help = "benchmark transport: row, stream, double, cached, native, psram or all",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "stream",
 	     },
 	    {
-         .name = "baud",
-         .valueName = "hz",
-         .help = "temporarily set display SPI baud rate before benchmark",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0",
+	     .name = "size",
+	     .valueName = "name",
+	     .help = "benchmark size: full, gb2, gb240, gb1 or custom",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "full",
 	     },
 	    {
-         .name = "keep-baud",
-         .help = "do not restore the previous display bus speed after benchmark",
-         .kind = lexxos::program::ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "baud",
+	     .valueName = "hz",
+	     .help = "temporarily set display SPI baud rate before benchmark",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0",
 	     },
 	    {
-         .name = "frames",
-         .valueName = "count",
-         .help = "benchmark frame count",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "20",
+	     .name = "keep-baud",
+	     .help = "do not restore the previous display bus speed after benchmark",
+	     .kind = lexxos::program::ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "width",
-         .valueName = "px",
-         .help = "custom benchmark width",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0",
+	     .name = "frames",
+	     .valueName = "count",
+	     .help = "benchmark frame count",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "20",
 	     },
 	    {
-         .name = "height",
-         .valueName = "px",
-         .help = "custom benchmark height",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0",
+	     .name = "width",
+	     .valueName = "px",
+	     .help = "custom benchmark width",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0",
 	     },
 	    {
-         .name = "x",
-         .valueName = "px",
-         .help = "benchmark rectangle x offset; centered when omitted",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "height",
+	     .valueName = "px",
+	     .help = "custom benchmark height",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0",
 	     },
 	    {
-         .name = "y",
-         .valueName = "px",
-         .help = "benchmark rectangle y offset; centered when omitted",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "x",
+	     .valueName = "px",
+	     .help = "benchmark rectangle x offset; centered when omitted",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	    {
-         .name = "rows",
-         .valueName = "count",
-         .help = "rows per chunk for double/psram transports, max 64",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "16",
+	     .name = "y",
+	     .valueName = "px",
+	     .help = "benchmark rectangle y offset; centered when omitted",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	    {
-         .name = "psram-address",
-         .valueName = "addr",
-         .help = "PSRAM staging address for psram transport",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "2097152",
+	     .name = "rows",
+	     .valueName = "count",
+	     .help = "rows per chunk for double/psram transports, max 64",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "16",
+	     },
+	    {
+	     .name = "psram-address",
+	     .valueName = "addr",
+	     .help = "PSRAM staging address for psram transport",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "2097152",
 	     },
 	};
 
@@ -233,7 +278,11 @@ namespace {
 		if (bytes > xPortGetFreeHeapSize() || xPortGetFreeHeapSize() - bytes < benchmarkHeapGuardBytes) {
 			return nullptr;
 		}
+
 		return pvPortMalloc(bytes);
+
+#elif defined(LEXXOS_PLATFORM_RK3506)
+		return rk3506_heap_allocate(bytes);
 #else
 		return std::malloc(bytes);
 #endif
@@ -245,6 +294,8 @@ namespace {
 		}
 #if defined(LEXXOS_KERNEL_FREERTOS)
 		vPortFree(memory);
+#elif defined(LEXXOS_PLATFORM_RK3506)
+		rk3506_heap_release(memory);
 #else
 		std::free(memory);
 #endif
@@ -266,6 +317,7 @@ namespace {
 		if (requestedBufferCount == 0) {
 			return true;
 		}
+
 		if (bufferBytes >= bytes && bufferCount >= requestedBufferCount) {
 			return true;
 		}
@@ -334,6 +386,11 @@ namespace {
 			return true;
 		}
 
+		if (text == "native" || text == "native565") {
+			transport = BenchmarkTransport::CachedNative;
+			return true;
+		}
+
 		if (text == "psram") {
 			transport = BenchmarkTransport::Psram;
 			return true;
@@ -343,6 +400,7 @@ namespace {
 			transport = BenchmarkTransport::All;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -356,11 +414,14 @@ namespace {
 				return "double";
 			case BenchmarkTransport::CachedCopy:
 				return "cached";
+			case BenchmarkTransport::CachedNative:
+				return "native";
 			case BenchmarkTransport::Psram:
 				return "psram";
 			case BenchmarkTransport::All:
 				return "all";
 		}
+
 		return "unknown";
 	}
 
@@ -412,10 +473,21 @@ namespace {
 		for (int x = 0; x < width; ++x) {
 			line[static_cast<std::size_t>(x)] = cachedCopyPixel(x, width);
 		}
+
 		auto* out = output;
 		for (int row = 0; row < rows; ++row) {
 			for (int x = 0; x < width; ++x) {
 				writeRgb565Bytes(out, line[static_cast<std::size_t>(x)]);
+			}
+		}
+	}
+
+	void prepareCachedNativeBenchmark(BenchmarkRect const& rect, int rowsPerChunk, BenchmarkWorkspace& workspace) {
+		auto const rows = std::min(rect.height, rowsPerChunk);
+		auto* output = reinterpret_cast<std::uint16_t*>(workspace.bufferA);
+		for (int y = 0; y < rows; ++y) {
+			for (int x = 0; x < rect.width; ++x) {
+				output[static_cast<std::size_t>(y) * rect.width + x] = cachedCopyPixel(x, rect.width);
 			}
 		}
 	}
@@ -427,6 +499,7 @@ namespace {
 		if (fraction < 10U) {
 			context.write("0");
 		}
+
 		writeUnsigned(context, fraction);
 	}
 
@@ -443,41 +516,49 @@ namespace {
 		options.size = arguments.valueOr("size", "full");
 
 		if (!parseTransport(arguments.valueOr("transport", "stream"), options.transport)) {
-			context.writeErrorLine("display-test: invalid --transport, expected row, stream, double, cached, psram or all");
+			context.writeErrorLine("display-test: invalid --transport, expected row, stream, double, cached, native, psram or all");
 			return false;
 		}
+
 		if (!parseOptionalUnsigned(arguments, "baud", options.baud)) {
 			context.writeErrorLine("display-test: invalid --baud");
 			return false;
 		}
+
 		if (!parseOptionalUnsigned(arguments, "frames", options.frames) || options.frames == 0 || options.frames > maxBenchmarkFrames) {
 			context.writeErrorLine("display-test: invalid --frames");
 			return false;
 		}
+
 		if (!parseOptionalUnsigned(arguments, "width", options.requestedWidth)
 		    || options.requestedWidth > static_cast<std::uint32_t>(maxBenchmarkWidth)) {
 			context.writeErrorLine("display-test: invalid --width");
 			return false;
 		}
+
 		if (!parseOptionalUnsigned(arguments, "height", options.requestedHeight)) {
 			context.writeErrorLine("display-test: invalid --height");
 			return false;
 		}
+
 		if (!parseOptionalUnsigned(arguments, "x", options.requestedX)
 		    || !parseOptionalUnsigned(arguments, "y", options.requestedY)) {
 			context.writeErrorLine("display-test: invalid --x/--y");
 			return false;
 		}
+
 		if (!parseOptionalUnsigned(arguments, "rows", options.rowsPerChunk)
 		    || options.rowsPerChunk == 0
 		    || options.rowsPerChunk > maxBenchmarkRowsPerChunk) {
 			context.writeErrorLine("display-test: invalid --rows");
 			return false;
 		}
+
 		if (!parseOptionalUnsigned(arguments, "psram-address", options.psramAddress)) {
 			context.writeErrorLine("display-test: invalid --psram-address");
 			return false;
 		}
+
 		return true;
 	}
 
@@ -508,18 +589,23 @@ namespace {
 			    options.requestedHeight > 0 ? static_cast<int>(options.requestedHeight) : display.height(),
 			};
 		}
+
 		if (options.size == "gb2") {
 			return {"gb2", 320, 288};
 		}
+
 		if (options.size == "gb240") {
 			return {"gb240", 320, 240};
 		}
+
 		if (options.size == "gb1") {
 			return {"gb1", 160, 144};
 		}
+
 		if (options.size == "half") {
 			return {"half", display.width() / 2, display.height() / 2};
 		}
+
 		return {"full", display.width(), display.height()};
 	}
 
@@ -537,6 +623,7 @@ namespace {
 		if (!display.beginFrame()) {
 			return false;
 		}
+
 		for (int y = 0; y < rect.height; ++y) {
 			fillRgb565Line(line, rect.width, y, rect.height, frame);
 			if (!display.blitRgb565({.x = rect.x, .y = rect.y + y, .width = rect.width, .height = 1}, line, rect.width)) {
@@ -544,6 +631,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return display.endFrame();
 	}
 
@@ -552,6 +640,7 @@ namespace {
 		if (!display.beginFrame()) {
 			return false;
 		}
+
 		if (!display.beginRgb565Stream({.x = rect.x, .y = rect.y, .width = rect.width, .height = rect.height})) {
 			display.endFrame();
 			return false;
@@ -564,6 +653,35 @@ namespace {
 				return false;
 			}
 		}
+
+		return display.endRgb565Stream() && display.endFrame();
+	}
+
+	bool runCachedNativeBenchmarkFrame(
+	    lexxos::devices::DisplayDevice& display,
+	    BenchmarkRect const& rect,
+	    int rowsPerChunk,
+	    BenchmarkWorkspace& workspace) {
+		auto const* source = reinterpret_cast<std::uint16_t const*>(workspace.bufferA);
+		if (!display.beginFrame()) {
+			return false;
+		}
+
+		if (!display.beginRgb565Stream({.x = rect.x, .y = rect.y, .width = rect.width, .height = rect.height})) {
+			display.endFrame();
+			return false;
+		}
+		for (int y = 0; y < rect.height;) {
+			auto const rows = std::min(rect.height - y, rowsPerChunk);
+			if (!display.writeRgb565Stream(source, rect.width * rows)) {
+				display.endRgb565Stream();
+				display.endFrame();
+				return false;
+			}
+
+			y += rows;
+		}
+
 		return display.endRgb565Stream() && display.endFrame();
 	}
 
@@ -579,6 +697,7 @@ namespace {
 		if (!display.beginFrame()) {
 			return false;
 		}
+
 		if (!display.beginRgb565Stream({.x = rect.x, .y = rect.y, .width = rect.width, .height = rect.height})) {
 			display.endFrame();
 			return false;
@@ -598,9 +717,11 @@ namespace {
 				display.endFrame();
 				return false;
 			}
+
 			useA = !useA;
 			y += rows;
 		}
+
 		return display.endRgb565Stream() && display.endFrame();
 	}
 
@@ -622,6 +743,7 @@ namespace {
 		if (!display.beginFrame()) {
 			return false;
 		}
+
 		if (!display.beginRgb565Stream({.x = rect.x, .y = rect.y, .width = rect.width, .height = rect.height})) {
 			display.endFrame();
 			return false;
@@ -632,13 +754,16 @@ namespace {
 			if (rows > rowsPerChunk) {
 				rows = rowsPerChunk;
 			}
+
 			if (!display.writeRgb565BytesStream(buffer, rect.width * rows)) {
 				display.endRgb565Stream();
 				display.endFrame();
 				return false;
 			}
+
 			y += rows;
 		}
+
 		return display.endRgb565Stream() && display.endFrame();
 	}
 
@@ -663,6 +788,7 @@ namespace {
 		if (!display.beginFrame()) {
 			return false;
 		}
+
 		if (!display.beginRgb565Stream({.x = rect.x, .y = rect.y, .width = rect.width, .height = rect.height})) {
 			display.endFrame();
 			return false;
@@ -673,6 +799,7 @@ namespace {
 			if (rows > rowsPerChunk) {
 				rows = rowsPerChunk;
 			}
+
 			auto const bytes = static_cast<std::size_t>(rect.width * rows * 2);
 			auto const address = psramAddress + static_cast<std::uint32_t>(y * rect.width * 2);
 
@@ -684,13 +811,16 @@ namespace {
 				context.writeErrorLine("display-test: PSRAM frame staging failed");
 				return false;
 			}
+
 			if (!display.writeRgb565BytesStream(readBuffer, rect.width * rows)) {
 				display.endRgb565Stream();
 				display.endFrame();
 				return false;
 			}
+
 			y += rows;
 		}
+
 		return display.endRgb565Stream() && display.endFrame();
 #else
 		(void) context;
@@ -710,12 +840,14 @@ namespace {
 			case BenchmarkTransport::Psram:
 				return 2;
 			case BenchmarkTransport::CachedCopy:
+			case BenchmarkTransport::CachedNative:
 				return 1;
 			case BenchmarkTransport::RowBlit:
-			case BenchmarkTransport::Stream:
+			case BenchmarkTransport::Stream :
 			case BenchmarkTransport::All:
 				return 0;
 		}
+
 		return 0;
 	}
 
@@ -744,7 +876,7 @@ namespace {
 	    BenchmarkRect const& rect,
 	    BenchmarkOptions const& options,
 	    BenchmarkWorkspace& workspace) {
-		if (!ensureBenchmarkWorkspace(context, workspace, transport, rect, options)) {
+		if (!display.waitIdle() || !ensureBenchmarkWorkspace(context, workspace, transport, rect, options)) {
 			return {
 			    .ok = false,
 			    .elapsedMs = 0,
@@ -755,8 +887,15 @@ namespace {
 
 		if (transport == BenchmarkTransport::CachedCopy) {
 			prepareCachedCopyBenchmark(rect, static_cast<int>(options.rowsPerChunk), workspace);
+		} else if (transport == BenchmarkTransport::CachedNative) {
+			prepareCachedNativeBenchmark(rect, static_cast<int>(options.rowsPerChunk), workspace);
 		}
 
+#if defined(LEXXOS_PLATFORM_RK3506)
+		auto const frameStart = lexxos::composition::products::picoCalcLyraDisplayTiming();
+		auto const panelStart = lexxos::composition::products::picoCalcLyraPanelTiming();
+		auto const spiStart = lexxos::platform::rk3506::lcdSpi0Statistics();
+#endif
 		auto const startMs = uptimeMs(context);
 		bool ok = true;
 		for (std::uint32_t frame = 0; frame < options.frames; ++frame) {
@@ -778,6 +917,9 @@ namespace {
 				case BenchmarkTransport::CachedCopy:
 					ok = runCachedCopyBenchmarkFrame(display, rect, static_cast<int>(options.rowsPerChunk), workspace);
 					break;
+				case BenchmarkTransport::CachedNative:
+					ok = runCachedNativeBenchmarkFrame(display, rect, static_cast<int>(options.rowsPerChunk), workspace);
+					break;
 				case BenchmarkTransport::Psram:
 					ok = runPsramBenchmarkFrame(context, display, rect, frame, static_cast<int>(options.rowsPerChunk), options.psramAddress, workspace);
 					break;
@@ -785,18 +927,54 @@ namespace {
 					ok = false;
 					break;
 			}
+
 			if (!ok) {
 				break;
 			}
+
 			lexxos::kernel::yield();
 		}
 
+		ok = display.waitIdle() && ok;
 		auto const elapsed = uptimeMs(context) - startMs;
+#if defined(LEXXOS_PLATFORM_RK3506)
+		auto spi = lexxos::platform::rk3506::lcdSpi0Statistics();
+		spi.calls -= spiStart.calls;
+		spi.requestedBytes -= spiStart.requestedBytes;
+		spi.completedBytes -= spiStart.completedBytes;
+		spi.elapsedTicks -= spiStart.elapsedTicks;
+		spi.failures -= spiStart.failures;
+
+		auto timing = lexxos::composition::products::picoCalcLyraDisplayTiming();
+		timing.copyTicks -= frameStart.copyTicks;
+		timing.drawTicks -= frameStart.drawTicks;
+		timing.queueTicks -= frameStart.queueTicks;
+		timing.presentTicks -= frameStart.presentTicks;
+		timing.copiedFrames -= frameStart.copiedFrames;
+		timing.copiedBytes -= frameStart.copiedBytes;
+		timing.fullSyncs -= frameStart.fullSyncs;
+		timing.partialSyncs -= frameStart.partialSyncs;
+		timing.skippedSyncs -= frameStart.skippedSyncs;
+		timing.preparedFrames -= frameStart.preparedFrames;
+		timing.presentedFrames -= frameStart.presentedFrames;
+		timing.presentedRegions -= frameStart.presentedRegions;
+		timing.presentedPixels -= frameStart.presentedPixels;
+
+		auto panelTiming = lexxos::composition::products::picoCalcLyraPanelTiming();
+		panelTiming.roiStageTicks -= panelStart.roiStageTicks;
+		panelTiming.roiStageBytes -= panelStart.roiStageBytes;
+		panelTiming.roiStageCalls -= panelStart.roiStageCalls;
+#endif
 		return {
 		    .ok = ok,
 		    .elapsedMs = elapsed,
 		    .logicalBytes = static_cast<std::uint64_t>(rect.width) * static_cast<std::uint64_t>(rect.height) * 2ULL * options.frames,
 		    .wireBytes = static_cast<std::uint64_t>(rect.width) * static_cast<std::uint64_t>(rect.height) * static_cast<std::uint64_t>(display.wireBytesPerPixel()) * options.frames,
+#if defined(LEXXOS_PLATFORM_RK3506)
+		    .spi = spi,
+		    .frameTiming = timing,
+		    .panelTiming = panelTiming,
+#endif
 		};
 	}
 
@@ -823,10 +1001,12 @@ namespace {
 		writeUnsigned(context, options.frames);
 		if (transport == BenchmarkTransport::DoubleBuffer
 		    || transport == BenchmarkTransport::CachedCopy
+		    || transport == BenchmarkTransport::CachedNative
 		    || transport == BenchmarkTransport::Psram) {
 			context.write(" rows=");
 			writeUnsigned(context, options.rowsPerChunk);
 		}
+
 		context.write(" ms=");
 		writeUnsigned(context, result.elapsedMs);
 		context.write(" logical-rgb565-bytes=");
@@ -834,7 +1014,7 @@ namespace {
 		context.write(" wire-bytes=");
 		writeUnsigned64(context, result.wireBytes);
 
-		if (result.elapsedMs > 0) {
+		if (result.ok && result.elapsedMs > 0) {
 			auto const fpsTimes100 =
 			    static_cast<std::uint32_t>((static_cast<std::uint64_t>(options.frames) * 100000ULL) / result.elapsedMs);
 			auto const kibPerSecond =
@@ -848,6 +1028,55 @@ namespace {
 			context.write(" wire-kib-s=");
 			writeUnsigned(context, wireKibPerSecond);
 		}
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+		if (result.spi.counterHz != 0) {
+			auto const ticks = result.spi.elapsedTicks;
+			auto const hz = result.spi.counterHz;
+			auto const spiUs = (ticks / hz) * 1000000ULL + ((ticks % hz) * 1000000ULL) / hz;
+			context.write(" spi0-us=");
+			writeUnsigned64(context, spiUs);
+			context.write(" spi0-calls=");
+			writeUnsigned64(context, result.spi.calls);
+			context.write(" spi0-completed-bytes=");
+			writeUnsigned64(context, result.spi.completedBytes);
+			context.write(" spi0-failures=");
+			writeUnsigned64(context, result.spi.failures);
+
+			context.write(" frame-copy-us=");
+			writeUnsigned64(context, (result.frameTiming.copyTicks / hz) * 1000000ULL + ((result.frameTiming.copyTicks % hz) * 1000000ULL) / hz);
+			context.write(" frame-draw-us=");
+			writeUnsigned64(context, (result.frameTiming.drawTicks / hz) * 1000000ULL + ((result.frameTiming.drawTicks % hz) * 1000000ULL) / hz);
+			context.write(" present-queue-us=");
+			writeUnsigned64(context, (result.frameTiming.queueTicks / hz) * 1000000ULL + ((result.frameTiming.queueTicks % hz) * 1000000ULL) / hz);
+			context.write(" present-write-us=");
+			writeUnsigned64(context, (result.frameTiming.presentTicks / hz) * 1000000ULL + ((result.frameTiming.presentTicks % hz) * 1000000ULL) / hz);
+			context.write(" copies=");
+			writeUnsigned(context, result.frameTiming.copiedFrames);
+			context.write(" copy-bytes=");
+			writeUnsigned64(context, result.frameTiming.copiedBytes);
+			context.write(" full-syncs=");
+			writeUnsigned(context, result.frameTiming.fullSyncs);
+			context.write(" partial-syncs=");
+			writeUnsigned(context, result.frameTiming.partialSyncs);
+			context.write(" skipped-syncs=");
+			writeUnsigned(context, result.frameTiming.skippedSyncs);
+			context.write(" roi-stage-us=");
+			writeUnsigned64(context, (result.panelTiming.roiStageTicks / hz) * 1000000ULL + ((result.panelTiming.roiStageTicks % hz) * 1000000ULL) / hz);
+			context.write(" roi-stage-bytes=");
+			writeUnsigned64(context, result.panelTiming.roiStageBytes);
+			context.write(" roi-stage-calls=");
+			writeUnsigned(context, result.panelTiming.roiStageCalls);
+			context.write(" prepared=");
+			writeUnsigned(context, result.frameTiming.preparedFrames);
+			context.write(" presented=");
+			writeUnsigned(context, result.frameTiming.presentedFrames);
+			context.write(" present-rects=");
+			writeUnsigned64(context, result.frameTiming.presentedRegions);
+			context.write(" present-pixels=");
+			writeUnsigned64(context, result.frameTiming.presentedPixels);
+		}
+#endif
 
 		context.write(" ok=");
 		context.writeLine(result.ok ? "yes" : "no");
@@ -874,6 +1103,7 @@ namespace {
 			    BenchmarkTransport::Stream,
 			    BenchmarkTransport::DoubleBuffer,
 			    BenchmarkTransport::CachedCopy,
+			    BenchmarkTransport::CachedNative,
 			    BenchmarkTransport::Psram,
 			};
 			for (auto const nestedTransport : transports) {
@@ -883,6 +1113,7 @@ namespace {
 					return false;
 				}
 			}
+
 			return true;
 		}
 
@@ -919,6 +1150,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -939,6 +1171,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -950,12 +1183,61 @@ namespace {
 		if (keepBaud || originalBaud == 0) {
 			return true;
 		}
+
 		if (!display.configureBusSpeed(originalBaud)) {
 			context.writeErrorLine("display-test: warning: failed to restore display bus speed");
 			return false;
 		}
+
 		return true;
 	}
+
+#if defined(LEXXOS_PLATFORM_RK3506)
+	void writeLcdDmaFailure(lexxos::os::AppContext& context) {
+		auto const fault = lexxos::platform::rk3506::lcdDmaLastFailure();
+		if (!fault.valid) {
+			return;
+		}
+
+		context.write("display-test: lcd-dma fault-stage=");
+		context.write(fault.stage);
+		context.write(" manager-state=");
+		writeUnsigned(context, fault.managerState);
+		context.write(" manager-pc=");
+		writeUnsigned(context, fault.managerPc);
+		context.write(" manager-fault=");
+		writeUnsigned(context, fault.managerFault);
+		context.write(" manager-fault-type=");
+		writeUnsigned(context, fault.managerFaultType);
+		context.writeLine("");
+		context.write("display-test: lcd-dma ch2-state=");
+		writeUnsigned(context, fault.channelState);
+		context.write(" ch2-pc=");
+		writeUnsigned(context, fault.channelPc);
+		context.write(" channel-faults=");
+		writeUnsigned(context, fault.channelFaults);
+		context.write(" ch2-fault-type=");
+		writeUnsigned(context, fault.channelFaultType);
+		context.write(" code-at=");
+		writeUnsigned(context, fault.codeAddress);
+		context.write(" code-bytes=");
+		writeUnsigned(context, fault.codeBytes);
+		context.writeLine("");
+		context.write("display-test: lcd-dma event-raw=");
+		writeUnsigned(context, fault.eventRaw);
+		context.write(" event-irq=");
+		writeUnsigned(context, fault.eventIrq);
+		context.write(" debug-status=");
+		writeUnsigned(context, fault.debugStatus);
+		context.write(" spi-status=");
+		writeUnsigned(context, fault.spiStatus);
+		context.write(" spi-dmacr=");
+		writeUnsigned(context, fault.spiDmaControl);
+		context.write(" spi-txflr=");
+		writeUnsigned(context, fault.spiTxLevel);
+		context.writeLine("");
+	}
+#endif
 
 	int runBenchmarkMode(
 	    lexxos::os::AppContext& context,
@@ -1037,6 +1319,7 @@ namespace {
 						break;
 					}
 				}
+
 				if (error == nullptr && !display.endFrame()) {
 					error = "display-test: failed to end frame";
 				}
@@ -1071,7 +1354,7 @@ lexxos::program::ProgramDescriptor DisplayTestProgram::descriptor() {
 	    .name = "display-test",
 	    .help = "draw a test pattern or benchmark display throughput",
 	    .description = "Draws a RGB565 test pattern or measures display throughput across row, stream, double-buffer, cached-copy and PSRAM-staged paths.",
-	    .usage = "display-test [name] [--bench] [--matrix] [--rows-scan] [--transport row|stream|double|cached|psram|all] [--size full|gb2|gb240|gb1|custom] [--baud <hz>] [--frames <count>] [--rows <count>] [--width <px>] [--height <px>]",
+	    .usage = "display-test [name] [--bench] [--lcd-dma] [--lcd-direct16|--lcd-packed8] [--matrix] [--rows-scan] [--transport row|stream|double|cached|native|psram|all] [--size full|gb2|gb240|gb1|custom] [--baud <hz>] [--frames <count>] [--rows <count>] [--width <px>] [--height <px>]",
 	    .arguments = argumentList(displayTestArguments),
 	    .handler = run,
 	    .runtime = {
@@ -1113,8 +1396,168 @@ int DisplayTestProgram::run(
 		return 1;
 	}
 
+#if defined(LEXXOS_PLATFORM_RK3506)
+	bool const useLcdDma = arguments.has("lcd-dma");
+	bool const useDirect16 = arguments.has("lcd-direct16");
+	bool const usePacked8 = arguments.has("lcd-packed8");
+
+	if (!display->waitIdle()) {
+		return 1;
+	}
+
+	bool const previousDma = lexxos::platform::rk3506::lcdDmaEnabled();
+	bool const previousDirect16 = lexxos::platform::rk3506::lcdSpi0Rgb565Direct16Enabled();
+
+	if (useDirect16 && usePacked8) {
+		context.writeErrorLine("display-test: --lcd-direct16 and --lcd-packed8 are mutually exclusive");
+		return 2;
+	}
+
+	if (usePacked8 && !options.bench) {
+		context.writeErrorLine("display-test: --lcd-packed8 requires --bench");
+		return 2;
+	}
+
+	if (useDirect16 && (!useLcdDma || !options.bench || display->wireFormat() != lexxos::devices::DisplayWireFormat::Rgb565)) {
+		context.writeErrorLine("display-test: --lcd-direct16 requires --bench --lcd-dma and RGB565 wire format");
+		return 2;
+	}
+
+	if (useLcdDma && !options.bench) {
+		context.writeErrorLine("display-test: --lcd-dma requires --bench");
+		return 2;
+	}
+
+	if (useLcdDma) {
+		auto const enabled = [] {
+			lexxos::devices::BusTransaction transaction{lexxos::composition::products::lyraSpi0Queue()};
+			return transaction && lexxos::platform::rk3506::lcdDmaProbe() && lexxos::platform::rk3506::lcdDmaSetEnabled(true);
+		}();
+		if (!enabled) {
+			context.write("display-test: SPI0 busy or DMA unavailable: ");
+			context.writeLine(lexxos::platform::rk3506::lcdDmaReason());
+			writeLcdDmaFailure(context);
+			return 1;
+		}
+
+		context.writeLine("display-test: LCD DMA enabled (DMAC0 ch2, IRQ148 event2)");
+	}
+
+	if (useDirect16 || usePacked8) {
+		bool const enabled = [useDirect16] {
+			lexxos::devices::BusTransaction transaction{lexxos::composition::products::lyraSpi0Queue()};
+			return transaction && lexxos::platform::rk3506::lcdSpi0SetRgb565Direct16(useDirect16);
+		}();
+
+		if (!enabled) {
+			lexxos::devices::BusTransaction transaction{lexxos::composition::products::lyraSpi0Queue()};
+			if (transaction) {
+				(void) lexxos::platform::rk3506::lcdDmaSetEnabled(previousDma);
+			}
+
+			context.writeErrorLine("display-test: cannot select LCD pixel transport (DMA unavailable or SPI0 busy)");
+			return 1;
+		}
+
+		context.writeLine(useDirect16
+		        ? "display-test: RGB565 direct16 active (SPI0 DFS16 + PL330 halfwords)"
+		        : "display-test: RGB565 packed8 active for this benchmark");
+	}
+#endif
+
 	if (options.bench) {
-		return runBenchmarkMode(context, *display, options);
+#if defined(LEXXOS_PLATFORM_RK3506)
+		auto const dmaBefore = lexxos::platform::rk3506::lcdDmaStatistics();
+#endif
+		auto result = runBenchmarkMode(context, *display, options);
+#if defined(LEXXOS_PLATFORM_RK3506)
+		if (useDirect16 || usePacked8) {
+			bool const idle = display->waitIdle();
+			bool const restored = [idle, previousDirect16] {
+				if (!idle) {
+					return false;
+				}
+
+				lexxos::devices::BusTransaction transaction{lexxos::composition::products::lyraSpi0Queue()};
+				return transaction && lexxos::platform::rk3506::lcdSpi0SetRgb565Direct16(previousDirect16);
+			}();
+
+			if (!restored) {
+				context.writeErrorLine("display-test: cannot restore default LCD pixel transport; reboot before further LCD use");
+				result = 1;
+			}
+		}
+
+		if (useLcdDma) {
+			(void) display->waitIdle();
+
+			auto const disabled = [previousDma] {
+				lexxos::devices::BusTransaction transaction{lexxos::composition::products::lyraSpi0Queue()};
+				return transaction && lexxos::platform::rk3506::lcdDmaSetEnabled(previousDma);
+			}();
+
+			if (!disabled) {
+				context.writeErrorLine("display-test: cannot restore LCD DMA mode (SPI0 busy or DMA failure)");
+				return 1;
+			}
+
+			auto stats = lexxos::platform::rk3506::lcdDmaStatistics();
+			stats.chunks -= dmaBefore.chunks;
+			stats.direct16Chunks -= dmaBefore.direct16Chunks;
+			stats.bytes -= dmaBefore.bytes;
+			stats.waitTicks -= dmaBefore.waitTicks;
+			stats.irqTicks -= dmaBefore.irqTicks;
+			stats.wakeupTicks -= dmaBefore.wakeupTicks;
+			stats.drainTicks -= dmaBefore.drainTicks;
+			stats.timedIrqs -= dmaBefore.timedIrqs;
+			stats.errors -= dmaBefore.errors;
+			stats.timeouts -= dmaBefore.timeouts;
+			stats.irqInterrupts -= dmaBefore.irqInterrupts;
+			stats.irqPollFallbacks -= dmaBefore.irqPollFallbacks;
+
+			context.write("display-test: lcd-dma irq=");
+			writeUnsigned(context, stats.irqInterrupts);
+			context.write(" poll-fallbacks=");
+			writeUnsigned(context, stats.irqPollFallbacks);
+			context.writeLine("");
+			context.write("display-test: lcd-dma chunks=");
+			writeUnsigned(context, stats.chunks);
+			context.write(" direct16-chunks=");
+			writeUnsigned(context, stats.direct16Chunks);
+			context.write(" bytes=");
+			writeUnsigned64(context, stats.bytes);
+			context.write(" wait-ticks=");
+			writeUnsigned64(context, stats.waitTicks);
+			context.write(" irq-ticks=");
+			writeUnsigned64(context, stats.irqTicks);
+			context.write(" wakeup-ticks=");
+			writeUnsigned64(context, stats.wakeupTicks);
+			context.write(" drain-ticks=");
+			writeUnsigned64(context, stats.drainTicks);
+			context.write(" timed-irqs=");
+			writeUnsigned(context, stats.timedIrqs);
+			context.write(" errors=");
+			writeUnsigned(context, stats.errors);
+			context.write(" timeouts=");
+			writeUnsigned(context, stats.timeouts);
+			context.write(" state=");
+			context.writeLine(lexxos::platform::rk3506::lcdDmaReason());
+			auto const regs = lexxos::platform::rk3506::lcdDmaRegisterSnapshot();
+			context.write("display-test: spi0-clksel=");
+			writeUnsigned(context, regs.spiClockSelect);
+			context.write(" spi0-baud-divider=");
+			writeUnsigned(context, regs.spiBaudDivider);
+			context.write(" dmac0-ch2=");
+			writeUnsigned(context, regs.dmaChannel2State);
+			context.write(" dmac0-faults=");
+			writeUnsigned(context, regs.dmaChannelFaults);
+			context.write(" grf-dma-route=");
+			writeUnsigned(context, regs.grfDmaRoute);
+			context.writeLine("");
+		}
+#endif
+
+		return result;
 	}
 
 	return runPatternMode(context, *display);

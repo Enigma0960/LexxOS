@@ -23,6 +23,7 @@
 #endif
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -39,32 +40,32 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec pingArguments[] = {
 	    {
-         .name = "count",
-         .shortName = 'c',
-         .valueName = "n",
-         .help = "number of ICMP echo requests, 1..10",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "4",
+	     .name = "count",
+	     .shortName = 'c',
+	     .valueName = "n",
+	     .help = "number of ICMP echo requests, 1..10",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "4",
 	     },
 	    {
-         .name = "timeout",
-         .shortName = 't',
-         .valueName = "ms",
-         .help = "timeout per request and DNS resolve",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "5000",
+	     .name = "timeout",
+	     .shortName = 't',
+	     .valueName = "ms",
+	     .help = "timeout per request and DNS resolve",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "5000",
 	     },
 	    {
-         .name = "target",
-         .valueName = "host-or-ip",
-         .help = "IPv4 address or DNS host name",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = true,
+	     .name = "target",
+	     .valueName = "host-or-ip",
+	     .help = "IPv4 address or DNS host name",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = true,
 	     },
 	};
 
@@ -72,9 +73,11 @@ namespace {
 		if (output == nullptr || outputSize == 0U || text.size() >= outputSize) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < text.size(); ++index) {
 			output[index] = text[index];
 		}
+
 		output[text.size()] = '\0';
 		return true;
 	}
@@ -90,6 +93,7 @@ namespace {
 			context.writeErrorLine("ping: missing target host or IP");
 			return false;
 		}
+
 		if (!copyToBuffer(targetText, target, sizeof(target))) {
 			context.writeErrorLine("ping: target name is too long");
 			return false;
@@ -99,12 +103,14 @@ namespace {
 			context.writeErrorLine("ping: invalid --count");
 			return false;
 		}
+
 		if (!parseUnsigned32(arguments.valueOr("timeout", "5000"), timeoutMs)
 		    || timeoutMs == 0U
 		    || timeoutMs > pingMaxTimeoutMs) {
 			context.writeErrorLine("ping: invalid --timeout");
 			return false;
 		}
+
 		return true;
 	}
 
@@ -120,6 +126,7 @@ namespace {
 			context.write("?");
 			return;
 		}
+
 		context.write(text);
 	}
 
@@ -246,9 +253,11 @@ namespace {
 				if (error == EWOULDBLOCK || error == EAGAIN || error == ETIMEDOUT) {
 					return PingReceiveResult::Timeout;
 				}
+
 				if (error == EINTR) {
 					continue;
 				}
+
 				writeSocketError(context, "ping: receive failed", error);
 				return PingReceiveResult::Error;
 			}
@@ -262,6 +271,7 @@ namespace {
 				return PingReceiveResult::Reply;
 			}
 		}
+
 		return PingReceiveResult::Timeout;
 	}
 
@@ -317,6 +327,7 @@ namespace {
 				close(socketHandle);
 				return received > 0U ? 0 : 1;
 			}
+
 			++transmitted;
 
 			std::size_t payloadLength = 0;
@@ -333,6 +344,7 @@ namespace {
 				close(socketHandle);
 				return received > 0U ? 0 : 1;
 			}
+
 			if (result == PingReceiveResult::Timeout) {
 				context.write("Request timeout for icmp_seq ");
 				writeUnsigned(context, sequence);

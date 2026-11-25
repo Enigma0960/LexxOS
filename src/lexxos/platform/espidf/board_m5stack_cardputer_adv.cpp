@@ -20,8 +20,8 @@ namespace lexxos::platform {
 	#define LEXXOS_CARDPUTER_LCD_SWAP_AXES false
 #endif
 
-BoardDescriptor const& activeBoardDescriptor() {
-	static BoardDescriptor const descriptor{
+LegacyBoardDescriptor const& activeBoardDescriptor() {
+	static LegacyBoardDescriptor const descriptor{
 	    .boardId = "m5stack_cardputer_adv",
 	    .boardName = "M5Stack Cardputer-Adv",
 	    .vendor = "M5Stack",

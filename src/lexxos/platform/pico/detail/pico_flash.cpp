@@ -1,8 +1,8 @@
-#include <lexxos/platform/platform.h>
-
 #include <hardware/flash.h>
 #include <hardware/regs/addressmap.h>
 #include <hardware/sync.h>
+
+#include <lexxos/platform/platform.h>
 
 namespace {
 
@@ -39,6 +39,7 @@ std::uint32_t runningBinaryEndOffset() {
 	if (offset > picoFlashSizeBytes || offset > UINT32_MAX) {
 		return 0;
 	}
+
 	return static_cast<std::uint32_t>(offset);
 }
 
@@ -47,9 +48,11 @@ bool stagingRegionOverlapsFirmware(std::uint32_t offset) {
 	if (firmwareEnd == 0) {
 		return false;
 	}
+
 	if (firmwareEnd > UINT32_MAX - flashSafetyMargin) {
 		return true;
 	}
+
 	auto const protectedEnd = alignUp(firmwareEnd + flashSafetyMargin, FLASH_SECTOR_SIZE);
 	return offset < protectedEnd;
 }
@@ -98,6 +101,7 @@ bool lexxos::platform::eraseAndProgramGameBoyRomFlash(std::uint32_t offset, void
 		    static_cast<std::uint8_t const*>(data) + programmed,
 		    region.programSize);
 	}
+
 	restore_interrupts(interrupts);
 	return true;
 }

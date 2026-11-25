@@ -16,7 +16,9 @@
 #endif
 
 namespace lexxos::apps::picocalc_programs::detail {
+
 namespace {
+
 	constexpr std::uint8_t psramJedecIdCommand = 0x9F;
 
 	bool parseUnsignedFlexible(std::string_view text, std::uint32_t& output) {
@@ -47,9 +49,11 @@ namespace {
 			} else {
 				return false;
 			}
+
 			if (digit >= base || value > (std::numeric_limits<std::uint32_t>::max() - digit) / base) {
 				return false;
 			}
+
 			value = value * base + digit;
 		}
 
@@ -66,6 +70,7 @@ namespace {
 		if (!pin.isValid()) {
 			return;
 		}
+
 		auto const gpio = picoGpio(pin);
 		gpio_init(gpio);
 		gpio_set_function(gpio, GPIO_FUNC_SIO);
@@ -109,6 +114,7 @@ namespace {
 			psramBitDelay(pins.spi.baudRate);
 			value = static_cast<std::uint8_t>(value << 1U);
 		}
+
 		return result;
 	}
 
@@ -154,7 +160,7 @@ void writeHexAddress(lexxos::os::AppContext& context, std::uint32_t value) {
 }
 
 bool readPsramJedecId(
-    lexxos::platform::BoardDescriptor const& board,
+    lexxos::platform::LegacyBoardDescriptor const& board,
     std::array<std::uint8_t, 8>& output) {
 #if defined(LEXXOS_PLATFORM_PICO)
 	auto const& pins = board.psram;
@@ -167,6 +173,7 @@ bool readPsramJedecId(
 	for (std::size_t index = 0; index < output.size(); ++index) {
 		output[index] = transferPsramByte(pins, 0xFF);
 	}
+
 	deselectPsram(pins);
 	return true;
 #else
@@ -243,6 +250,7 @@ bool verifyPsramBuffer(
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -252,6 +260,7 @@ bool idLooksIdle(std::array<std::uint8_t, 8> const& id, std::uint8_t value) {
 			return false;
 		}
 	}
+
 	return true;
 }
 

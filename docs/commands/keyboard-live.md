@@ -1,6 +1,6 @@
 # `keyboard-live`
 
-run a live keyboard input test.
+Проверяет события клавиатуры в реальном времени.
 
 ## Справка shell
 

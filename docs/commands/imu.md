@@ -1,6 +1,6 @@
 # `imu`
 
-Reads samples from the primary motion sensor.
+Считывает измерения основного датчика движения.
 
 ## Справка shell
 

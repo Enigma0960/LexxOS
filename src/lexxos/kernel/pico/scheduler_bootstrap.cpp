@@ -1,8 +1,7 @@
-#include <lexxos/kernel/scheduler.h>
-
 #include <array>
 
 #include <lexxos/kernel/pico/bootstrap_scheduler_types.h>
+#include <lexxos/kernel/scheduler.h>
 
 namespace {
 
@@ -53,6 +52,10 @@ void sleepMs(std::uint32_t milliseconds) {
 
 void yield() {
 	schedulerBackend().yield();
+}
+
+std::size_t reapFinishedTasks() {
+	return 0;
 }
 
 std::size_t taskCount() {

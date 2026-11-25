@@ -30,10 +30,12 @@ int GbPpuTestProgram::run(
 		context.writeErrorLine("gb-ppu-test: display device is not registered");
 		return 1;
 	}
+
 	if (!display->isReady()) {
 		context.writeErrorLine("gb-ppu-test: display device is not ready");
 		return 1;
 	}
+
 	if (display->nativeFormat() != lexxos::devices::PixelFormat::Rgb565) {
 		context.writeErrorLine("gb-ppu-test: only rgb565 displays are supported");
 		return 1;

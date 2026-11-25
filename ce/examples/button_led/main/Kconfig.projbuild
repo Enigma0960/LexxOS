@@ -1,0 +1,10 @@
+menu "Button / LED"
+    config DEMO_BUTTON_GPIO
+        int "Button GPIO (internal pull-up, switch to GND)"
+        range 0 33
+        default 27
+    config DEMO_LED_GPIO
+        int "LED GPIO (active high)"
+        range 0 33
+        default 2
+endmenu

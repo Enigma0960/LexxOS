@@ -1,6 +1,6 @@
 # `umount`
 
-unmount a VFS mount point.
+Размонтирует файловую систему VFS.
 
 ## Справка shell
 

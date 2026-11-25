@@ -1,6 +1,7 @@
 #include <lexxos/shell/shell_escape_sequence_parser.h>
 
 namespace lexxos::shell::detail {
+
 namespace {
 
 	[[nodiscard]] ShellEscapeSequenceResult keyResult(ShellInputKey key) {
@@ -43,6 +44,7 @@ ShellEscapeSequenceResult ShellEscapeSequenceParser::consume(char value) {
 			reset();
 			return noKey();
 	}
+
 	reset();
 	return noKey();
 }
@@ -59,14 +61,17 @@ ShellEscapeSequenceResult ShellEscapeSequenceParser::_consumeEscape(char value) 
 		_enterCsi();
 		return noKey();
 	}
+
 	if (value == 'O') {
 		_state = State::Ss3;
 		return noKey();
 	}
+
 	if (value == '\x1B') {
 		start();
 		return noKey();
 	}
+
 	reset();
 	return noKey();
 }
@@ -95,6 +100,7 @@ ShellEscapeSequenceResult ShellEscapeSequenceParser::_consumeSs3(char value) {
 		default:
 			break;
 	}
+
 	reset();
 	return result;
 }
@@ -105,8 +111,10 @@ ShellEscapeSequenceResult ShellEscapeSequenceParser::_consumeCsi(char value) {
 			_parameter = static_cast<std::uint16_t>(_parameter * 10U + static_cast<unsigned>(value - '0'));
 			_parameterPresent = true;
 		}
+
 		return noKey();
 	}
+
 	if (value == ';') {
 		_ignoreParameters = true;
 		return noKey();
@@ -140,10 +148,12 @@ ShellEscapeSequenceResult ShellEscapeSequenceParser::_consumeCsi(char value) {
 			} else if (_parameterPresent && (_parameter == 4U || _parameter == 8U)) {
 				result = keyResult(ShellInputKey::End);
 			}
+
 			break;
 		default:
 			break;
 	}
+
 	reset();
 	return result;
 }

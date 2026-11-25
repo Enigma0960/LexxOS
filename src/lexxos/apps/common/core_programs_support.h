@@ -39,7 +39,7 @@ void writeHex32(lexxos::os::AppContext& context, std::uint32_t value);
 [[nodiscard]] bool parseUnsigned64(std::string_view text, std::uint64_t& value);
 [[nodiscard]] std::uint32_t uptimeMs(lexxos::os::AppContext const& context);
 void sleepMs(lexxos::os::AppContext const& context, std::uint32_t milliseconds);
-[[nodiscard]] lexxos::platform::BoardDescriptor const& activeBoard(lexxos::os::AppContext const& context);
+[[nodiscard]] lexxos::platform::LegacyBoardDescriptor const& activeBoard(lexxos::os::AppContext const& context);
 
 [[nodiscard]] bool isPrintableAscii(std::uint8_t value);
 [[nodiscard]] std::uint16_t readLe16(std::uint8_t const* data);

@@ -1,6 +1,6 @@
 # `sd-baud`
 
-show or set SD SPI baud rate.
+Показывает или задаёт частоту SPI карты SD.
 
 ## Справка shell
 

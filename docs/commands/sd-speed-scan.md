@@ -1,6 +1,6 @@
 # `sd-speed-scan`
 
-find stable SD SPI baud rate.
+Определяет устойчивую частоту SPI карты SD.
 
 ## Справка shell
 

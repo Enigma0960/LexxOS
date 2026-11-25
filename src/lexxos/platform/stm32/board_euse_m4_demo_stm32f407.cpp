@@ -1,6 +1,7 @@
 #include <lexxos/platform/board.h>
 
 namespace lexxos::platform {
+
 namespace {
 
 	constexpr int stm32PinNumber(char port, int pin) {
@@ -13,8 +14,8 @@ namespace {
 
 } // namespace
 
-BoardDescriptor const& activeBoardDescriptor() {
-	static BoardDescriptor const descriptor{
+LegacyBoardDescriptor const& activeBoardDescriptor() {
+	static LegacyBoardDescriptor const descriptor{
 	    .boardId = "euse_m4_demo_stm32f407",
 	    .boardName = "Euse M4 DEMO Large on STM32F407ZGT6",
 	    .vendor = "Euse",

@@ -126,6 +126,8 @@ private:
 	[[nodiscard]] bool _clearTextAreaBackground();
 
 	void _drawStatusBar();
+	bool _clearNow(bool discardQueuedText);
+	[[nodiscard]] std::uint32_t _uptimeMs() const;
 
 	lexxos::app::picocalc_lcd_console::ConsoleRenderStats _stats{};
 	lexxos::os::OperatingSystem* _operatingSystem{nullptr};
@@ -135,8 +137,9 @@ private:
 	bool _drawCursor{true};
 	bool _ready{false};
 	bool _textMode{true};
+	bool _clearRequested{}, _refreshRequested{};
 	LcdConsoleCharacterQueue _queue{};
-#if !defined(LEXXOS_KERNEL_FREERTOS)
+#if !defined(LEXXOS_KERNEL_FREERTOS) && !defined(LEXXOS_PLATFORM_RK3506)
 	std::atomic_flag _stateLock = ATOMIC_FLAG_INIT;
 #endif
 	std::array<bool, maxRows> _dirtyRows{};

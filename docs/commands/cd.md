@@ -1,6 +1,6 @@
 # `cd`
 
-change current VFS directory.
+Меняет текущий каталог VFS.
 
 ## Справка shell
 

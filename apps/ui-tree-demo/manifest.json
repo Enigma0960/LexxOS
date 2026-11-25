@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "id": "org.lexxos.apps.ui-tree-demo",
+  "name": "LexxUI Nested Layout Demo",
+  "version": "0.1.0",
+  "description": "Nested system-managed UI layout and modal dialogs",
+  "author": "LexxOS Contributors",
+  "license": "Apache-2.0",
+  "capabilities": ["console", "keyboard", "graphics"],
+  "memory": {"guest_bytes": 65536, "stack_bytes": 8192}
+}

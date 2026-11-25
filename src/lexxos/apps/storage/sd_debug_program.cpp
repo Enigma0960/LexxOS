@@ -19,12 +19,12 @@ namespace {
 
 	constexpr ProgramArgumentSpec sdDebugArguments[] = {
 	    {
-         .name = "action",
-         .valueName = "status|on|off|clear",
-         .help = "optional diagnostic action; default: status",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "action",
+	     .valueName = "status|on|off|clear",
+	     .help = "optional diagnostic action; default: status",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 

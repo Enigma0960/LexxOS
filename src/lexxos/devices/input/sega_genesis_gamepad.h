@@ -8,12 +8,16 @@
 #include <lexxos/platform/board.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices::input::detail {
+
 struct SegaGenesisGamepadSample;
-}
+
+} // namespace lexxos::devices::input::detail
 
 namespace lexxos::devices {
 

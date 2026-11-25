@@ -1,6 +1,6 @@
 # `ls`
 
-list VFS directory.
+Показывает содержимое каталога VFS.
 
 ## Справка shell
 

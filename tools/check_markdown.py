@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 IGNORED_DIR_NAMES = {
+    "work",
     ".cache",
     ".git",
     ".idea",
@@ -26,6 +27,9 @@ IGNORED_DIR_NAMES = {
     "external",
     "managed_components",
     "third_party",
+    "temp",
+    "temp-img",
+    "backups",
     "node_modules",
     "venv",
 }
@@ -102,12 +106,10 @@ def check_fences(path: Path, relative: Path, lines: list[str]) -> list[Finding]:
             continue
 
         marker = match.group(1)
-        marker_family = marker[0]
-
         if open_fence is None:
-            open_fence = marker_family
+            open_fence = marker
             open_line = line_number
-        elif open_fence == marker_family:
+        elif open_fence[0] == marker[0] and len(marker) >= len(open_fence):
             open_fence = None
             open_line = 0
 
@@ -135,8 +137,22 @@ def target_exists(path: Path, target: str) -> bool:
 
 def check_links(path: Path, relative: Path, lines: list[str]) -> list[Finding]:
     findings: list[Finding] = []
+    fence: str | None = None
 
     for line_number, line in enumerate(lines, start=1):
+        marker = FENCE_RE.match(line)
+        if marker:
+            token = marker.group(1)
+            if fence is None:
+                fence = token
+            elif token[0] == fence[0] and len(token) >= len(fence):
+                fence = None
+            continue
+        if fence is not None:
+            continue
+
+        # Примеры кода, включая C++ lambda, не являются Markdown-ссылками.
+        line = re.sub(r"(`+)(?!`)(.*?)\1(?!`)", "", line)
         targets = [match.group(1) for match in LINK_RE.finditer(line)]
 
         reference_match = REFERENCE_LINK_RE.match(line)

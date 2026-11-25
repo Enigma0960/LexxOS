@@ -35,6 +35,7 @@ int GbTestSuiteProgram::run(
 		context.writeLine(directory.data());
 		return 1;
 	}
+
 	if (stat.type != lexxos::vfs::NodeType::Directory) {
 		context.write("gb-test-suite: not a directory: ");
 		context.writeLine(directory.data());
@@ -46,6 +47,7 @@ int GbTestSuiteProgram::run(
 		context.writeErrorLine("gb-test-suite: invalid cycles count");
 		return 2;
 	}
+
 	if (cycleLimit > maxGbTestCycles) {
 		cycleLimit = maxGbTestCycles;
 	}
@@ -77,6 +79,7 @@ int GbTestSuiteProgram::run(
 			if (stopOnFail) {
 				break;
 			}
+
 			continue;
 		}
 

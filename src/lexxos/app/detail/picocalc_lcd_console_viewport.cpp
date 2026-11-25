@@ -19,6 +19,7 @@ bool LcdConsoleViewport::setTop(int topLine, int maxTopLine) {
 	if (topLine < 0) {
 		topLine = 0;
 	}
+
 	if (topLine > maxTopLine) {
 		topLine = maxTopLine;
 	}
@@ -60,6 +61,7 @@ bool LcdConsoleViewport::followCursorColumn(int cursorColumn, int visibleColumns
 	if (visibleColumns <= 0 || maxLeftColumn <= 0) {
 		return setLeft(0, maxLeftColumn, false);
 	}
+
 	if (cursorColumn < 0) {
 		cursorColumn = 0;
 	}
@@ -82,6 +84,7 @@ bool LcdConsoleViewport::followCursorColumn(int cursorColumn, int visibleColumns
 	} else {
 		targetLeft = cursorColumn - visibleColumns + 1 + margin;
 	}
+
 	return setLeft(targetLeft, maxLeftColumn, false);
 }
 
@@ -89,9 +92,11 @@ bool LcdConsoleViewport::setLeft(int leftColumn, int maxLeftColumn, bool manual)
 	if (leftColumn < 0) {
 		leftColumn = 0;
 	}
+
 	if (leftColumn > maxLeftColumn) {
 		leftColumn = maxLeftColumn;
 	}
+
 	bool const manualHorizontalView = manual && leftColumn != 0;
 	if (_leftColumn == leftColumn && _manualHorizontalView == manualHorizontalView) {
 		return false;

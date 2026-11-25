@@ -12,6 +12,7 @@
 #include <soc/soc_caps.h>
 
 namespace lexxos::devices::espidf_ethernet {
+
 namespace {
 
 	struct Runtime {
@@ -58,6 +59,7 @@ namespace {
 			g_runtime.status.hostname[0] = '\0';
 			return;
 		}
+
 		auto const byte4 = g_runtime.status.mac[4];
 		auto const byte5 = g_runtime.status.mac[5];
 		std::snprintf(g_runtime.status.hostname,
@@ -105,6 +107,7 @@ namespace {
 			setError(result);
 			return false;
 		}
+
 		return true;
 	}
 
@@ -112,6 +115,7 @@ namespace {
 		if (mac != nullptr) {
 			mac->del(mac);
 		}
+
 		if (phy != nullptr) {
 			phy->del(phy);
 		}
@@ -154,13 +158,14 @@ namespace {
 		if (event == nullptr) {
 			return;
 		}
+
 		g_runtime.status.gotIp = true;
 		esp_ip4addr_ntoa(&event->ip_info.ip, g_runtime.status.ip, sizeof(g_runtime.status.ip));
 		esp_ip4addr_ntoa(&event->ip_info.netmask, g_runtime.status.netmask, sizeof(g_runtime.status.netmask));
 		esp_ip4addr_ntoa(&event->ip_info.gw, g_runtime.status.gateway, sizeof(g_runtime.status.gateway));
 	}
 
-	bool installDriver(lexxos::platform::BoardDescriptor const& board) {
+	bool installDriver(lexxos::platform::LegacyBoardDescriptor const& board) {
 #if !SOC_EMAC_SUPPORTED
 		(void) board;
 		g_runtime.status = {};
@@ -179,6 +184,7 @@ namespace {
 		if (g_runtime.status.initialized) {
 			return true;
 		}
+
 		if (!ensureNetworkCore()) {
 			return false;
 		}
@@ -215,6 +221,7 @@ namespace {
 			setError(ESP_FAIL);
 			return false;
 		}
+
 		auto* phy = esp_eth_phy_new_generic(&phyConfig);
 		if (phy == nullptr) {
 			destroyPartialDriver(mac, nullptr);
@@ -229,6 +236,7 @@ namespace {
 			setError(result);
 			return false;
 		}
+
 		refreshMac();
 		refreshHostnameFromMac();
 
@@ -238,6 +246,7 @@ namespace {
 			setError(ESP_ERR_NO_MEM);
 			return false;
 		}
+
 		if (g_runtime.status.hostname[0] != '\0') {
 			result = esp_netif_set_hostname(g_runtime.netif, g_runtime.status.hostname);
 			if (result != ESP_OK) {
@@ -251,6 +260,7 @@ namespace {
 			setError(ESP_ERR_NO_MEM);
 			return false;
 		}
+
 		result = esp_netif_attach(g_runtime.netif, g_runtime.glue);
 		if (result != ESP_OK) {
 			setError(result);
@@ -262,11 +272,13 @@ namespace {
 			setError(result);
 			return false;
 		}
+
 		result = esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &gotIpEventHandler, nullptr);
 		if (result != ESP_OK) {
 			setError(result);
 			return false;
 		}
+
 		g_runtime.eventHandlersRegistered = true;
 
 		g_runtime.status.initialized = true;
@@ -277,19 +289,22 @@ namespace {
 
 } // namespace
 
-bool start(lexxos::platform::BoardDescriptor const& board) {
+bool start(lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!installDriver(board)) {
 		return false;
 	}
+
 	if (g_runtime.status.started) {
 		clearError();
 		return true;
 	}
+
 	auto const result = esp_eth_start(g_runtime.handle);
 	if (result != ESP_OK) {
 		setError(result);
 		return false;
 	}
+
 	g_runtime.status.started = true;
 	clearError();
 	return true;
@@ -299,21 +314,24 @@ bool stop() {
 	if (!g_runtime.status.initialized || g_runtime.handle == nullptr) {
 		return true;
 	}
+
 	if (!g_runtime.status.started) {
 		return true;
 	}
+
 	auto const result = esp_eth_stop(g_runtime.handle);
 	if (result != ESP_OK) {
 		setError(result);
 		return false;
 	}
+
 	g_runtime.status.started = false;
 	clearIp();
 	clearError();
 	return true;
 }
 
-bool restart(lexxos::platform::BoardDescriptor const& board) {
+bool restart(lexxos::platform::LegacyBoardDescriptor const& board) {
 	if (!stop()) {
 		return false;
 	}
@@ -329,11 +347,13 @@ Status status() {
 			esp_ip4addr_ntoa(&ipInfo.netmask, g_runtime.status.netmask, sizeof(g_runtime.status.netmask));
 			esp_ip4addr_ntoa(&ipInfo.gw, g_runtime.status.gateway, sizeof(g_runtime.status.gateway));
 		}
+
 		refreshMac();
 		if (g_runtime.status.linkUp) {
 			refreshLinkDetails();
 		}
 	}
+
 	return g_runtime.status;
 }
 

@@ -21,6 +21,7 @@
 #endif
 
 namespace lexxos::app::picocalc_display_power {
+
 namespace {
 
 #if BOARD_FAMILY_ENABLED(JC_ESP32P4_M3_DEV)
@@ -89,6 +90,7 @@ namespace {
 		if (left.size() != right.size()) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < left.size(); ++index) {
 			auto const l = left[index] >= 'A' && left[index] <= 'Z' ? static_cast<char>(left[index] - 'A' + 'a') : left[index];
 			auto const r = right[index] >= 'A' && right[index] <= 'Z' ? static_cast<char>(right[index] - 'A' + 'a') : right[index];
@@ -96,6 +98,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -103,9 +106,11 @@ namespace {
 		while (!value.empty() && (value.front() == ' ' || value.front() == '\t' || value.front() == '\r')) {
 			value.remove_prefix(1);
 		}
+
 		while (!value.empty() && (value.back() == ' ' || value.back() == '\t' || value.back() == '\r')) {
 			value.remove_suffix(1);
 		}
+
 		return value;
 	}
 
@@ -113,17 +118,21 @@ namespace {
 		if (text.empty()) {
 			return false;
 		}
+
 		std::uint32_t parsed = 0;
 		for (char const character : text) {
 			if (character < '0' || character > '9') {
 				return false;
 			}
+
 			auto const digit = static_cast<std::uint32_t>(character - '0');
 			if (parsed > (0xFFFFFFFFU - digit) / 10U) {
 				return false;
 			}
+
 			parsed = parsed * 10U + digit;
 		}
+
 		value = parsed;
 		return true;
 	}
@@ -133,6 +142,7 @@ namespace {
 		if (!parseUnsigned(text, parsed) || parsed > 255U) {
 			return false;
 		}
+
 		value = static_cast<std::uint8_t>(parsed);
 		return true;
 	}
@@ -142,10 +152,12 @@ namespace {
 			mode = lexxos::devices::DisplayPowerMode::Off;
 			return true;
 		}
+
 		if (equalsIgnoreCase(text, "sleep")) {
 			mode = lexxos::devices::DisplayPowerMode::Sleep;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -161,9 +173,11 @@ namespace {
 		if (text.size() > buffer.size() - offset) {
 			return false;
 		}
+
 		for (char const character : text) {
 			buffer[offset++] = character;
 		}
+
 		return true;
 	}
 
@@ -181,6 +195,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -199,9 +214,11 @@ namespace {
 		if (settings.timeoutMs > maximumIdleTimeoutMs || settings.dimTimeoutMs > maximumIdleTimeoutMs) {
 			return false;
 		}
+
 		if (settings.dimTimeoutMs != 0 && (settings.timeoutMs == 0 || settings.dimTimeoutMs >= settings.timeoutMs)) {
 			return false;
 		}
+
 		return settings.mode == lexxos::devices::DisplayPowerMode::Off
 		    || settings.mode == lexxos::devices::DisplayPowerMode::Sleep;
 	}
@@ -246,6 +263,7 @@ namespace {
 				if (!parseUnsigned(valueText, timeoutMs)) {
 					return false;
 				}
+
 				parsed.timeoutMs = timeoutMs;
 				hasAny = true;
 			} else if (name == "dim-timeout-ms") {
@@ -253,6 +271,7 @@ namespace {
 				if (!parseUnsigned(valueText, timeoutMs)) {
 					return false;
 				}
+
 				parsed.dimTimeoutMs = timeoutMs;
 				hasAny = true;
 			} else if (name == "dim-backlight") {
@@ -260,6 +279,7 @@ namespace {
 				if (!parseByte(valueText, backlight)) {
 					return false;
 				}
+
 				parsed.dimBacklight = backlight;
 				hasAny = true;
 			} else if (name == "mode") {
@@ -267,6 +287,7 @@ namespace {
 				if (!parsePowerMode(valueText, mode)) {
 					return false;
 				}
+
 				parsed.mode = mode;
 				hasAny = true;
 			} else {
@@ -277,14 +298,17 @@ namespace {
 		if (!hasAny) {
 			return false;
 		}
+
 		if (parsed.timeoutMs == 0) {
 			parsed.dimTimeoutMs = 0;
 		} else if (parsed.dimTimeoutMs >= parsed.timeoutMs) {
 			parsed.dimTimeoutMs = 0;
 		}
+
 		if (!validateSettings(parsed)) {
 			return false;
 		}
+
 		parsed.loadedFromConfig = true;
 		settings = parsed;
 		return true;
@@ -303,6 +327,7 @@ namespace {
 		if (readStatus != lexxos::vfs::ReadStatus::Ok) {
 			return false;
 		}
+
 		return parseConfigText(std::string_view{buffer.data(), bytesRead}, settings);
 	}
 
@@ -321,10 +346,12 @@ namespace {
 		if (path.empty()) {
 			return true;
 		}
+
 		lexxos::vfs::Stat node{};
 		if (lexxos::vfs::stat(path, node)) {
 			return node.type == lexxos::vfs::NodeType::Directory;
 		}
+
 		auto const status = lexxos::vfs::createDirectory(path);
 		return status == lexxos::vfs::WriteStatus::Ok || status == lexxos::vfs::WriteStatus::IsDirectory;
 	}
@@ -355,6 +382,7 @@ namespace {
 		if (writeStatus != lexxos::vfs::WriteStatus::Ok) {
 			return false;
 		}
+
 		return lexxos::vfs::sync() == lexxos::vfs::SyncStatus::Ok;
 	}
 
@@ -362,6 +390,7 @@ namespace {
 		if (!force && g_configLoaded) {
 			return;
 		}
+
 		if (!force && g_nextConfigLoadMs != 0 && !timeReached(nowMs, g_nextConfigLoadMs)) {
 			return;
 		}
@@ -380,13 +409,16 @@ namespace {
 		if (!display.supportsBacklight()) {
 			return;
 		}
+
 		auto const value = display.backlight();
 		if (value == 0) {
 			return;
 		}
+
 		if (g_idleStage == IdleStage::Dimmed && g_restoreLcdBacklightValid) {
 			return;
 		}
+
 		g_restoreLcdBacklight = value;
 		g_restoreLcdBacklightValid = true;
 	}
@@ -395,12 +427,14 @@ namespace {
 		if (g_restoreLcdBacklightValid) {
 			return g_restoreLcdBacklight;
 		}
+
 		if (display.supportsBacklight()) {
 			auto const current = display.backlight();
 			if (current > 0) {
 				return current;
 			}
 		}
+
 		return fallbackWakeLcdBacklight;
 	}
 
@@ -411,6 +445,7 @@ namespace {
 		if (!display.supportsBacklight()) {
 			return true;
 		}
+
 		result.lcdBacklightAttempted = true;
 		result.lcdBacklightValue = value;
 		result.lcdBacklightValueValid = true;
@@ -418,6 +453,7 @@ namespace {
 		if (result.lcdBacklightOk) {
 			result.lcdBacklightValue = display.backlight();
 		}
+
 		return result.lcdBacklightOk;
 	}
 
@@ -429,28 +465,35 @@ namespace {
 		if (!display.supportsBacklight() || display.powerMode() != lexxos::devices::DisplayPowerMode::On) {
 			return false;
 		}
+
 		auto displayLock = devices.lockDisplayDevice(display.name(), priority, owner);
 		if (!displayLock) {
 			return false;
 		}
+
 		if (!display.supportsBacklight() || display.powerMode() != lexxos::devices::DisplayPowerMode::On) {
 			return false;
 		}
+
 		auto const current = display.backlight();
 		if (current == 0) {
 			return false;
 		}
+
 		rememberDisplayBacklight(display);
 		auto target = g_idleSettings.dimBacklight;
 		if (target == 0) {
 			target = 1;
 		}
+
 		if (current < target) {
 			target = current;
 		}
+
 		if (!display.setBacklight(target)) {
 			return false;
 		}
+
 		g_idleStage = IdleStage::Dimmed;
 		return true;
 	}
@@ -472,6 +515,7 @@ namespace {
 			g_restoreLcdBacklight = snapshot.lcdBacklight;
 			g_restoreLcdBacklightValid = true;
 		}
+
 		if (snapshot.has(lexxos::devices::PicoCalcSouthbridgeSnapshot::validKeyboardBacklight)) {
 			g_restoreKeyboardBacklight = snapshot.keyboardBacklight;
 			g_restoreKeyboardBacklightValid = true;
@@ -492,6 +536,7 @@ namespace {
 		    && snapshot.lcdBacklight > 0) {
 			return snapshot.lcdBacklight;
 		}
+
 		return fallbackWakeLcdBacklight;
 	}
 
@@ -508,6 +553,7 @@ namespace {
 		    && snapshot.has(lexxos::devices::PicoCalcSouthbridgeSnapshot::validKeyboardBacklight)) {
 			return snapshot.keyboardBacklight;
 		}
+
 		return 0;
 	}
 
@@ -524,6 +570,7 @@ namespace {
 		if (status.acceptedValueValid) {
 			result.lcdBacklightValue = status.acceptedValue;
 		}
+
 		return result.lcdBacklightOk;
 	}
 
@@ -540,6 +587,7 @@ namespace {
 		if (status.acceptedValueValid) {
 			result.keyboardBacklightValue = status.acceptedValue;
 		}
+
 		return result.keyboardBacklightOk;
 	}
 	#endif
@@ -575,12 +623,15 @@ bool configureIdleTimeout(
 	if (updated.timeoutMs == 0 || updated.dimTimeoutMs >= updated.timeoutMs) {
 		updated.dimTimeoutMs = 0;
 	}
+
 	if (!validateSettings(updated)) {
 		if (settings != nullptr) {
 			*settings = g_idleSettings;
 		}
+
 		return false;
 	}
+
 	bool const saved = !save || saveConfig(updated);
 	updated.loadedFromConfig = save && saved;
 	g_idleSettings = updated;
@@ -592,6 +643,7 @@ bool configureIdleTimeout(
 	if (settings != nullptr) {
 		*settings = g_idleSettings;
 	}
+
 	return saved;
 #else
 	(void) platform;
@@ -601,6 +653,7 @@ bool configureIdleTimeout(
 	if (settings != nullptr) {
 		*settings = {};
 	}
+
 	return false;
 #endif
 }
@@ -623,11 +676,13 @@ bool updateIdle(
 	if (g_nextIdleCheckMs != 0 && !timeReached(nowMs, g_nextIdleCheckMs)) {
 		return false;
 	}
+
 	g_nextIdleCheckMs = nowMs + idleCheckIntervalMs;
 
 	if (g_idleSettings.timeoutMs == 0) {
 		return false;
 	}
+
 	if (g_lastActivityMs == 0) {
 		g_lastActivityMs = nowMs;
 		return false;
@@ -637,6 +692,7 @@ bool updateIdle(
 	if (display == nullptr || !display->supportsPowerMode()) {
 		return false;
 	}
+
 	if (display->powerMode() != lexxos::devices::DisplayPowerMode::On) {
 		g_idleStage = IdleStage::Off;
 		return false;
@@ -656,6 +712,7 @@ bool updateIdle(
 		if (result.displayOk) {
 			g_idleStage = IdleStage::Off;
 		}
+
 		return result.ok();
 	}
 
@@ -668,6 +725,7 @@ bool updateIdle(
 		    "display-idle-dim",
 		    lexxos::devices::DeviceResourcePriority::Background);
 	}
+
 	return false;
 #else
 	(void) devices;
@@ -692,6 +750,7 @@ bool applyPowerMode(
 		if (result != nullptr) {
 			*result = localResult;
 		}
+
 		return false;
 	}
 
@@ -753,6 +812,7 @@ bool applyPowerMode(
 	if (result != nullptr) {
 		*result = localResult;
 	}
+
 	return localResult.ok();
 }
 
@@ -765,6 +825,7 @@ bool wakeForInput(
 	if (display == nullptr || !display->supportsPowerMode()) {
 		return false;
 	}
+
 	if (display->powerMode() == lexxos::devices::DisplayPowerMode::On && g_idleStage == IdleStage::Active) {
 		return false;
 	}

@@ -37,6 +37,7 @@ enum class DisplayPowerMode : std::uint8_t {
 		case PixelFormat::Indexed2:
 			return "indexed2";
 	}
+
 	return "unknown";
 }
 
@@ -51,6 +52,7 @@ enum class DisplayPowerMode : std::uint8_t {
 		case DisplayWireFormat::Rgb888:
 			return "rgb888";
 	}
+
 	return "unknown";
 }
 
@@ -63,6 +65,7 @@ enum class DisplayPowerMode : std::uint8_t {
 		case DisplayPowerMode::Sleep:
 			return "sleep";
 	}
+
 	return "unknown";
 }
 
@@ -94,11 +97,29 @@ public:
 	virtual bool setBacklight(std::uint8_t value);
 
 	virtual bool clear(std::uint16_t rgb565) = 0;
+
+	// The rendering system may submit only changed pixels when this is true.
+	[[nodiscard]] virtual bool supportsPartialUpdates() const { return false; }
+
 	virtual bool beginFrame() = 0;
 	virtual bool blitRgb565(Rect const& rect, std::uint16_t const* pixels, int stridePixels) = 0;
 	virtual bool fillRgb565(Rect const& rect, std::uint16_t rgb565);
 	virtual bool endFrame() = 0;
+	// Дождаться физической передачи опубликованных кадров (диагностика, power, reload).
+	virtual bool waitIdle();
 
+	// Alpha blending requires a readable logical framebuffer; raw panels may opt out.
+	virtual bool blitRgb565Alpha(Rect const& rect, std::uint16_t const* pixels,
+	    std::uint8_t const* alpha, int stridePixels) {
+		(void) rect;
+		(void) pixels;
+		(void) alpha;
+		(void) stridePixels;
+		return false;
+	}
+
+	// Caller pixel representation, independent of the physical wire format.
+	[[nodiscard]] virtual bool prefersRgb565Stream() const;
 	virtual bool beginRgb565Stream(Rect const& rect);
 	virtual bool writeRgb565Stream(std::uint16_t const* pixels, int count);
 	virtual bool writeRgb565BytesStream(std::uint8_t const* bytes, int pixelCount);

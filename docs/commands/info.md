@@ -20,6 +20,12 @@ info <path>
 Для каталога: `name`, `path`, `type`, `created`, `modified`, `files`, `directories`, `permissions`.
 `files` и `directories` — количество непосредственных дочерних элементов, **не рекурсивный** подсчёт.
 
+Для ярлыка `.lnk`: `type: shortcut` и дополнительное поле `target` — путь к исходному
+файлу или команде из манифеста ярлыка. `path`, `size`, даты и права доступа относятся
+к самому файлу `.lnk`; целевой файл не открывается и не обязан существовать.
+Неверный или повреждённый `.lnk` выводится как `shortcut (invalid)` с полем
+`shortcut status`; команда завершается с ошибкой.
+
 - Пустая строка `created` или `modified` означает, что VFS не предоставляет дату.
 - В FatFs `FILINFO` доступно **время последней модификации**, но нет времени создания. FAT время имеет точность 2
   секунды, часовой пояс в нём не хранится.
@@ -40,6 +46,7 @@ info <path>
 
 ```text
 lexx:/> info /mnt/sd/apps/fileman.lexx
+lexx:/> info /mnt/sd/snake.lnk
 lexx:/> info /mnt/sd/docs
 lexx:/> info /proc/tasks
 ```

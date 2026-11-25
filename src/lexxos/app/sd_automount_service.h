@@ -3,7 +3,9 @@
 #include <string_view>
 
 namespace lexxos::os {
+
 class OperatingSystem;
+
 } // namespace lexxos::os
 
 namespace lexxos::app {

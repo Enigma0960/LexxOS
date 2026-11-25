@@ -11,6 +11,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::rtc_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -32,6 +33,7 @@ namespace {
 		if (offsetSeconds == 0) {
 			return;
 		}
+
 		context.write(offsetSeconds < 0 ? "-" : "+");
 		std::uint32_t const absolute = static_cast<std::uint32_t>(offsetSeconds < 0 ? -offsetSeconds : offsetSeconds);
 		writeOffset2(context, absolute / 3600U);
@@ -53,6 +55,7 @@ namespace {
 		if (status == detail::RtcSettingsStatus::Ok || status == detail::RtcSettingsStatus::NotFound) {
 			return true;
 		}
+
 		context.write("rtc-sync: warning: ignored invalid RTC config: ");
 		context.writeLine(detail::toString(status));
 		detail::resetRtcSettingsDefaults(settings, lexxos::devices::rtc::software::config(context.platform()));
@@ -67,6 +70,7 @@ namespace {
 			context.writeErrorLine("rtc-sync: invalid --server");
 			return false;
 		}
+
 		if (arguments.has("timeout")) {
 			std::uint32_t timeoutMs = rtcSyncDefaultTimeoutMs;
 			if (!parseUnsigned32(arguments.value("timeout"), timeoutMs)
@@ -75,26 +79,32 @@ namespace {
 				context.writeErrorLine("rtc-sync: invalid --timeout");
 				return false;
 			}
+
 			settings.timeoutMs = timeoutMs;
 		}
+
 		if (arguments.has("tz") && !detail::parseRtcTimezoneOffset(arguments.value("tz"), settings.timezoneOffsetSeconds)) {
 			context.writeErrorLine("rtc-sync: invalid --tz, expected UTC, Z, +HH, +HH:MM, +HHMM, -HH, -HH:MM or -HHMM");
 			return false;
 		}
+
 		if (arguments.has("source") && !detail::setRtcSettingsSource(settings, arguments.value("source"))) {
 			context.writeErrorLine("rtc-sync: invalid --source value, expected auto, software, picocalc, ds3231, pcf8563 or bm8563");
 			return false;
 		}
+
 		if (arguments.has("bus") && !detail::setRtcSettingsBus(settings, arguments.value("bus"))) {
 			context.writeErrorLine("rtc-sync: invalid --bus");
 			return false;
 		}
+
 		if (arguments.has("address")) {
 			std::uint8_t address = 0;
 			if (!detail::parseRtcI2cAddress(arguments.value("address"), address)) {
 				context.writeErrorLine("rtc-sync: invalid --address value");
 				return false;
 			}
+
 			settings.addressSet = true;
 			settings.address = address;
 		}
@@ -105,6 +115,7 @@ namespace {
 			context.writeErrorLine(error);
 			return false;
 		}
+
 		return true;
 	}
 
@@ -117,6 +128,7 @@ namespace {
 			formatAddress(settings.address, addressText);
 			(void) effectiveArguments.setNamed("address", addressText, true);
 		}
+
 		return detail::openRtcBackend(context, "rtc-sync", effectiveArguments, backend);
 	}
 
@@ -127,6 +139,7 @@ namespace {
 			context.writeLine(detail::toString(status));
 			return;
 		}
+
 		auto const config = detail::softwareRtcConfigFromSettings(settings);
 		(void) lexxos::devices::rtc::software::applyRuntimeConfigOverride(
 		    context.platform(),
@@ -136,63 +149,63 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec rtcSyncArguments[] = {
 	    {
-         .name = "server",
-         .shortName = 'n',
-         .valueName = "host",
-         .help = "NTP server host name",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "pool.ntp.org",
+	     .name = "server",
+	     .shortName = 'n',
+	     .valueName = "host",
+	     .help = "NTP server host name",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "pool.ntp.org",
 	     },
 	    {
-         .name = "timeout",
-         .shortName = 't',
-         .valueName = "ms",
-         .help = "overall DNS and NTP timeout",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "8000",
+	     .name = "timeout",
+	     .shortName = 't',
+	     .valueName = "ms",
+	     .help = "overall DNS and NTP timeout",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "8000",
 	     },
 	    {
-         .name = "tz",
-         .shortName = 'z',
-         .valueName = "+HH[:MM]|-HH[:MM]|UTC",
-         .help = "timezone offset applied before writing RTC",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "UTC",
+	     .name = "tz",
+	     .shortName = 'z',
+	     .valueName = "+HH[:MM]|-HH[:MM]|UTC",
+	     .help = "timezone offset applied before writing RTC",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "UTC",
 	     },
 	    {
-         .name = "source",
-         .shortName = 's',
-         .valueName = "auto|software|picocalc|ds3231|pcf8563",
-         .help = "RTC backend source",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "auto",
+	     .name = "source",
+	     .shortName = 's',
+	     .valueName = "auto|software|picocalc|ds3231|pcf8563",
+	     .help = "RTC backend source",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "auto",
 	     },
 	    {
-         .name = "bus",
-         .shortName = 'b',
-         .valueName = "name",
-         .help = "I2C bus name",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "debug",
+	     .name = "bus",
+	     .shortName = 'b',
+	     .valueName = "name",
+	     .help = "I2C bus name",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "debug",
 	     },
 	    {
-         .name = "address",
-         .shortName = 'a',
-         .valueName = "addr",
-         .help = "RTC 7-bit I2C address, decimal or hex; backend default when omitted",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "address",
+	     .shortName = 'a',
+	     .valueName = "addr",
+	     .help = "RTC 7-bit I2C address, decimal or hex; backend default when omitted",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	};
 

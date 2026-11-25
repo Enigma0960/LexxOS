@@ -1,6 +1,6 @@
 # `storage`
 
-show, probe, read or diagnose block storage.
+Показывает, определяет, читает и диагностирует блочные хранилища.
 
 ## Справка shell
 

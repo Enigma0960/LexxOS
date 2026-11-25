@@ -22,6 +22,7 @@ GamepadState CompositeGamepad::state() {
 	if (_first.isReady()) {
 		result = _first.state();
 	}
+
 	if (_second.isReady()) {
 		auto const second = _second.state();
 		result.up = result.up || second.up;
@@ -35,6 +36,7 @@ GamepadState CompositeGamepad::state() {
 		result.start = result.start || second.start;
 		result.select = result.select || second.select;
 	}
+
 	return result;
 }
 

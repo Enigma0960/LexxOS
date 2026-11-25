@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include <lexxos/app/sd_hotplug_policy.h>
 #include <lexxos/feature.h>
 #include <lexxos/lifecycle/event_bus.h>
 #include <lexxos/platform/board.h>
@@ -63,10 +64,7 @@ private:
 	lexxos::lifecycle::EventCursor _eventCursor{};
 	lexxos::runtime::CapabilitySet _capabilities{};
 #if FEATURE_ENABLED(SD_CARD)
-	bool _sdDetectInitialized{false};
-	bool _stableSdInserted{false};
-	bool _previousSdSample{false};
-	std::uint8_t _stableSdSamples{0};
+	SdHotplugPolicy _sdHotplug;
 	bool _sdDetectInterruptEnabled{false};
 	std::atomic_bool _sdDetectInterruptPending{false};
 #endif

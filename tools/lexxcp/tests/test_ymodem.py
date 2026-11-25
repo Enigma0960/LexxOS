@@ -23,7 +23,7 @@ class ScriptedStream:
         return len(data)
 
 
-def test_send_file_skips_shell_output_before_receiver_request(tmp_path: Path) -> None:
+def test_send_file_skips_shell_output_between_control_bytes(tmp_path: Path) -> None:
     source = tmp_path / "hello.txt"
     source.write_bytes(b"hello")
 
@@ -36,22 +36,19 @@ def test_send_file_skips_shell_output_before_receiver_request(tmp_path: Path) ->
             )
         )
         + b"M0 > /dev/ttyACM0\r\n"
-        + bytes(
-            (
-                ymodem.ACK,
-                ymodem.CRCCHR,
-                ymodem.ACK,
-                ymodem.ACK,
-                ymodem.CRCCHR,
-                ymodem.ACK,
-            )
-        )
+        + bytes((ymodem.ACK, ymodem.CRCCHR))
+        + b"keyboard diagnostic was already being printed\r\n"
+        + bytes((ymodem.ACK, ymodem.NAK))
+        + b"remaining serial output\r\n"
+        + bytes((ymodem.ACK, ymodem.CRCCHR, ymodem.ACK))
     )
 
     ymodem.send_file(stream, source, timeout_s=0.01)
 
-    assert stream.written[0] == ymodem.SOH
-    assert bytes((ymodem.EOT,)) in bytes(stream.written)
+    metadata = ymodem._make_packet(0, ymodem._metadata_payload("hello.txt", 5))
+    data = ymodem._make_packet(1, b"hello" + b"\x1A" * (ymodem.BLOCK_1024 - 5))
+    empty = ymodem._make_packet(0, ymodem._empty_metadata_payload())
+    assert stream.written == metadata + data + bytes((ymodem.EOT, ymodem.EOT)) + empty
 
 
 def test_receive_file_skips_shell_output_before_metadata_packet(tmp_path: Path) -> None:

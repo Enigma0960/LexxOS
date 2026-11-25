@@ -8,6 +8,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	void writeBool(lexxos::os::AppContext& context, bool value) {
@@ -146,16 +147,19 @@ int ConsoleInfoProgram::run(
 		if (info.statusBarHour < 10) {
 			context.write("0");
 		}
+
 		writeUnsigned(context, static_cast<std::uint32_t>(info.statusBarHour));
 		context.write(":");
 		if (info.statusBarMinute < 10) {
 			context.write("0");
 		}
+
 		writeUnsigned(context, static_cast<std::uint32_t>(info.statusBarMinute));
 		context.write(":");
 		if (info.statusBarSecond < 10) {
 			context.write("0");
 		}
+
 		writeUnsigned(context, static_cast<std::uint32_t>(info.statusBarSecond));
 		context.writeLine("");
 	}

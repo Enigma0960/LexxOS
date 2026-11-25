@@ -3,63 +3,30 @@
 #include <cstdint>
 #include <string_view>
 
+#include <lexxos/app/console_mirror_sink.h>
+#include <lexxos/app/scoped_console_mirror_mode.h>
+#include <lexxos/app/scoped_console_mirror_suspension.h>
+
 namespace lexxos::os {
+
 class OperatingSystem;
-}
 
-namespace lexxos::app {
+} // namespace lexxos::os
 
-enum class ConsoleMirrorMode : std::uint8_t {
-	Text,
-	Graphics,
-};
+// Suppresses text mirroring without changing focus-selected Text/Graphics mode.
+namespace lexxos::app::console_mirror {
 
-class ScopedConsoleMirrorMode {
-public:
-	explicit ScopedConsoleMirrorMode(ConsoleMirrorMode mode);
-	~ScopedConsoleMirrorMode();
+void initialize(lexxos::os::OperatingSystem& operatingSystem);
+void write(std::string_view text);
+void flush();
+void clear();
+void setMode(ConsoleMirrorMode mode);
+bool update();
+void refresh();
 
-	ScopedConsoleMirrorMode(ScopedConsoleMirrorMode const&) = delete;
-	ScopedConsoleMirrorMode& operator=(ScopedConsoleMirrorMode const&) = delete;
-	ScopedConsoleMirrorMode(ScopedConsoleMirrorMode&&) = delete;
-	ScopedConsoleMirrorMode& operator=(ScopedConsoleMirrorMode&&) = delete;
+[[nodiscard]] ConsoleMirrorSink& sink();
+[[nodiscard]] ConsoleMirrorMode mode();
+[[nodiscard]] bool isReady();
+[[nodiscard]] bool isSuspended();
 
-	void restore();
-
-private:
-	ConsoleMirrorMode _previousMode{ConsoleMirrorMode::Text};
-	bool _active{false};
-};
-
-class ConsoleMirrorSink {
-public:
-	virtual ~ConsoleMirrorSink() = default;
-
-	virtual void initialize(lexxos::os::OperatingSystem& operatingSystem) = 0;
-	virtual void write(std::string_view text) = 0;
-	virtual void flush() = 0;
-	virtual void clear() = 0;
-	virtual void refresh() = 0;
-	virtual void setMode(ConsoleMirrorMode mode) = 0;
-	[[nodiscard]] virtual ConsoleMirrorMode mode() const = 0;
-	virtual bool update() = 0;
-	[[nodiscard]] virtual bool isReady() const = 0;
-};
-
-namespace console_mirror {
-
-	[[nodiscard]] ConsoleMirrorSink& sink();
-
-	void initialize(lexxos::os::OperatingSystem& operatingSystem);
-	void write(std::string_view text);
-	void flush();
-	void clear();
-	void setMode(ConsoleMirrorMode mode);
-	bool update();
-	void refresh();
-
-	[[nodiscard]] ConsoleMirrorMode mode();
-	[[nodiscard]] bool isReady();
-
-} // namespace console_mirror
-} // namespace lexxos::app
+} // namespace lexxos::app::console_mirror

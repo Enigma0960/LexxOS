@@ -1,0 +1,16 @@
+{
+  "id": "euse_m4_demo_stm32f407",
+  "name": "Euse M4 Demo STM32F407ZG",
+  "platform": "stm32f4",
+  "preset": "debug-stm32f407",
+  "buildDir": "build/configurator/stm32f407",
+  "userPresetName": "user-stm32f4-euse_m4_demo_stm32f407",
+  "featureDefaults": {
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_DEBUG_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_FEATURE_DS3231_RTC": "ON"
+  }
+}

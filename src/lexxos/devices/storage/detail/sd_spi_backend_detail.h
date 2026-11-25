@@ -62,6 +62,7 @@ inline constexpr bool reinitializeOnReadFailure = true;
 			crc = (crc & 0x8000U) != 0 ? static_cast<std::uint16_t>((crc << 1) ^ 0x1021U) : static_cast<std::uint16_t>(crc << 1);
 		}
 	}
+
 	return crc;
 }
 
@@ -80,6 +81,7 @@ inline constexpr bool reinitializeOnReadFailure = true;
 		case lexxos::devices::SdSpiProtocolError::CommandExtraReadFailed:
 			return lexxos::devices::SdCardDiagnosticCode::CommandExtraReadFailed;
 	}
+
 	return lexxos::devices::SdCardDiagnosticCode::TransferFailure;
 }
 

@@ -1,31 +1,11 @@
 #pragma once
 
+#include <lexxos/apps/devices/mouse_info_program.h>
+#include <lexxos/apps/devices/mouse_live_program.h>
+#include <lexxos/apps/devices/mouse_reset_program.h>
+#include <lexxos/apps/devices/usb_hid_info_program.h>
 #include <lexxos/program/program.h>
 
 namespace lexxos::apps::device_programs {
-
-class MouseInfoProgram final {
-public:
-	static lexxos::program::ProgramDescriptor descriptor();
-	static int run(lexxos::os::AppContext&, lexxos::program::ProgramInvocation const&, lexxos::program::ParsedArguments const&);
-};
-
-class MouseResetProgram final {
-public:
-	static lexxos::program::ProgramDescriptor descriptor();
-	static int run(lexxos::os::AppContext&, lexxos::program::ProgramInvocation const&, lexxos::program::ParsedArguments const&);
-};
-
-class MouseLiveProgram final {
-public:
-	static lexxos::program::ProgramDescriptor descriptor();
-	static int run(lexxos::os::AppContext&, lexxos::program::ProgramInvocation const&, lexxos::program::ParsedArguments const&);
-};
-
-class UsbHidInfoProgram final {
-public:
-	static lexxos::program::ProgramDescriptor descriptor();
-	static int run(lexxos::os::AppContext&, lexxos::program::ProgramInvocation const&, lexxos::program::ParsedArguments const&);
-};
 
 } // namespace lexxos::apps::device_programs

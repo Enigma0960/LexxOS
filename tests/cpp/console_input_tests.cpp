@@ -1,12 +1,11 @@
-#include <lexxos/app/console_input.h>
-
 #include <array>
 #include <cstdlib>
 #include <iostream>
 #include <string_view>
 
+#include <lexxos/app/console_input.h>
 #include <lexxos/platform/platform_services.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 
 namespace {
 
@@ -37,6 +36,7 @@ std::size_t readPlatformAvailable(char* buffer, std::size_t capacity) {
 	while (count < capacity && readPlatformChar(buffer[count])) {
 		++count;
 	}
+
 	return count;
 }
 
@@ -83,6 +83,7 @@ void checkInjectedSequenceIsAtomic() {
 	for (char& value : large) {
 		value = 'z';
 	}
+
 	expect(!lexxos::app::console_input::inject({large.data(), large.size()}), "oversized injected sequence should fail");
 	expect(lexxos::app::console_input::pendingInjected() == 0, "failed sequence must not partially enqueue");
 

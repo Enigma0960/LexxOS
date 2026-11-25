@@ -1,134 +1,41 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string_view>
+#include <variant>
 
 #include <lexxos/devices/audio/audio_registry.h>
+#include <lexxos/devices/bus/i2c_bus.h>
+#include <lexxos/devices/bus/spi_controller.h>
 #include <lexxos/devices/detail/device_resource_registry.h>
+#include <lexxos/devices/device_manager_types.h>
 #include <lexxos/devices/device_resource.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/devices/device_resource_lock.h>
+#include <lexxos/devices/input/analog_input.h>
+#include <lexxos/devices/input/digital_input.h>
+#include <lexxos/devices/output/analog_output.h>
+#include <lexxos/devices/output/digital_output.h>
+#include <lexxos/devices/output/pwm_output.h>
+#include <lexxos/platform/board.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices {
 
-class AudioDevice;
-class BlockDevice;
-class DisplayDevice;
-class GamepadDevice;
-class I2cBus;
-class InfraredTransmitter;
-class InputDevice;
-class PointingDevice;
-class MicrophoneDevice;
-class Sensor;
-class PicoCalcSouthbridgeRuntimeService;
-class DeviceManager;
-
-struct I2cBusDescriptor {
-	std::string_view name;
-	std::string_view description;
-	I2cBus* bus{nullptr};
-};
-
-struct BlockDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	BlockDevice* device{nullptr};
-};
-
-struct DisplayDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	DisplayDevice* device{nullptr};
-};
-
-struct InputDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	InputDevice* device{nullptr};
-};
-
-struct PointingDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	PointingDevice* device{nullptr};
-};
-
-struct GamepadDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	GamepadDevice* device{nullptr};
-};
-
-struct AudioDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	AudioDevice* device{nullptr};
-};
-
-struct MicrophoneDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	MicrophoneDevice* device{nullptr};
-};
-
-struct SensorDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	Sensor* device{nullptr};
-};
-
-struct InfraredDeviceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	InfraredTransmitter* device{nullptr};
-};
-
-struct PicoCalcSouthbridgeServiceDescriptor {
-	std::string_view name;
-	std::string_view description;
-	PicoCalcSouthbridgeRuntimeService* service{nullptr};
-};
-
-class DeviceResourceLock {
-public:
-	DeviceResourceLock() = default;
-	DeviceResourceLock(DeviceResourceLock const&) = delete;
-	DeviceResourceLock& operator=(DeviceResourceLock const&) = delete;
-	DeviceResourceLock(DeviceResourceLock&& other) noexcept;
-	DeviceResourceLock& operator=(DeviceResourceLock&& other) noexcept;
-	~DeviceResourceLock();
-	[[nodiscard]] bool valid() const;
-	[[nodiscard]] explicit operator bool() const;
-	void release();
-
-private:
-	friend class DeviceManager;
-	enum class Kind : std::uint8_t {
-		None,
-		I2cBus,
-		BlockDevice,
-		DisplayDevice,
-		InputDevice,
-		PointingDevice,
-		GamepadDevice,
-		SensorDevice,
-		InfraredDevice,
-		PicoCalcSouthbridgeService,
-	};
-	DeviceResourceLock(DeviceManager& manager, Kind kind, std::size_t index);
-	DeviceManager* _manager{nullptr};
-	Kind _kind{Kind::None};
-	std::size_t _index{0};
-};
-
 class DeviceManager {
 public:
 	static constexpr std::size_t maxI2cBuses = lexxos::runtime::standardRuntimeProfile.devices.maxI2cBuses;
+	static constexpr std::size_t maxSpiBuses = lexxos::runtime::standardRuntimeProfile.devices.maxSpiBuses;
+	static constexpr std::size_t maxUartBuses = lexxos::runtime::standardRuntimeProfile.devices.maxUartBuses;
+	static constexpr std::size_t maxGpioPins = lexxos::runtime::standardRuntimeProfile.devices.maxGpioPins;
 	static constexpr std::size_t maxBlockDevices = lexxos::runtime::standardRuntimeProfile.devices.maxBlockDevices;
 	static constexpr std::size_t maxDisplayDevices = lexxos::runtime::standardRuntimeProfile.devices.maxDisplayDevices;
 	static constexpr std::size_t maxInputDevices = lexxos::runtime::standardRuntimeProfile.devices.maxInputDevices;
@@ -144,7 +51,26 @@ public:
 	void initialize();
 	void initialize(lexxos::platform::PlatformServices const& platform);
 
+	static constexpr std::size_t maxAnalogInputs = 8;
+	static constexpr std::size_t maxAnalogOutputs = 8;
+	static constexpr std::size_t maxPwmOutputs = 8;
+	bool bindBoardAnalogPwm(platform::LegacyBoardDescriptor const& board, platform::PlatformServices const& platform);
+	[[nodiscard]] AnalogInput* analogInput(std::string_view name);
+	[[nodiscard]] AnalogOutput* analogOutput(std::string_view name);
+	[[nodiscard]] PwmOutput* pwmOutput(std::string_view name);
+
+	bool bindBoardSpi(platform::LegacyBoardDescriptor const& board, platform::PlatformServices const& platform);
+	bool bindBoardI2c(platform::LegacyBoardDescriptor const& board, platform::PlatformServices const& platform);
 	bool registerI2cBus(std::string_view name, std::string_view description, I2cBus& bus);
+	bool registerSpiBus(std::string_view name, std::string_view description, SpiBus& bus);
+	bool registerUartBus(std::string_view name, std::string_view description, UartBus& bus);
+	bool registerGpioPin(std::string_view name, std::string_view description,
+	    lexxos::platform::GpioPin pin, bool inputAllowed, bool outputAllowed);
+	// Вызывается при загрузке, до регистрации GPIO приложением.
+	bool bindBoardGpio(platform::BoardUserGpio const& board, platform::PlatformGpioService const& gpio);
+	[[nodiscard]] DigitalInput* digitalInput(std::string_view name);
+	[[nodiscard]] DigitalOutput* digitalOutput(std::string_view name);
+	[[nodiscard]] bool pollDigitalInputs(std::uint32_t nowMs);
 	bool registerBlockDevice(std::string_view name, std::string_view description, BlockDevice& device);
 	bool registerDisplayDevice(std::string_view name, std::string_view description, DisplayDevice& device);
 	bool registerInputDevice(std::string_view name, std::string_view description, InputDevice& device);
@@ -164,6 +90,35 @@ public:
 	[[nodiscard]] DeviceResourceStatus i2cBusStatusAt(std::size_t index) const;
 	[[nodiscard]] DeviceResourceLock lockI2cBus(
 	    std::string_view name,
+	    DeviceResourcePriority priority = DeviceResourcePriority::Normal,
+	    std::string_view owner = {});
+
+	// Permanently owned chip addresses are not accessible to guest programs.
+	bool reserveI2cAddress(std::string_view busName, std::uint8_t address,
+	    std::string_view owner);
+	[[nodiscard]] bool isI2cAddressReserved(I2cBus const& bus, std::uint8_t address) const;
+
+	[[nodiscard]] SpiBus* spiBus(std::string_view name);
+	[[nodiscard]] std::size_t spiBusCount() const;
+	[[nodiscard]] SpiBusDescriptor const& spiBusAt(std::size_t index) const;
+	[[nodiscard]] DeviceResourceStatus spiBusStatusAt(std::size_t index) const;
+	[[nodiscard]] DeviceResourceLock lockSpiBus(std::string_view name,
+	    DeviceResourcePriority priority = DeviceResourcePriority::Normal,
+	    std::string_view owner = {});
+
+	[[nodiscard]] UartBus* uartBus(std::string_view name);
+	[[nodiscard]] std::size_t uartBusCount() const;
+	[[nodiscard]] UartBusDescriptor const& uartBusAt(std::size_t index) const;
+	[[nodiscard]] DeviceResourceStatus uartBusStatusAt(std::size_t index) const;
+	[[nodiscard]] DeviceResourceLock lockUartBus(std::string_view name,
+	    DeviceResourcePriority priority = DeviceResourcePriority::Normal,
+	    std::string_view owner = {});
+
+	[[nodiscard]] GpioPinDescriptor const* gpioPin(std::string_view name) const;
+	[[nodiscard]] std::size_t gpioPinCount() const;
+	[[nodiscard]] GpioPinDescriptor const& gpioPinAt(std::size_t index) const;
+	[[nodiscard]] DeviceResourceStatus gpioPinStatusAt(std::size_t index) const;
+	[[nodiscard]] DeviceResourceLock lockGpioPin(std::string_view name,
 	    DeviceResourcePriority priority = DeviceResourcePriority::Normal,
 	    std::string_view owner = {});
 
@@ -296,7 +251,48 @@ private:
 	friend class DeviceResourceLock;
 	void _release(DeviceResourceLock::Kind kind, std::size_t index);
 
+	struct I2cAddressReservation {
+		I2cBus const* bus{nullptr};
+		std::uint8_t address{0};
+		std::string_view owner{};
+	};
+
+	std::array<I2cAddressReservation, 16> _i2cReservations{};
+	std::size_t _i2cReservationCount{0};
+
+	[[nodiscard]] std::size_t _canonicalI2cIndex(std::string_view name) const;
+
+	struct AnalogInputSlot {
+		std::string_view name;
+		std::unique_ptr<AnalogInput> driver;
+	};
+
+	struct AnalogOutputSlot {
+		std::string_view name;
+		std::unique_ptr<AnalogOutput> driver;
+	};
+
+	struct PwmOutputSlot {
+		std::string_view name;
+		std::unique_ptr<PwmOutput> driver;
+	};
+
+	std::array<AnalogInputSlot, maxAnalogInputs> _boardAnalogInputs{};
+	std::array<AnalogOutputSlot, maxAnalogOutputs> _boardAnalogOutputs{};
+	std::array<PwmOutputSlot, maxPwmOutputs> _boardPwmOutputs{};
+	std::array<std::unique_ptr<I2cBus>, maxI2cBuses> _boardI2c{};
+	// Устройства уничтожаются раньше контроллеров и их общих очередей.
+	std::array<std::unique_ptr<SpiController>, maxSpiBuses> _boardSpiControllers{};
+	std::array<std::unique_ptr<SpiBus>, maxSpiBuses> _boardSpi{};
 	detail::DeviceResourceRegistry<I2cBusDescriptor, maxI2cBuses> _i2cBuses{};
+	detail::DeviceResourceRegistry<SpiBusDescriptor, maxSpiBuses> _spiBuses{};
+	detail::DeviceResourceRegistry<UartBusDescriptor, maxUartBuses> _uartBuses{};
+	detail::DeviceResourceRegistry<GpioPinDescriptor, maxGpioPins> _gpioPins{};
+	using GpioDriverInstance = std::variant<std::monostate, DigitalInput, DigitalOutput>;
+	GpioDriverInstance* findGpioDriver(std::string_view name);
+	// Индексы первых записей _gpioPins совпадают с индексами драйверов платы.
+	std::unique_ptr<GpioDriverInstance[]> _boardDrivers;
+	std::size_t _boardDriverCount{};
 	detail::DeviceResourceRegistry<BlockDeviceDescriptor, maxBlockDevices> _blockDevices{};
 	detail::DeviceResourceRegistry<DisplayDeviceDescriptor, maxDisplayDevices> _displayDevices{};
 	detail::DeviceResourceRegistry<InputDeviceDescriptor, maxInputDevices> _inputDevices{};
@@ -335,6 +331,7 @@ inline AudioDeviceDescriptor DeviceManager::audioDeviceAt(lexxos::platform::Plat
 	if (index != 0 || device == nullptr) {
 		return {};
 	}
+
 	return {
 	    .name = device->name(),
 	    .description = "primary board audio output",
@@ -375,6 +372,7 @@ inline MicrophoneDeviceDescriptor DeviceManager::microphoneDeviceAt(lexxos::plat
 	if (index != 0 || device == nullptr) {
 		return {};
 	}
+
 	return {
 	    .name = device->name(),
 	    .description = "primary board microphone input",

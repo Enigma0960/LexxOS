@@ -36,6 +36,9 @@ lexxos::program::ProgramDescriptor ShellConfigProgram::descriptor() {
 	    .description = "Shows or updates shell autosuggestion settings and saves or reloads shell history.",
 	    .usage = "shell-config [show|load|save|autosuggest on|off]",
 	    .handler = run,
+#if defined(LEXXOS_PLATFORM_PICO)
+	    .runtime = {.stackSizeBytes = 8192},
+#endif
 	    .allowExtraArguments = true,
 	    .legacy = false,
 	    .enabled = true,
@@ -61,6 +64,7 @@ int ShellConfigProgram::run(lexxos::os::AppContext& context, lexxos::program::Pr
 			context.writeLine("shell-config: load failed");
 			return 1;
 		}
+
 		writeShellConfigStatus(context, *shell);
 		return 0;
 	}
@@ -70,6 +74,7 @@ int ShellConfigProgram::run(lexxos::os::AppContext& context, lexxos::program::Pr
 			context.writeLine("shell-config: save failed");
 			return 1;
 		}
+
 		writeShellConfigStatus(context, *shell);
 		return 0;
 	}
@@ -79,6 +84,7 @@ int ShellConfigProgram::run(lexxos::os::AppContext& context, lexxos::program::Pr
 			context.writeLine("usage: shell-config autosuggest on|off");
 			return 1;
 		}
+
 		std::string_view const value = invocation.argv[2];
 		if (equals(value, "on")) {
 			shell->setAutosuggestEnabled(true);
@@ -88,6 +94,7 @@ int ShellConfigProgram::run(lexxos::os::AppContext& context, lexxos::program::Pr
 			context.writeLine("usage: shell-config autosuggest on|off");
 			return 1;
 		}
+
 		writeShellConfigStatus(context, *shell);
 		return 0;
 	}

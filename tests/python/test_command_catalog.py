@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('catalog', ROOT / 'tools/generate_command_catalog.py')
 catalog = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(catalog)
-ENTRIES = json.loads((ROOT / 'cmake/commands.json').read_text())
+ENTRIES = json.loads((ROOT / 'config/cmake/commands.json').read_text())
 
 
 class CommandCatalogTests(unittest.TestCase):
@@ -27,6 +27,17 @@ class CommandCatalogTests(unittest.TestCase):
         names = {e['name'] for e in selected}
         self.assertTrue({'display-info', 'gbemu', 'help'} <= names)
         self.assertFalse({'bench', 'fs-smoke', 'sd-test', 'gb-test-suite', 'display-test'} & names)
+
+    def test_bench_only_keeps_raw_diagnostics_disabled(self):
+        selected, flags = self.select(board="picocalc_lyra", platform="rk3506",
+                                     features={"BENCH_ONLY"}, groups={"SYSTEM", "DIAGNOSTICS"})
+        names = {entry["name"] for entry in selected}
+        self.assertIn("bench", names)
+        self.assertFalse({"display-test", "fs-smoke"} & names)
+        baseline, _ = self.select(board="picocalc_lyra", platform="rk3506",
+                                  groups={"SYSTEM", "DIAGNOSTICS"})
+        self.assertEqual(names - {entry["name"] for entry in baseline}, {"bench"})
+        self.assertNotIn("GROUP_TESTS", flags)
 
     def test_no_display_does_not_remove_uart_utilities(self):
         selected, _ = self.select(board='jc_esp32p4_m3_dev', platform='espidf')
@@ -74,6 +85,23 @@ class CommandCatalogTests(unittest.TestCase):
             for path in [entry['header'], *entry['sources']]:
                 self.assertTrue((ROOT / 'src' / path).is_file(), path)
             self.assertTrue((ROOT / entry['doc']).is_file(), entry['doc'])
+
+    def test_native_ui_opt_in_preserves_explicit_feature_selection(self):
+        selected, flags = self.select(platform="host", board="host_native",
+                                      features={"UI_NATIVE_DEMO"}, groups=set())
+        self.assertEqual({e["name"] for e in selected}, {"ui-native-demo", "ui-native-tree-demo"})
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            catalog.generate(ENTRIES, selected, output, flags)
+            report = json.loads((output / "commands.json").read_text())
+            self.assertTrue(all(not e["missing"] for e in report if e["enabled"]))
+        baseline, _ = self.select(groups=set())
+        self.assertFalse(baseline)
+
+    def test_invalid_opt_in_is_rejected(self):
+        entry = dict(ENTRIES[0], opt_in="TYPO")
+        with self.assertRaisesRegex(ValueError, "Invalid explicit opt-in"):
+            catalog.select([entry], set())
 
     def test_unknown_dependency_is_an_error(self):
         entry = dict(ENTRIES[0], requires=["DISPALY"])

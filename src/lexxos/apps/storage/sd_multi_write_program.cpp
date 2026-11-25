@@ -8,16 +8,17 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec arguments[] = {
 	    {
-         .name = "state",
-         .valueName = "on|off",
-         .help = "enable or disable experimental CMD25 multi-block writes",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "state",
+	     .valueName = "on|off",
+	     .help = "enable or disable experimental CMD25 multi-block writes",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -59,6 +60,7 @@ int SdMultiWriteProgram::run(lexxos::os::AppContext& context, lexxos::program::P
 	if (lexxos::devices::sd_card::multiBlockWriteEnabled()) {
 		context.writeLine("sd-multiwrite: warning: CMD25 is experimental on this SPI backend");
 	}
+
 	return 0;
 }
 

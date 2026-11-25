@@ -53,26 +53,36 @@
 	#define xPortPendSVHandler PendSV_Handler
 	#define vPortSVCHandler SVC_Handler
 	#define xPortSysTickHandler SysTick_Handler
-#elif defined(LEXXOS_PLATFORM_PICO)
-    // Pico/PicoCalc runtime allocates task stacks, foreground program arenas and
-    // large optional workspaces from the FreeRTOS heap. RP2350 has substantially
-    // more SRAM than RP2040, so keep the RP2040 default conservative but give
-    // Pico 2 W enough headroom for the Game Boy workspace after display, Wi-Fi,
-    // SD/FAT and gamepad services are enabled.
-    //
-    // CMake sets the first-generation PicoCalc Pico W profile to 88 KiB so
-    // RP2040 can keep Wi-Fi, display, SD/FAT and the shell linked together.
-    // The value can still be overridden from CMake, for example:
-    //   -DLEXXOS_PICO_FREERTOS_HEAP_KB=88
-    //   -DLEXXOS_PICO_FREERTOS_HEAP_KB=192
-    //   -DLEXXOS_PICO_FREERTOS_HEAP_KB=224
-	#if defined(LEXXOS_PICO_FREERTOS_HEAP_KB) && LEXXOS_PICO_FREERTOS_HEAP_KB > 0
-		#define configTOTAL_HEAP_SIZE (LEXXOS_PICO_FREERTOS_HEAP_KB * 1024)
-	#elif defined(PICO_RP2350) && PICO_RP2350
-		#define configTOTAL_HEAP_SIZE (224 * 1024)
-	#else
-		#define configTOTAL_HEAP_SIZE (126 * 1024)
+#elif defined(LEXXOS_PLATFORM_RK3506)
+    // RK3506 GICv2 implements four priority bits (0xF0): 16 levels.
+    // The owned PPI27 uses priority 0xA0, below the FreeRTOS API
+    // interrupt mask threshold of 0x90.
+	#define configINTERRUPT_CONTROLLER_BASE_ADDRESS 0xFF581000UL
+	#define configINTERRUPT_CONTROLLER_CPU_INTERFACE_OFFSET 0x1000UL
+	#define configUNIQUE_INTERRUPT_PRIORITIES 16
+	#define configMAX_API_CALL_INTERRUPT_PRIORITY 9
+	#define configUSE_TASK_FPU_SUPPORT 1
+    // Override from RK3506 CMake for ALL FreeRTOS source files (heap_4.c included).
+	#ifndef LEXXOS_RK3506_FREERTOS_HEAP_BYTES
+		#define LEXXOS_RK3506_FREERTOS_HEAP_BYTES (128 * 1024)
 	#endif
+	#define configTOTAL_HEAP_SIZE LEXXOS_RK3506_FREERTOS_HEAP_BYTES
+	#ifdef __cplusplus
+extern "C" {
+	#endif
+void rk3506_freertos_setup_tick(void);
+void rk3506_freertos_clear_tick(void);
+void rk3506_freertos_assert_failure(char const* file, unsigned line);
+	#ifdef __cplusplus
+}
+	#endif
+	#define configSETUP_TICK_INTERRUPT() rk3506_freertos_setup_tick()
+	#define configCLEAR_TICK_INTERRUPT() rk3506_freertos_clear_tick()
+#elif defined(LEXXOS_PLATFORM_PICO)
+    // Keep this C header and the C++ runtime profile on the same allocator budget.
+    // The board/preset limit is resolved in CMake before compilation.
+	#include <memory/pico_freertos_heap.h>
+	#define configTOTAL_HEAP_SIZE LEXXOS_PICO_FREERTOS_HEAP_BYTES
 #else
 	#define configTOTAL_HEAP_SIZE (128 * 1024)
 #endif
@@ -129,7 +139,13 @@
 	#endif
 #endif
 
-#define configASSERT(x) assert(x)
+#if defined(LEXXOS_PLATFORM_RK3506)
+    // Required by the ARM_CA9 port's vPortValidateInterruptPriority().
+    // The firmware-owned SPI32 startup probe is disabled in the generated port.c.
+	#define configASSERT(x) ((x) ? (void) 0 : rk3506_freertos_assert_failure(__FILE__, __LINE__))
+#else
+	#define configASSERT(x) assert(x)
+#endif
 
 #define INCLUDE_vTaskPrioritySet 1
 #define INCLUDE_uxTaskPriorityGet 1
@@ -167,7 +183,7 @@
 	#endif
 
 	#if !(defined(FREE_RTOS_KERNEL_SMP) && FREE_RTOS_KERNEL_SMP)
-		/*
+	    /*
 		* The Cortex-M33 NTZ FreeRTOS port clears CLKSOURCE when
 		* configSYSTICK_CLOCK_HZ is defined. RP2350 feeds that external SysTick
 		* input from the TICKS_PROC0/TICKS_PROC1 generators, which Pico SDK starts
@@ -206,7 +222,7 @@
 	#ifndef configENABLE_FPU
 		#define configENABLE_FPU 1
 	#endif
-	/*
+    /*
 	 * The Pico SDK's double implementation sets LIB_PICO_DOUBLE_PICO, which the
 	 * RP2350 port otherwise treats as permission to access coprocessor p4. That
 	 * coprocessor raises NOCP on the PicoCalc target during PendSV.

@@ -9,7 +9,9 @@
 #include <lexxos/platform/platform.h>
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::devices {

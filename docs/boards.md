@@ -5,7 +5,9 @@ capabilities конкретной платы, но не является platfor
 
 ## Экспериментальные dev-платы
 
-`dev_pico`, `dev_pico_sdio` и `dev_pico2w` — экспериментальные платы для разработки и проверки драйверов. Их настройки, состав периферии и назначение IO (GPIO/pinout) могут меняться со временем. Перед подключением оборудования сверяйте wiring с документацией и board descriptor используемой версии; совместимость распиновки между версиями не гарантируется.
+`dev_pico`, `dev_pico_sdio` и `dev_pico2w` — экспериментальные платы для разработки и проверки драйверов. Их настройки,
+состав периферии и назначение IO (GPIO/pinout) могут меняться со временем. Перед подключением оборудования сверяйте
+wiring с документацией и board descriptor используемой версии; совместимость распиновки между версиями не гарантируется.
 
 ## `host_native`
 
@@ -126,12 +128,12 @@ Board id:  dev_pico2w
 
 ## PicoCalc: выбор модуля для 0.1.0
 
-| Модуль | Board id | Pico SDK board | Сеть |
-| --- | --- | --- | --- |
-| Pico | `picocalc_pico` | `pico` | Нет CYW43 |
-| Pico W | `picocalc_pico_w` | `pico_w` | Wi-Fi |
-| Pico 2 | `picocalc_pico2` | `pico2` | Нет CYW43 |
-| Pico 2 W | `picocalc_pico2w` | `pico2_w` | Wi-Fi |
+| Модуль   | Board id          | Pico SDK board | Сеть      |
+|----------|-------------------|----------------|-----------|
+| Pico     | `picocalc_pico`   | `pico`         | Нет CYW43 |
+| Pico W   | `picocalc_pico_w` | `pico_w`       | Wi-Fi     |
+| Pico 2   | `picocalc_pico2`  | `pico2`        | Нет CYW43 |
+| Pico 2 W | `picocalc_pico2w` | `pico2_w`      | Wi-Fi     |
 
 Для каждого есть `minimal-<board id>` и `full-<board id>`. В Pico/Pico 2 без W
 используется общая PicoCalc-распиновка соответствующего поколения, wireless отключён.
@@ -221,7 +223,7 @@ cmake --build --preset lexxos-picocalc-pico2w
 
 Профиль переносит PicoCalc LCD, southbridge keyboard/power/backlight service, USB CDC console mirror и SD wiring с
 `picocalc_pico_w` на RP2350 target. Hardware smoke-test на реальном PicoCalc с Pico 2 W пройден 2026-07-08:
-SD/FAT, LCD console, keyboard/southbridge snapshot, backlight/display-power, RTC/NTP, PSRAM, audio, Wi-Fi,
+SD/FAT, LCD-консоль, снимок клавиатуры/STM32, подсветка и питание дисплея, RTC/NTP, PSRAM, аудио, Wi-Fi,
 external `.lexx` runtime, reboot и `poweroff` подтверждены через UART.
 
 Текущий preset использует RP2350/Pico 2 W runtime path; regression log показывает FreeRTOS task startup на
@@ -324,7 +326,7 @@ esp32-info
 ```
 
 Интерфейсная карта уже зафиксирована в
-`src/lexxos/platform/espidf/board_jc_esp32p4_m3_dev.cpp`: JP1 expansion header, hosted ESP32-C6 SDIO,
+`src/lexxos/platform/espidf/board_jc_esp32p4_m3_dev.cpp`: разъём расширения JP1, сопроцессор ESP32-C6 через SDIO,
 IP101 RMII Ethernet, system I2C, ES8311/ES7210 audio nets, TF SDIO, MIPI DSI/CSI, USB OTG/USB-TTL, RS485 и battery ADC.
 ESP32-C6 hosted WiFi включен через `esp_wifi_remote`/`esp_hosted`; `wifi-connect`, `wifi-status`, `net-status`, `ping`,
 `wifi-scan`, автоподключение и software RTC auto-sync проверены на реальной плате после обновления C6 firmware до
@@ -332,7 +334,8 @@ ESP-Hosted 2.11.7. Audio,
 camera, USB OTG, RS485 и battery ADC пока оставлены как комментарии/descriptor wiring для быстрого
 последующего включения драйверов без риска случайно дёрнуть неподтверждённые периферийные линии.
 MIPI DSI display включен для BIGTREETECH Pi TFT70 V2.1 / Raspberry Pi DSI-compatible 7" panel: LexxOS использует
-RGB888 framebuffer с BGR element order, RGB888 DSI video, 1 data lane, 600 Mbps/lane, 25.979 MHz DPI clock и power/backlight control
+RGB888 framebuffer с BGR element order, RGB888 DSI video, 1 data lane, 600 Mbps/lane, 25.979 MHz DPI clock и
+power/backlight control
 через I2C `0x45`. `display-power timeout` хранит staged idle policy в `/mnt/sd/.lexx/display-power.conf`: default
 уменьшает backlight до 10% через 5 минут и выключает экран ещё через 5 минут. Touch input зарегистрирован как
 FocalTech/FT5x06-compatible `ft5x06-touch` на I2C `0x38`;
@@ -348,7 +351,8 @@ FocalTech/FT5x06-compatible `ft5x06-touch` на I2C `0x38`;
 Инструкция по сборке и обновлению C6 firmware: `docs/boards/jc_esp32p4_m3_dev.md`.
 В публичных схемах отдельный RTC IC не подтверждён: `RTC_DAT/SDA1` и `RTC_CLK/SCL1` встречаются как touch-FPC
 sideband labels. Поэтому профиль включает программный RTC (`--source software`) как default backend, а
-`rtc-status --source pcf8563 --bus system` остается ручной проверкой внешнего/неподтвержденного PCF8563/BM8563-compatible
+`rtc-status --source pcf8563 --bus system` остается ручной проверкой внешнего/неподтвержденного
+PCF8563/BM8563-compatible
 устройства на `0x51`.
 
 ## `m5stack_cardputer`
@@ -360,7 +364,8 @@ TCA8418 и BMI270 из профиля Adv на эту плату без пров
 
 ## `m5stack_cardputer_adv`
 
-Профиль для M5Stack Cardputer-Adv на ESP-IDF. Публичный preset — `debug-cardputer-adv`. Локальный user preset `user-espidf-m5stack_cardputer` используется как
+Профиль для M5Stack Cardputer-Adv на ESP-IDF. Публичный preset — `debug-cardputer-adv`. Локальный user preset
+`user-espidf-m5stack_cardputer` используется как
 bring-up preset для этой платы, но внутри выбирает board profile `m5stack_cardputer_adv`.
 
 ```text
@@ -408,47 +413,49 @@ power
 console-info
 ```
 
-Cardputer-Adv keyboard uses the TCA8418 controller event FIFO. LexxOS filters unused controller columns/rows, applies a
-small software debounce window and resets local key state after controller FIFO overflow, so idle `keyboard-live` /
-`keyboard-raw` should not report random key activity even while the USB Serial/JTAG console is connected. Manual typing
-is still the final check for layout-level issues.
+Клавиатура Cardputer-Adv использует FIFO событий TCA8418. LexxOS отбрасывает
+неиспользуемые строки/столбцы, подавляет дребезг и сбрасывает локальное
+состояние клавиш после переполнения FIFO. При бездействии `keyboard-live`
+и `keyboard-raw` не должны выдавать случайные события, в том числе при
+подключённой USB Serial/JTAG-консоли. Раскладку окончательно проверяют ручным вводом.
 
-Cardputer-Adv exposes the built-in BMI270 as `cardputer-bmi270` through the `sensor` device registry and the `imu`
-diagnostic command. The BMI270 requires a Bosch config file upload during initialization; after successful load,
-`imu` prints raw accel/gyro/temperature samples. The board also exposes `cardputer-ir` as an IR transmitter device on
-GPIO44. `ir info` prints the pin/carrier, and `ir samsung-power` sends the common Samsung BN59-class power toggle frame
-`0xE0E040BF`; `ir samsung-on`, `ir samsung-off` and `ir samsung-code -c <hex>` are available for manual line-of-sight
-testing.
+BMI270 зарегистрирован как `cardputer-bmi270` в реестре `sensor` и доступен
+команде `imu`. При инициализации загружается конфигурация Bosch; затем
+выводятся необработанные ускорение, угловая скорость и температура.
+ИК-передатчик `cardputer-ir` использует GPIO44. `ir info` показывает вывод
+и несущую; `ir samsung-power` передаёт код BN59 `0xE0E040BF`.
+Для ручных проверок есть `ir samsung-on`, `ir samsung-off` и
+`ir samsung-code -c <hex>`. Реакция приёмника проверяется при прямой видимости.
 
-Expansion pins are listed as user GPIO in `board`: HY2.0 `G1/G2` and EXT `G3/G4/G5/G6` are visible input/output pins.
-Shared EXT pins for UART, SD and I2C (`G13/G15/G39/G40/G14/G8/G9`) are present in the descriptor but hidden by default
-or output-disabled, so programs can discover them without accidentally driving active board buses.
+Расширения HY2.0 `G1/G2` и EXT `G3/G4/G5/G6` показаны в `board` как
+пользовательские GPIO ввода/вывода. Общие EXT-выводы UART, SD, I2C
+`G13/G15/G39/G40/G14/G8/G9` есть в описании, но по умолчанию скрыты либо
+запрещены для вывода, чтобы не воздействовать на работающие шины.
 
-`audio` and portable `beep` use the ES8311 codec at I2C address `0x18` and I2S1 pins `BCLK=41`, `WS=43`, `DOUT=42`,
-`DIN=46`. The current bring-up exposes tone output and blocking PCM buffer output for `mplay`; tone mixing is still
-reported as unavailable. Cardputer-Adv uses `44100 Hz` native PCM output, stereo 16-bit I2S framing and 8x256 DMA
-frames. `mplay --test` should report `441000` PCM frames and finish in about 10-11 seconds; a much longer run usually
-means foreground cancellation polling is blocking between audio buffers.
+`audio` и переносимый `beep` используют ES8311 по I2C `0x18` и I2S1:
+`BCLK=41`, `WS=43`, `DOUT=42`, `DIN=46`. Доступны тон и блокирующий вывод
+PCM для `mplay`; смешивание тонов пока недоступно. Формат — 44100 Гц,
+стерео 16 бит, DMA 8×256 кадров. `mplay --test` должен передать 441000
+кадров за 10–11 с; значительное замедление обычно связано с блокирующим
+опросом отмены между буферами.
 
-`mic` uses the ES8311/I2S RX path and registers `cardputer-adv-mic`. `mic sample` captures one PCM chunk and prints
-peak/average values; `mic loopback -s 1 -g 2` captures microphone input and immediately plays it through the speaker.
+`mic` использует ES8311/I2S RX и регистрирует `cardputer-adv-mic`.
+`mic sample` печатает пиковое/среднее значение одного блока PCM;
+`mic loopback -s 1 -g 2` сразу воспроизводит микрофон через динамик.
 
-`gbemu` is enabled in `user-espidf-m5stack_cardputer` with no PSRAM requirement on ESP-IDF. The preset uses
-`LEXXOS_GAMEBOY_ROM_CACHE_BANKS=3`, `LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES=8192` and dynamic ROM cache allocation, which
-produces the runtime diagnostic `rom-cache=8Kx6=48K` while keeping the cache out of static `.bss`. Playable runs default
-to mapped flash staging in the ESP-IDF `storage` partition, so successful runs print `rom-storage=flash` and
-`cache-fills=0` after the ROM has been staged. Direct shell runs keep ESP-IDF audio disabled unless `--audio` is passed;
-the TUI launcher uses `[audio] enabled = true` by default and passes `--audio` for selected ROMs. The keyboard-backed
-`cardputer-gamepad` maps `e/z/a/d` to up/down/left/right, `[`/`]` to A/B, `;` to X and `` ` `` to Y; Start is Enter
-and Select is Backspace.
+`gbemu` включён в `user-espidf-m5stack_cardputer` без требования PSRAM.
+`LEXXOS_GAMEBOY_ROM_CACHE_BANKS=3`, `LEXXOS_GAMEBOY_ROM_CACHE_PAGE_BYTES=8192`
+и динамический кеш дают `rom-cache=8Kx6=48K` без резервирования в `.bss`.
+Для игры ROM по умолчанию размещается в разделе ESP-IDF `storage` с
+отображением flash: после подготовки выводятся `rom-storage=flash` и
+`cache-fills=0`. Прямой запуск включает звук только с `--audio`; меню
+по умолчанию использует `[audio] enabled = true` и передаёт этот флаг.
+`cardputer-gamepad` назначает `e/z/a/d` на вверх/вниз/влево/вправо,
+`[`/`]` на A/B, `;` на X, обратную кавычку на Y, Enter на Start,
+Backspace на Select.
 
-`clear` uses the shared console clear path and clears the full LCD text area below the status bar, not only the logical
-character cells. This avoids stale pixels in the right/bottom margins on narrow text layouts.
-
-Ограничение питания: Cardputer и Cardputer-Adv аппаратно не предоставляют LexxOS достоверный признак текущей зарядки
-или ток батареи. LexxOS читает только напряжение через ADC GPIO10 и показывает процент как приблизительную оценку.
-Поэтому `power` печатает `charging=unavailable`, а статус-бар отображает уровень батареи без charging icon. Для
-зарядки по документации M5Stack боковой выключатель должен быть в положении `ON`.
+`clear` очищает всю текстовую область LCD под строкой состояния, включая
+поля справа/снизу за пределами символьных ячеек.
 
 ## `euse_m4_demo_stm32f407`
 
@@ -472,7 +479,7 @@ Display:   EU-TFT3.2-320x240 on DIS header, parallel 16-bit FSMC/8080-style bus
 - [SDIO](stm32f407-sdio.md) и [проверка надёжности](stm32f407-sdio-reliability.md)
 - [CLion/OpenOCD](stm32f407-clion-macos.md)
 
-## Debug OLED
+## Отладочный OLED
 
 Для development profiles LexxOS рассматривает OLED как необязательную диагностическую периферию.
 
@@ -520,7 +527,7 @@ VFS:
 /dev/sd0
 ```
 
-Default FAT mount point:
+Точка монтирования FAT по умолчанию:
 
 ```text
 /mnt/sd
@@ -568,7 +575,7 @@ FAT disk write max sectors: 8
 
 Подробности, известные ограничения `CMD25` и regression checklist находятся в `docs/sd-card-production.md`.
 
-## SD card-detect
+## Обнаружение карты SD
 
 Hot-plug использует GP22 как active-low card-detect. На Pico изменение уровня фиксируется GPIO interrupt, а обработка
 выполняется отложенно в общей задаче `system-events`: debounce, SD probe, mount/unmount и console output не выполняются
@@ -578,9 +585,23 @@ Hot-plug использует GP22 как active-low card-detect. На Pico из
 
 Подробная схема подключения описана в `docs/sd-card-detect.md`.
 
-## ESP-IDF backend
+## Реализация ESP-IDF
 
 ESP-IDF уже реализован. Доступные board profiles: `m5stack_basic_v1`, `m5stack_cardputer`,
 `m5stack_cardputer_adv`, `jc_esp32p4_m3_dev`. Набор драйверов и capabilities различается по платам.
 Профиль `esp32_devkit` не зарегистрирован. Сборка запускается из корня репозитория;
 подробности в [инструкции сборки](build.md).
+
+## `picocalc_lyra` — Rockchip RK3506G2 (CPU0)
+
+PicoCalc / Luckfox Lyra M использует порт ARMv7-A: FreeRTOS на CPU0,
+управляемую MMU/D-cache, RGB565 LCD через SPI0/PL330, съёмную microSD SPI1
+с DMA-чтением и CMD24 PIO-записью. `sd1` автоматически монтируется в
+`/mnt/sd` по политике `default-rw` при включённых FreeRTOS peripherals;
+для восстановления предусмотрен `LEXXOS_RK3506_SD_FORCE_READ_ONLY`.
+Системная SDMMC `sd0` не получает автоматического монтирования и разрешения записи.
+
+[Единое руководство платы](boards/picocalc_lyra_m.md) содержит явные параметры
+рабочей сборки, подключение к PicoCalc, отладку и датированные результаты.
+Публичный preset `picocalc-lyra` без переопределений сохраняет кооперативный
+планировщик; не путайте его с FreeRTOS-конфигурацией из руководства.

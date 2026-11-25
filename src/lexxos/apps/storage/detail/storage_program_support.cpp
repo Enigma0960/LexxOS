@@ -7,6 +7,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs::detail {
+
 namespace {
 
 	[[nodiscard]] char patternByte(std::uint32_t seed, std::uint64_t offset) {
@@ -29,8 +30,10 @@ namespace {
 			if (offset + 1 >= path.size()) {
 				return false;
 			}
+
 			path[offset++] = digits[--count];
 		}
+
 		path[offset] = '\0';
 		return true;
 	}
@@ -84,6 +87,7 @@ bool verifyPattern(std::array<char, storageBlockSize> const& buffer, std::size_t
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -97,6 +101,7 @@ bool makeStressPath(std::uint32_t pass, std::uint32_t file, std::array<char, lex
 		if (offset + text.size() + 1 > path.size()) {
 			return false;
 		}
+
 		std::memcpy(path.data() + offset, text.data(), text.size());
 		offset += text.size();
 		path[offset] = '\0';
@@ -115,6 +120,7 @@ bool makeSpeedPath(std::uint32_t file, std::array<char, lexxos::vfs::maxPathLeng
 		if (offset + text.size() + 1 > path.size()) {
 			return false;
 		}
+
 		std::memcpy(path.data() + offset, text.data(), text.size());
 		offset += text.size();
 		path[offset] = '\0';
@@ -130,6 +136,7 @@ std::uint32_t hashBytes(std::uint32_t hash, void const* data, std::size_t size) 
 		hash ^= bytes[index];
 		hash *= 16777619U;
 	}
+
 	return hash;
 }
 

@@ -7,10 +7,12 @@
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
 #include <esp_err.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::size_t maxTransferBytes = 4096;
@@ -60,6 +62,7 @@ namespace {
 		if (gpio_config(&config) != ESP_OK) {
 			return false;
 		}
+
 		return gpio_set_level(toGpio(pin), 1) == ESP_OK;
 	}
 
@@ -101,6 +104,7 @@ EspIdfSpiBus::~EspIdfSpiBus() {
 		(void) spi_bus_remove_device(_device);
 		_device = nullptr;
 	}
+
 	if (_mutex != nullptr) {
 		vSemaphoreDelete(_mutex);
 		_mutex = nullptr;
@@ -191,6 +195,7 @@ void EspIdfSpiBus::select() {
 	if (!isReady() || !_lock()) {
 		return;
 	}
+
 	++_selectLockDepth;
 	if (_pins.cs.isValid()) {
 		(void) gpio_set_level(toGpio(_pins.cs), 0);
@@ -201,9 +206,11 @@ void EspIdfSpiBus::deselect() {
 	if (!isReady() || _selectLockDepth == 0) {
 		return;
 	}
+
 	if (_pins.cs.isValid()) {
 		(void) gpio_set_level(toGpio(_pins.cs), 1);
 	}
+
 	--_selectLockDepth;
 	_unlock();
 }
@@ -212,9 +219,11 @@ bool EspIdfSpiBus::transfer(std::uint8_t const* tx, std::uint8_t* rx, std::size_
 	if (size == 0) {
 		return true;
 	}
+
 	if (tx == nullptr || rx == nullptr) {
 		return false;
 	}
+
 	return _transmit(tx, rx, size);
 }
 
@@ -222,9 +231,11 @@ bool EspIdfSpiBus::write(std::uint8_t const* data, std::size_t size) {
 	if (size == 0) {
 		return true;
 	}
+
 	if (data == nullptr) {
 		return false;
 	}
+
 	return _transmit(data, nullptr, size);
 }
 
@@ -232,6 +243,7 @@ bool EspIdfSpiBus::read(std::uint8_t fill, std::uint8_t* data, std::size_t size)
 	if (size == 0) {
 		return true;
 	}
+
 	if (data == nullptr || !isReady() || !_lock()) {
 		return false;
 	}
@@ -246,6 +258,7 @@ bool EspIdfSpiBus::read(std::uint8_t fill, std::uint8_t* data, std::size_t size)
 			result = false;
 			break;
 		}
+
 		offset += chunk;
 	}
 
@@ -299,6 +312,7 @@ bool EspIdfSpiBus::_transmit(std::uint8_t const* tx, std::uint8_t* rx, std::size
 			result = false;
 			break;
 		}
+
 		offset += chunk;
 	}
 

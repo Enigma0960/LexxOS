@@ -20,6 +20,7 @@ inline bool copyText(std::string_view source, char* output, std::size_t outputCa
 	if (outputCapacity == 0 || source.size() + 1 > outputCapacity) {
 		return false;
 	}
+
 	std::memcpy(output, source.data(), source.size());
 	output[source.size()] = '\0';
 	return true;

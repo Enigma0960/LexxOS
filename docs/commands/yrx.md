@@ -1,6 +1,6 @@
 # `yrx`
 
-receive a file over YMODEM/CRC.
+Принимает файл по YMODEM в VFS LexxOS.
 
 ## Справка shell
 

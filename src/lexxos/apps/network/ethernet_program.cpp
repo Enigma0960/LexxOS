@@ -8,6 +8,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -28,12 +29,12 @@ namespace {
 
 	constexpr ProgramArgumentSpec ethArguments[] = {
 	    {
-         .name = "action",
-         .valueName = "status|start|stop|restart",
-         .help = "Ethernet action, default status",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "action",
+	     .valueName = "status|start|stop|restart",
+	     .help = "Ethernet action, default status",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -46,6 +47,7 @@ namespace {
 			if (index != 0) {
 				context.write(":");
 			}
+
 			writeHexByte(context, mac[index]);
 		}
 	}
@@ -67,6 +69,7 @@ namespace {
 		} else {
 			context.writeLine("-");
 		}
+
 		context.write("hostname: ");
 		context.writeLine(status.hostname[0] != '\0' ? status.hostname : "-");
 		context.write("speed: ");
@@ -76,6 +79,7 @@ namespace {
 		} else {
 			context.writeLine("-");
 		}
+
 		context.write("duplex: ");
 		context.writeLine(status.duplexValid ? (status.fullDuplex ? "full" : "half") : "-");
 		context.write("ip: ");
@@ -122,6 +126,7 @@ int EthernetProgram::run(lexxos::os::AppContext& context,
 		writeStatus(context);
 		return 0;
 	}
+
 	if (equals(action, "start")) {
 		ok = lexxos::devices::espidf_ethernet::start(board);
 	} else if (equals(action, "stop")) {
@@ -138,6 +143,7 @@ int EthernetProgram::run(lexxos::os::AppContext& context,
 		writeStatus(context);
 		return 1;
 	}
+
 	writeStatus(context);
 	return 0;
 }

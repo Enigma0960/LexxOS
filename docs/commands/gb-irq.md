@@ -1,6 +1,6 @@
 # `gb-irq`
 
-test Game Boy CPU interrupt handling.
+Проверяет обработку прерываний CPU Game Boy.
 
 ## Справка shell
 

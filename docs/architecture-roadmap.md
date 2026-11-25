@@ -6,6 +6,19 @@
 Активные задачи ведутся только в корневом roadmap. Этапы ниже сохраняют архитектурный контекст;
 их формулировки не являются отдельным актуальным release checklist.
 
+Следующая большая цель от 26 октября 2026 раскрыта в
+[плане драйверов, составных плат и загрузочной цепочки](hardware-boot-architecture-plan.md).
+Он уточняет hardware/board/provider/lifecycle часть этого документа и добавляет
+U-Boot, раннюю LexxOS и исследование SPL. Статусы HW-0…HW-11 ведутся в корневом
+roadmap. Исторически закрытые этапы ниже не означают завершения новой миграции.
+Текущий остаток работ — в [состоянии перехода](hardware-migration-first-step.md);
+выполненные изменения новой миграции перенесены в [черновик 0.1.1](release-0.1.1.md).
+Закрытые этапы 0.0.7 ниже сохраняют свою историческую принадлежность.
+
+Развитие IRQ, DMA и ядра ARMv7-A (preemptive scheduler, MMU, SMP) описано
+в [отдельной дорожной карте KRN-*](armv7a-irq-dma-kernel-roadmap.md).
+Она использует контракты HW-этапов, но не увеличивает неявно их объём.
+
 ## Цель
 
 Подготовить LexxOS к добавлению новых плат, драйверов, файловых систем и программ без разрастания центральных
@@ -45,7 +58,8 @@
 4. `BoardDescriptor` содержит поля конкретных периферийных профилей (`SPI TFT`, `PCF8575`, parallel TFT), поэтому общий
    board
    contract растёт с каждым новым устройством.
-5. Регистрация встроенных команд теперь генерируется из `cmake/commands.json`; группы и зависимости описаны в [матрице](command-matrix.md).
+5. Регистрация встроенных команд теперь генерируется из `config/cmake/commands.json`; группы и зависимости описаны
+   в [матрице](command-matrix.md).
 6. FAT сам обращается к глобальному VFS для поиска block device и регистрации mount.
 7. `RuntimeProfile` уже собирает фиксированные лимиты portable runtime; следующий шаг: profile selection по board/target
    и capability registry вместо scattered feature checks.
@@ -93,25 +107,25 @@ Board profile должен описывать доступные компоне�
 
 Открытых пунктов этапа 0 не осталось.
 
-Baseline от 16 июня 2026:
+Исходные измерения от 16 июня 2026:
 
-| Target         | Preset                  |   text |  data |    bss |    dec |                                                Image |
+| Цель           | Конфигурация                  |   text |  data |    bss |    dec |                                                Образ |
 |----------------|-------------------------|-------:|------:|-------:|-------:|-----------------------------------------------------:|
-| Pico           | `lexxos-pico`           | 358052 |     0 | 177744 | 535796 | `lexxos.uf2` 708096 bytes, `lexxos.bin` 353956 bytes |
-| Pico full      | `lexxos-pico-full`      | 406252 |     0 | 179024 | 585276 | `lexxos.uf2` 804352 bytes, `lexxos.bin` 402156 bytes |
-| STM32F407      | `lexxos-stm32f407`      | 301804 | 39388 |  97336 | 438528 |                            `lexxos.bin` 341244 bytes |
-| STM32F407 full | `lexxos-stm32f407-full` | 459796 | 39388 | 109496 | 608680 |                            `lexxos.bin` 499236 bytes |
+| Pico           | `lexxos-pico`           | 358052 |     0 | 177744 | 535796 | `lexxos.uf2` 708096 байт, `lexxos.bin` 353956 байт |
+| Pico full      | `lexxos-pico-full`      | 406252 |     0 | 179024 | 585276 | `lexxos.uf2` 804352 байт, `lexxos.bin` 402156 байт |
+| STM32F407      | `lexxos-stm32f407`      | 301804 | 39388 |  97336 | 438528 |                            `lexxos.bin` 341244 байт |
+| STM32F407 full | `lexxos-stm32f407-full` | 459796 | 39388 | 109496 | 608680 |                            `lexxos.bin` 499236 байт |
 
-Simulator baseline:
+Исходные измерения симулятора:
 
-- `cmake --build --preset lexxos-sim`: ok, `build/sim/src/liblexxos_sim.dylib` is `arm64` on current macOS host.
-- `cmake --build --preset lexxos-sim-full`: ok, `FEATURE_GAMEBOY: ON`, `build/sim-full/src/liblexxos_sim.dylib` is
-  `arm64` on current macOS host.
-- Standard stable subset:
-  `PYTHONPATH=emulator python3 -m pytest emulator/tests/test_i2c.py emulator/tests/test_run.py emulator/tests/test_sd.py emulator/tests/test_shell.py emulator/tests/test_virtual_board.py --lexxos-sim-lib build/sim/src/liblexxos_sim.dylib`
+- `cmake --build --preset lexxos-sim`: успешно, `build/sim/src/liblexxos_sim.dylib` имеет архитектуру `arm64` на проверенном компьютере macOS.
+- `cmake --build --preset lexxos-sim-full`: успешно, `FEATURE_GAMEBOY: ON`, `build/sim-full/src/liblexxos_sim.dylib` имеет
+  архитектуру `arm64` на проверенном компьютере macOS.
+- Устойчивый стандартный набор:
+  `PYTHONPATH=tools/emulator python3 -m pytest tools/emulator/tests/test_i2c.py tools/emulator/tests/test_run.py tools/emulator/tests/test_sd.py tools/emulator/tests/test_shell.py tools/emulator/tests/test_virtual_board.py --lexxos-sim-lib build/sim/src/liblexxos_sim.dylib`
     - `24 passed`, `real 10.34s`.
-- Full regression:
-  `PYTHONPATH=emulator python3 -m pytest emulator/tests --lexxos-sim-lib build/sim-full/src/liblexxos_sim.dylib`
+- Полная регрессия:
+  `PYTHONPATH=tools/emulator python3 -m pytest tools/emulator/tests --lexxos-sim-lib build/sim-full/src/liblexxos_sim.dylib`
     - `46 passed, 1 skipped`, `real 19.68s`.
 
 ## Этап 1. Явный composition root
@@ -149,7 +163,7 @@ providers и экземпляр VFS.
   FreeRTOS scheduler stop log и FreeRTOS panic hooks используют этот backend вместо прямых `platform::*`;
 - старые `platform::*` free functions остались compatibility fallback-ом внутри services/backend adapters и ранних panic
   paths;
-- `cmake/build_info.h.in` знает `LEXXOS_PLATFORM_ESPIDF`, поэтому команда `version` больше не покажет `unknown` на
+- `config/cmake/build_info.h.in` знает `LEXXOS_PLATFORM_ESPIDF`, поэтому команда `version` больше не покажет `unknown` на
   ESP32;
 - host contract test проверяет instance-scoped services и stdout routing;
 - services contract test покрывает fake services для shell, storage/block device command и Game Boy cartridge
@@ -191,7 +205,8 @@ input       driver=pcf8575-matrix bus=debug address=0x20
 для одного hardware controller, если controller имеет общий state или destructive registers. Первый рабочий пример —
 PicoCalc STM32 southbridge: provider `picocalc-keyboard` владеет FIFO, регистрирует `InputDevice` и одновременно
 экспортирует `picocalc-southbridge` runtime service через facade для cached battery/backlight/power операций. Текущий
-runtime composition root сохраняет это как единый provider-owned controller, а не как отдельный raw I2C driver для shell.
+runtime composition root сохраняет это как единый provider-owned controller, а не как отдельный raw I2C driver для
+shell.
 
 Критерий: добавление нового дисплея не требует изменения `DeviceManager`.
 
@@ -409,3 +424,16 @@ mutex на время активной DMA-передачи от `startDmaTransf
 - capability checks заменяют прямые platform checks в apps;
 - simulator может собрать две независимые system composition в одном процессе;
 - добавление нового board profile не требует изменения core, VFS, shell и существующих drivers.
+
+## RK3506 / PicoCalc Lyra M
+
+Актуальный аудит интеграции и оставшиеся задачи: [ревизия RK3506](boards/picocalc_lyra_m.md#архитектура-порта).
+Перенос mount policy, выделение BlockDevice и изоляция SPI1/DMA выполнены; общий
+многослотовый сервис автомонтирования и разделение SDMMC-диагностики остаются открытыми.
+Плата уже зарегистрирована в `Boards.cmake`, но собирается отдельным профилем.
+
+### Актуальное состояние PicoCalc Lyra на 04.11.2026
+
+На Lyra работают CPU0 FreeRTOS, managed MMU/D-cache, SPI0 LCD TX и SPI1 SD RX через PL330 DMA и Normal-NC пул. Для отдельной съёмной SD1 подтверждены FAT CMD24 PIO RW, `write`, `append`, `cp`, `sync` и повторное RO-монтирование; системная загрузочная SDMMC `sd0` не изменялась.
+
+**Открытые задачи:** запасы стеков `cat`/`write`/`append`, длительный стресс конкурентного I/O, аппаратная перепроверка восстановленного hotplug FreeRTOS, проверка холодного старта и FAT на ПК, аварийная устойчивость, per-process MMU и SMP. [Актуальная сводка](boards/picocalc_lyra_m.md#аппаратные-результаты).

@@ -39,6 +39,7 @@ int SyncProgram::run(
 			context.writeLine("sync: host directory check failed (see emulator log)");
 			return 1;
 		}
+
 		if (pending > 0) {
 			// Must not change FAT sectors while the FatFs volume is mounted.
 			auto const unmounted = lexxos::fs::fat::unmount("/mnt/sd");
@@ -47,6 +48,7 @@ int SyncProgram::run(
 				context.writeLine("sync: cannot unmount /mnt/sd for host synchronization");
 				return 1;
 			}
+
 			int const applied = lexxos_sim_host_directory_sync(1);
 			// Always attempt remount, including after a conflict or I/O error.
 			auto const remounted = lexxos::fs::fat::mount("/dev/sd0", "/mnt/sd");

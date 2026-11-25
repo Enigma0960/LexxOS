@@ -1,7 +1,7 @@
-# PicoCalc southbridge
+# Контроллер STM32 PicoCalc
 
 Документ фиксирует текущее состояние поддержки STM32 southbridge на ClockworkPi PicoCalc в LexxOS 0.0.7.
-Дальнейшие работы вынесены в [`docs/todo/roadmap.md`](todo/roadmap.md).
+Дальнейшие работы вынесены в [дорожную карту](../roadmap.md).
 
 ## Назначение
 
@@ -54,11 +54,11 @@ src/lexxos/apps/picocalc/picocalc_southbridge_program.cpp
 
 `PicoCalcSouthbridge` содержит register-level API для:
 
-- version/config/interrupt/debounce/polling-frequency;
+- версия, настройки, прерывания, подавление дребезга, частота опроса;
 - keyboard state и keyboard FIFO;
 - battery;
 - LCD backlight и keyboard backlight;
-- C64 matrix/joystick registers;
+- регистры матрицы/джойстика C64;
 - power-off support;
 - reset request.
 
@@ -110,7 +110,8 @@ keyboard snapshot, отдаёт input events и решает, когда мож�
 contract как `picocalc-southbridge`, поэтому `picocalc-info`, `picocalc-sb`, `backlight`, `display-power`, `power`,
 `poweroff`, RTC helpers и статус-бар зависят от runtime service contract, а не от concrete keyboard class.
 `DeviceManager` также ведёт service-level resource lock для `picocalc-southbridge`: `devices` показывает этот registered
-service как service entry с состоянием `free`/`busy`, priority и owner. Runtime clients получают имя service и lock через
+service как service entry с состоянием `free`/`busy`, priority и owner. Runtime clients получают имя service и lock
+через
 `PicoCalcSouthbridgeResourcePolicy`, поэтому owner/priorities остаются локальной политикой call site, а имя shared
 resource не дублируется. При этом keyboard остаётся единственным потребителем FIFO.
 
@@ -131,7 +132,7 @@ PicoCalc southbridge считается provider-owned composite controller:
 оба контракта от его имени. Новые runtime clients должны зависеть от `PicoCalcSouthbridgeRuntimeService`, а не от
 `PicoCalcSouthbridge` register-level API и не от raw I2C bus.
 
-## Ownership rules
+## Правила владения
 
 При активном `picocalc-keyboard` действуют правила:
 
@@ -162,7 +163,7 @@ PicoCalc southbridge считается provider-owned composite controller:
 плохом
 состоянии, полное отключение питания надёжнее обычного `reboot`.
 
-## Power UX status
+## Состояние управления питанием
 
 P0 power/backlight UX подтверждён на реальном PicoCalc:
 
@@ -185,7 +186,7 @@ keyboard FIFO safety    ok
 - charging flag;
 - процент заряда из младших 7 бит battery register;
 - человекочитаемый уровень `empty-or-disconnected`/`critical`/`low`/`medium`/`good`;
-- display-only low-battery policy;
+- политика низкого заряда только для отображения;
 - power-off support;
 - текущие уровни LCD/keyboard backlight;
 - последнюю service-backed write-команду с `state=ok`, `state=failed` или `state=refused`.
@@ -194,7 +195,7 @@ Low-battery policy в LexxOS сейчас deliberately display-only: shell sessi
 читается. Принудительное shutdown-поведение остаётся на стороне STM32/PMU firmware; если позже потребуется действие со
 стороны LexxOS, его нужно добавлять отдельной политикой поверх текущей диагностики.
 
-## Cached snapshot
+## Кешированный снимок
 
 В активной PicoCalc-сборке cached snapshot содержит:
 
@@ -252,7 +253,7 @@ scan-code. Она покрывает навигацию, Enter, Escape, Backspac
 [`docs/picocalc-keyboard-layout.md`](picocalc-keyboard-layout.md). На проверенной прошивке PicoCalc power button не
 появляется в keyboard FIFO, поэтому `KeyCode::Power` не маппится в клавиатурном драйвере.
 
-## Console input integration
+## Интеграция консольного ввода
 
 PicoCalc input poll выполняется в background runtime task `picocalc-input` с интервалом 16 ms и ограничением на
 количество событий за poll. Перед каждым коротким drain task берёт `picocalc-keyboard` input-device lock с owner
@@ -376,7 +377,7 @@ lexx:/> picocalc-sb --direct-i2c
 Пока не реализовано:
 
 - расширенная terminal/app семантика для `F1..F10`, `Insert` и будущих app hotkeys описана в PicoCalc-блоке
-  [`docs/todo/roadmap.md`](todo/roadmap.md);
+  [дорожную карту](../roadmap.md);
 - software `poweroff` request на JCS southbridge пока не подтверждён, используйте физическую кнопку питания;
 - одиночный `update-keyboard-fifo-read` warning на JCS считается неблокирующим, если `ready=yes`, `consecutive=1`,
   `snapshot-ok=yes` и ввод продолжает работать;
@@ -384,4 +385,4 @@ lexx:/> picocalc-sb --direct-i2c
   сценария; текущий сценарий закрывает автоматическое выключение экрана и подсветки;
 - активная low-battery policy со стороны LexxOS поверх текущего display-only статуса.
 
-Следующий технический трек описан в [`docs/todo/roadmap.md`](todo/roadmap.md).
+Следующий технический трек описан в [дорожную карту](../roadmap.md).

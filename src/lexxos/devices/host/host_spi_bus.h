@@ -9,6 +9,8 @@ namespace lexxos::devices {
 
 class HostSpiBus final : public SpiBus {
 public:
+	using SpiBus::SpiBus;
+
 	bool initialize(lexxos::platform::SpiPins const& pins) override;
 	[[nodiscard]] bool isReady() const override;
 	bool setBaudRate(std::uint32_t baudRate) override;

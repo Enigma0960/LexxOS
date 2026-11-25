@@ -5,6 +5,15 @@
 #include <lexxos/board_config.h>
 #include <lexxos/feature.h>
 
+#if defined(LEXXOS_KERNEL_FREERTOS)
+	#include <FreeRTOS.h>
+	#include <task.h>
+#endif
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	#include <lexxos/platform/platform.h>
+#endif
+
 #if !defined(LEXXOS_TEST_FORCE_NULL_CONSOLE_MIRROR) && LEXXOS_LCD_CONSOLE_TARGET_ENABLED
 	#include <lexxos/app/detail/picocalc_lcd_console_mirror_sink.h>
 #endif
@@ -25,24 +34,6 @@ lexxos::app::ConsoleMirrorSink& selectedSink() {
 
 namespace lexxos::app {
 
-ScopedConsoleMirrorMode::ScopedConsoleMirrorMode(ConsoleMirrorMode mode)
-    : _previousMode(console_mirror::mode())
-    , _active(true) {
-	console_mirror::setMode(mode);
-}
-
-ScopedConsoleMirrorMode::~ScopedConsoleMirrorMode() {
-	restore();
-}
-
-void ScopedConsoleMirrorMode::restore() {
-	if (!_active) {
-		return;
-	}
-	console_mirror::setMode(_previousMode);
-	_active = false;
-}
-
 } // namespace lexxos::app
 
 namespace lexxos::app::console_mirror {
@@ -52,23 +43,45 @@ ConsoleMirrorSink& sink() {
 }
 
 void initialize(lexxos::os::OperatingSystem& operatingSystem) {
-	sink().initialize(operatingSystem);
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-mirror] selecting sink\n");
+#endif
+
+	auto& target = sink();
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-mirror] dispatch initialize\n");
+#endif
+
+	target.initialize(operatingSystem);
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-mirror] initialize returned\n");
+#endif
 }
 
 void write(std::string_view text) {
-	sink().write(text);
+	if (!isSuspended()) {
+		sink().write(text);
+	}
 }
 
 void flush() {
-	sink().flush();
+	if (!isSuspended()) {
+		sink().flush();
+	}
 }
 
 void clear() {
-	sink().clear();
+	if (!isSuspended()) {
+		sink().clear();
+	}
 }
 
 void refresh() {
-	sink().refresh();
+	if (!isSuspended()) {
+		sink().refresh();
+	}
 }
 
 void setMode(ConsoleMirrorMode mode) {
@@ -80,7 +93,7 @@ ConsoleMirrorMode mode() {
 }
 
 bool update() {
-	return sink().update();
+	return !isSuspended() && sink().update();
 }
 
 bool isReady() {

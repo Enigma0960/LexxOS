@@ -26,6 +26,7 @@ enum class DeviceResourcePriority : std::uint8_t {
 		case DeviceResourcePriority::Critical:
 			return "critical";
 	}
+
 	return "normal";
 }
 

@@ -44,6 +44,7 @@ gpio_int_type_t toInterruptType(lexxos::platform::GpioInterruptEdge edge) {
 		case lexxos::platform::GpioInterruptEdge::Both:
 			return GPIO_INTR_ANYEDGE;
 	}
+
 	return GPIO_INTR_DISABLE;
 }
 
@@ -63,24 +64,6 @@ void IRAM_ATTR gpioInterruptTrampoline(void* argument) {
 }
 
 } // namespace
-
-void lexxos::platform::espidf::detail::initializeStatusLed() {
-	auto const& descriptor = activeBoardDescriptor();
-	if (!descriptor.statusLed.isValid()) {
-		return;
-	}
-	configureGpioOutput(descriptor.statusLed, false);
-}
-
-void lexxos::platform::setStatusLed(bool enabled) {
-	auto const& descriptor = activeBoardDescriptor();
-	if (!descriptor.statusLed.isValid()) {
-		return;
-	}
-
-	auto const active = descriptor.statusLedActiveLevel == GpioActiveLevel::High;
-	writeGpio(descriptor.statusLed, enabled ? active : !active);
-}
 
 bool lexxos::platform::configureGpioInput(GpioPin pin, GpioPull pull) {
 	if (!isValidPin(pin)) {
@@ -110,6 +93,7 @@ bool lexxos::platform::configureGpioOutput(GpioPin pin, bool initialValue) {
 	if (gpio_config(&config) != ESP_OK) {
 		return false;
 	}
+
 	return writeGpio(pin, initialValue);
 }
 
@@ -132,13 +116,16 @@ bool lexxos::platform::configureGpioInterrupt(GpioPin pin, GpioInterruptEdge edg
 	if (!isValidPin(pin) || handler == nullptr) {
 		return false;
 	}
+
 	if (!g_isrServiceInstalled) {
 		auto const result = gpio_install_isr_service(0);
 		if (result != ESP_OK && result != ESP_ERR_INVALID_STATE) {
 			return false;
 		}
+
 		g_isrServiceInstalled = true;
 	}
+
 	g_interrupts[static_cast<std::size_t>(pin.number)] =
 	    lexxos::platform::espidf::detail::GpioInterruptSlot{handler, userData};
 	gpio_set_intr_type(toEspGpio(pin), toInterruptType(edge));
@@ -153,6 +140,7 @@ void lexxos::platform::disableGpioInterrupt(GpioPin pin) {
 	if (!isValidPin(pin)) {
 		return;
 	}
+
 	gpio_isr_handler_remove(toEspGpio(pin));
 	gpio_set_intr_type(toEspGpio(pin), GPIO_INTR_DISABLE);
 	g_interrupts[static_cast<std::size_t>(pin.number)] =

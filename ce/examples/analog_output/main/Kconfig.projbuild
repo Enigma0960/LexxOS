@@ -1,0 +1,6 @@
+menu "LexxCE: Analog output"
+    config DEMO_DAC_GPIO
+        int "DAC output GPIO (25 or 26)"
+        range 25 26
+        default 25
+endmenu

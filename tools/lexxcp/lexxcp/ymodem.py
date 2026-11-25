@@ -98,30 +98,13 @@ def _wait_for_byte(
     retries: int,
     *,
     accepted: tuple[int, ...] = (),
-    skip_noise: bool = False,
 ) -> int:
-    if skip_noise:
-        deadline = time.monotonic() + timeout_s * max(1, retries)
-        last = None
-        while time.monotonic() < deadline:
-            remaining = max(0.0, deadline - time.monotonic())
-            try:
-                value = _read_byte(stream, min(timeout_s, remaining))
-            except TimeoutError:
-                continue
-            last = value
-            if value == CAN:
-                raise CancelledTransfer("remote cancelled transfer")
-            if value == expected or value in accepted:
-                return value
-        if last is None:
-            raise TransferError(f"timed out waiting for 0x{expected:02X}")
-        raise TransferError(f"expected 0x{expected:02X}, got 0x{last:02X}")
-
+    deadline = time.monotonic() + timeout_s * max(1, retries)
     last = None
-    for _ in range(retries):
+    while time.monotonic() < deadline:
+        remaining = max(0.0, deadline - time.monotonic())
         try:
-            value = _read_byte(stream, timeout_s)
+            value = _read_byte(stream, min(timeout_s, remaining))
         except TimeoutError:
             continue
         last = value
@@ -158,10 +141,11 @@ def _empty_metadata_payload() -> bytes:
     return b"\0" * BLOCK_128
 
 
-def _send_packet_with_ack(stream: ByteStream, packet: bytes, timeout_s: float, *, skip_noise: bool = False) -> None:
+def _send_packet_with_ack(stream: ByteStream, packet: bytes, timeout_s: float) -> None:
     for _ in range(PACKET_RETRIES):
         stream.write(packet)
         deadline = time.monotonic() + timeout_s
+        # A diagnostic already being printed can finish during a transfer.
         while True:
             try:
                 value = _read_byte(stream, max(0.0, deadline - time.monotonic()))
@@ -172,8 +156,6 @@ def _send_packet_with_ack(stream: ByteStream, packet: bytes, timeout_s: float, *
             if value == CAN:
                 raise CancelledTransfer("remote cancelled transfer")
             if value == NAK:
-                break
-            if not skip_noise:
                 break
     raise TransferError("remote did not ACK packet")
 
@@ -240,8 +222,8 @@ def send_file(stream: ByteStream, source: Path, remote_name: str | None = None, 
     name = remote_name or source.name
     size = source.stat().st_size
 
-    _wait_for_byte(stream, CRCCHR, timeout_s, PACKET_RETRIES, skip_noise=True)
-    _send_packet_with_ack(stream, _make_packet(0, _metadata_payload(name, size)), timeout_s, skip_noise=True)
+    _wait_for_byte(stream, CRCCHR, timeout_s, PACKET_RETRIES)
+    _send_packet_with_ack(stream, _make_packet(0, _metadata_payload(name, size)), timeout_s)
     _wait_for_byte(stream, CRCCHR, timeout_s, PACKET_RETRIES)
 
     sent = 0
@@ -262,25 +244,20 @@ def send_file(stream: ByteStream, source: Path, remote_name: str | None = None, 
     for _ in range(PACKET_RETRIES):
         _write_byte(stream, EOT)
         try:
-            value = _read_byte(stream, timeout_s)
-        except TimeoutError:
+            value = _wait_for_byte(stream, ACK, timeout_s, 1, accepted=(NAK,))
+        except TransferError:
             continue
         if value == ACK:
             break
-        if value == CAN:
-            raise CancelledTransfer("remote cancelled transfer")
     else:
         raise TransferError("remote did not ACK EOT")
 
     try:
-        value = _read_byte(stream, 1.5)
-    except TimeoutError:
+        _wait_for_byte(stream, CRCCHR, 1.5, 1)
+    except TransferError:
         return
 
-    if value == CRCCHR:
-        _send_packet_with_ack(stream, _make_packet(0, _empty_metadata_payload()), timeout_s)
-    elif value == CAN:
-        raise CancelledTransfer("remote cancelled transfer")
+    _send_packet_with_ack(stream, _make_packet(0, _empty_metadata_payload()), timeout_s)
 
 
 def receive_file(stream: ByteStream, destination: Path, *, timeout_s: float = 10.0, progress: ProgressCallback | None = None) -> ReceivedFile:

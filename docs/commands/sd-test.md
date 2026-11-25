@@ -1,6 +1,6 @@
 # `sd-test`
 
-run SD FAT read/write smoke test.
+Проверяет основные операции чтения и записи SD FAT.
 
 ## Справка shell
 

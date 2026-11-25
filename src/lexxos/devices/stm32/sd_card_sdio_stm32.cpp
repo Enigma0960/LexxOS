@@ -1,11 +1,11 @@
-#include <lexxos/devices/storage/sd_sdio_backend.h>
-
 #include <cstdint>
 
 #include <lexxos/devices/stm32/detail/stm32_sdio_support.h>
+#include <lexxos/devices/storage/sd_sdio_backend.h>
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint8_t cmd0GoIdle = 0;
@@ -50,11 +50,13 @@ bool SdSdioBackend::initialize() {
 		setFailure(SdCardState::NoBus);
 		return false;
 	}
+
 	if (!physicalCardPresent()) {
 		recordDiagnostic(SdCardDiagnosticCode::CardRemoved);
 		setFailure(SdCardState::NoCard);
 		return false;
 	}
+
 	if (!_pins.isValid() || !configurePeripheral()) {
 		recordDiagnostic(SdCardDiagnosticCode::InitializeFailed);
 		setFailure(SdCardState::NoBus);
@@ -66,6 +68,7 @@ bool SdSdioBackend::initialize() {
 		setFailure(SdCardState::NoBus);
 		return false;
 	}
+
 	sleepMs(2);
 
 	// Этап 2: переводим карту в idle и согласовываем SD v2 + рабочее напряжение.
@@ -90,8 +93,10 @@ bool SdSdioBackend::initialize() {
 				break;
 			}
 		}
+
 		sleepMs(2);
 	}
+
 	if (!enteredReadyState) {
 		recordDiagnostic(SdCardDiagnosticCode::CommandResponseTimeout, acmd41SendOpCond);
 		setFailure(SdCardState::Timeout);
@@ -114,6 +119,7 @@ bool SdSdioBackend::initialize() {
 		setFailure(SdCardState::IoError);
 		return false;
 	}
+
 	_rca = static_cast<std::uint16_t>((cmd3.response[0] >> 16U) & 0xFFFFU);
 	if (_rca == 0) {
 		recordDiagnostic(SdCardDiagnosticCode::CommandResponseReadFailed, cmd3SendRelativeAddress);
@@ -126,6 +132,7 @@ bool SdSdioBackend::initialize() {
 		setFailure(SdCardState::IoError);
 		return false;
 	}
+
 	if (!selectCard() || !configureBusWidth()) {
 		recordDiagnostic(SdCardDiagnosticCode::SetModeFailed);
 		setFailure(SdCardState::IoError);
@@ -169,6 +176,7 @@ bool SdSdioBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size
 		if (!physicalCardPresent()) {
 			setFailure(SdCardState::CardRemoved);
 		}
+
 		return false;
 	}
 
@@ -179,6 +187,7 @@ bool SdSdioBackend::readBlocks(std::uint64_t firstBlock, void* buffer, std::size
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -187,6 +196,7 @@ bool SdSdioBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, st
 		if (!physicalCardPresent()) {
 			setFailure(SdCardState::CardRemoved);
 		}
+
 		return false;
 	}
 
@@ -197,6 +207,7 @@ bool SdSdioBackend::writeBlocks(std::uint64_t firstBlock, void const* buffer, st
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -242,10 +253,12 @@ bool SdSdioBackend::setTransferBaudRate(std::uint32_t baudRate) {
 		recordDiagnostic(SdCardDiagnosticCode::SetBaudFailed, 0xFFU, baudRate);
 		return false;
 	}
+
 	_pins.transferClockHz = baudRate;
 	if (_state != SdCardState::Ready) {
 		return true;
 	}
+
 	return setClock(baudRate);
 }
 
@@ -287,6 +300,7 @@ bool SdSdioBackend::physicalCardPresent() const {
 	if (gpio.read == nullptr || !gpio.read(_cardDetect.detect, value)) {
 		return false;
 	}
+
 	return _cardDetect.insertedLevel == lexxos::platform::GpioActiveLevel::High ? value : !value;
 }
 
@@ -320,6 +334,7 @@ SdSdioBackend::CommandResult SdSdioBackend::sendCommand(std::uint8_t command, st
 	for (std::size_t index = 0; index < 4; ++index) {
 		result.response[index] = commandResult.response[index];
 	}
+
 	return result;
 }
 
@@ -357,6 +372,7 @@ bool SdSdioBackend::readCsd() {
 		_blockCount = (static_cast<std::uint64_t>(cSize) + 1ULL) * 1024ULL;
 		return _blockCount > 0;
 	}
+
 	if (structure == 0U) {
 		std::uint32_t const readBlockLength = stm32::detail::readCsdBits(csd.response, 83, 80);
 		std::uint32_t const cSize = stm32::detail::readCsdBits(csd.response, 73, 62);
@@ -366,6 +382,7 @@ bool SdSdioBackend::readCsd() {
 		_blockCount = (blockNumber * blockLength) / blockSize;
 		return _blockCount > 0;
 	}
+
 	return false;
 }
 
@@ -381,6 +398,7 @@ bool SdSdioBackend::readSingleBlock(std::uint64_t block, std::uint8_t* buffer) {
 		stm32::detail::cancelSdioDataTransfer();
 		return false;
 	}
+
 	return stm32::detail::finishSdioBlockRead(buffer, blockSize);
 }
 
@@ -396,6 +414,7 @@ bool SdSdioBackend::writeSingleBlock(std::uint64_t block, std::uint8_t const* bu
 		stm32::detail::cancelSdioDataTransfer();
 		return false;
 	}
+
 	return stm32::detail::finishSdioBlockWrite(buffer, blockSize);
 }
 
@@ -456,6 +475,7 @@ SdCardDiagnostics SdSdioBackend::diagnosticsUnlocked() const {
 	for (std::uint32_t index = 0; index < _diagnosticStoredCount; ++index) {
 		snapshot.entries[index] = _diagnosticEntries[(first + index) % sdCardDiagnosticEntryCount];
 	}
+
 	return snapshot;
 }
 

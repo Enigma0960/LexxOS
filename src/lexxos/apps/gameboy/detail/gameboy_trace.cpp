@@ -142,6 +142,7 @@ void writeCpuStep(lexxos::os::AppContext& context, std::uint32_t index, lexxos::
 		context.write(" cb=");
 		writeCode8(context, step.prefixedOpcode);
 	}
+
 	context.write(" cycles=");
 	writeUnsigned(context, step.cycles);
 	context.write(" status=");
@@ -152,6 +153,7 @@ void writeCpuStep(lexxos::os::AppContext& context, std::uint32_t index, lexxos::
 		context.write(" vector=");
 		writeHex16(context, step.interruptVector);
 	}
+
 	context.write(" | ");
 	writeCpuState(context, cpu);
 	context.writeLine("");
@@ -161,6 +163,7 @@ void writeRunStopStep(lexxos::os::AppContext& context, char const* prefix, RunBu
 	if (!run.hasLastStep || isContinuableEmulationStatus(run.status)) {
 		return;
 	}
+
 	context.write(prefix);
 	context.write("stop pc=");
 	writeHex16(context, run.lastStep.pcBefore);
@@ -170,6 +173,7 @@ void writeRunStopStep(lexxos::os::AppContext& context, char const* prefix, RunBu
 		context.write(" cb=");
 		writeCode8(context, run.lastStep.prefixedOpcode);
 	}
+
 	context.write(" status=");
 	context.write(lexxos::gameboy::toString(run.status));
 	context.writeLine("");
@@ -195,6 +199,7 @@ void writeRunTrace(lexxos::os::AppContext& context, char const* prefix, RunTrace
 			context.write(" cb=");
 			writeCode8(context, entry.prefixedOpcode);
 		}
+
 		context.write(" cycles=");
 		writeUnsigned(context, entry.cycles);
 		if (entry.repeatCount > 1U) {
@@ -203,12 +208,14 @@ void writeRunTrace(lexxos::os::AppContext& context, char const* prefix, RunTrace
 			context.write(" total-cycles=");
 			writeUnsigned(context, entry.totalCycles);
 		}
+
 		if (entry.servicedInterrupt) {
 			context.write(" irq=");
 			writeCode8(context, entry.interruptMask);
 			context.write(" vector=");
 			writeHex16(context, entry.interruptVector);
 		}
+
 		context.write(" bank=");
 		writeUnsigned(context, entry.romBank);
 		if (entry.pc < 0x8000U) {
@@ -217,8 +224,10 @@ void writeRunTrace(lexxos::os::AppContext& context, char const* prefix, RunTrace
 			if (entry.pc >= 0x4000U) {
 				romAddress = entry.romBank * 0x4000U + static_cast<std::uint32_t>(entry.pc - 0x4000U);
 			}
+
 			writeHex32(context, romAddress);
 		}
+
 		context.write(" status=");
 		context.write(lexxos::gameboy::toString(entry.status));
 		context.writeLine("");

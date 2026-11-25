@@ -6,7 +6,9 @@
 #include <lexxos/devices/bus/spi_bus.h>
 
 namespace lexxos::os {
+
 class AppContext;
+
 } // namespace lexxos::os
 
 namespace lexxos::apps::storage_programs::detail {

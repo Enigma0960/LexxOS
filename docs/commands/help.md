@@ -1,6 +1,6 @@
 # `help`
 
-show program list.
+Показывает список программ.
 
 ## Справка shell
 

@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "board": "picocalc-lyra-rk3506g2",
+  "files": {
+    "sd-loader.bin": {
+      "size": 196608,
+      "sha256": "861872d90d053bb990920a50b8b05e44cf9b0c1baa384b53255d4d142f1b7b54"
+    },
+    "fit-header.bin": {
+      "size": 1536,
+      "sha256": "80f742d551e3d8702f6313ab8a45c2b3769c20974748b4f9e25ed24f3b6bff1c"
+    },
+    "board.dtb": {
+      "size": 69359,
+      "sha256": "aac7a994cbf1838da707dcc02bab245be017854cc40e69abd6289a62e4c08e1a"
+    },
+    "resource.img": {
+      "size": 1484800,
+      "sha256": "4e358aeda4c2de9e933294cc47f43f3a6cc42f091a0ff1759832faafd6bfcaeb"
+    }
+  },
+  "boot_template": {
+    "size": 6359040,
+    "sha256": "dff9a40e0e1c4a421fc951849cb3f296c1b2c0073792b8f456d7cc05898f4509",
+    "source": "existing third_party/rk3506-luckfox-lurra/boot.img (Luckfox_Lyra_MircoSD_250717, per existing packer documentation)"
+  },
+  "sd_loader": {
+    "source": "working PicoCalc Lyra SD dump, 2026-10-26 (work/backups/rk3506/lyra-sd-reference.img)",
+    "source_sha256": "343729f9412d6e3d2dbf517aea02e92a968f2e2254d51f2b760b5bb0a0cab1ef",
+    "source_size": 4027580416,
+    "offset": 32768,
+    "size": 196608,
+    "extent_source": "RKNS v2 image descriptors; tools/rkcommon.c in pinned SDK u-boot"
+  },
+  "sdk": {
+    "device/rockchip": "d0ba3ec0379307d33198ba631a2c404bed816a2e",
+    "rkbin": "32ccaf811ae70ce050aa810869c63c2b34324d59",
+    "u-boot": "f2a7bbcf5c92a68cc3e6cfffee9b602af964c0e8"
+  },
+  "sd_loader_vendor_comparison": {
+    "source": "Luckfox_Lyra_MircoSD_261020/sd_update.img",
+    "source_sha256": "515157b70410ec5029d60b63ad032b4cc1b244175f8301bea4483f5d973765c1",
+    "offset": 32768,
+    "size": 4161536
+  }
+}

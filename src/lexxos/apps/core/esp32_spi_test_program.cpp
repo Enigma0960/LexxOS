@@ -68,6 +68,7 @@ int Esp32SpiTestProgram::run(
 		context.writeErrorLine("esp32-spi-test: failed to set SPI mode 0");
 		return 1;
 	}
+
 	if (!bus.setBaudRate(pins.baudRate)) {
 		context.writeErrorLine("esp32-spi-test: failed to set SPI baudrate");
 		return 1;

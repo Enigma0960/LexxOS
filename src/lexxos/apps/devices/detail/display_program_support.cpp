@@ -9,12 +9,14 @@
 #include <lexxos/program/program.h>
 
 namespace lexxos::apps::device_programs::detail {
+
 namespace {
 
 	[[nodiscard]] bool equalsIgnoreCase(std::string_view left, std::string_view right) {
 		if (left.size() != right.size()) {
 			return false;
 		}
+
 		for (std::size_t index = 0; index < left.size(); ++index) {
 			auto const l = left[index] >= 'A' && left[index] <= 'Z' ? static_cast<char>(left[index] - 'A' + 'a') : left[index];
 			auto const r = right[index] >= 'A' && right[index] <= 'Z' ? static_cast<char>(right[index] - 'A' + 'a') : right[index];
@@ -22,6 +24,7 @@ namespace {
 				return false;
 			}
 		}
+
 		return true;
 	}
 
@@ -91,8 +94,8 @@ namespace {
 
 } // namespace
 
-constexpr std::uint32_t inputLockAttempts = 100;
-constexpr std::uint32_t inputLockRetryDelayMs = 1;
+constexpr std::uint32_t diagnosticLockAttempts = 100;
+constexpr std::uint32_t diagnosticLockRetryDelayMs = 1;
 
 std::uint16_t rgb565(std::uint8_t red, std::uint8_t green, std::uint8_t blue) {
 	return static_cast<std::uint16_t>(((red & 0xF8U) << 8U) | ((green & 0xFCU) << 3U) | (blue >> 3U));
@@ -123,6 +126,7 @@ bool parseRgb565Color(std::string_view text, std::uint16_t& color) {
 	if (!parseUnsigned(text, value) || value > 0xFFFFU) {
 		return false;
 	}
+
 	color = static_cast<std::uint16_t>(value);
 	return true;
 }
@@ -146,24 +150,25 @@ DisplayDiagnosticLocks lockDisplayDiagnosticResources(
     std::string_view owner) {
 	DisplayDiagnosticLocks locks{};
 	auto& devices = context.devices();
-	if (devices.inputDeviceCount() != 0) {
-		auto const inputName = devices.inputDeviceAt(0).name;
-		for (std::uint32_t attempt = 0; attempt < inputLockAttempts && !locks.input; ++attempt) {
+	bool const hasInput = devices.inputDeviceCount() != 0;
+	auto const inputName = hasInput ? devices.inputDeviceAt(0).name : std::string_view{};
+	for (std::uint32_t attempt = 0; attempt < diagnosticLockAttempts; ++attempt) {
+		if (hasInput) {
 			locks.input = devices.lockInputDevice(inputName, lexxos::devices::DeviceResourcePriority::Interactive, owner);
-			if (!locks.input) {
-				lexxos::kernel::sleepMs(inputLockRetryDelayMs);
+		}
+
+		if (!hasInput || locks.input) {
+			locks.display = lockDisplay(context, display, owner);
+			if (locks.display) {
+				return locks;
 			}
 		}
-		if (!locks.input) {
-			return {};
-		}
+
+		// Console renderer может ещё завершать кадр. Ждём без удержания input.
+		locks.input.release();
+		lexxos::kernel::sleepMs(diagnosticLockRetryDelayMs);
 	}
 
-	locks.display = lockDisplay(context, display, owner);
-	if (!locks.display) {
-		locks.input.release();
-		return {};
-	}
 	return locks;
 }
 
@@ -192,11 +197,13 @@ bool drawFilledRect(
 	if (!display.beginFrame()) {
 		return false;
 	}
+
 	for (int y = 0; y < rect.height; ++y) {
 		if (!display.blitRgb565({.x = rect.x, .y = rect.y + y, .width = rect.width, .height = 1}, line, rect.width)) {
 			return false;
 		}
 	}
+
 	return display.endFrame();
 }
 
@@ -241,6 +248,7 @@ bool drawTextLine(
 						line[lineWidth++] = lit ? foreground : background;
 					}
 				}
+
 				for (int sx = 0; sx < scale && lineWidth < maxWidth; ++sx) {
 					line[lineWidth++] = background;
 				}
@@ -250,15 +258,18 @@ bool drawTextLine(
 		if (lineWidth <= 0) {
 			line[lineWidth++] = background;
 		}
+
 		if (lineWidth > drawnWidth) {
 			drawnWidth = lineWidth;
 		}
+
 		for (int sy = 0; sy < scale; ++sy) {
 			if (!display.blitRgb565({.x = x, .y = y + sourceRow * scale + sy, .width = lineWidth, .height = 1}, line, lineWidth)) {
 				return false;
 			}
 		}
 	}
+
 	return display.endFrame();
 }
 

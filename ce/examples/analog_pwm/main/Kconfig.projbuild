@@ -1,0 +1,13 @@
+menu "LexxCE: Analog input and PWM"
+    config DEMO_ADC_GPIO
+        int "Potentiometer ADC GPIO"
+        range 0 39
+        default 34
+    config DEMO_PWM_GPIO
+        int "LED PWM GPIO"
+        range 0 33
+        default 2
+    config DEMO_PWM_ACTIVE_LOW
+        bool "LED active-low"
+        default n
+endmenu

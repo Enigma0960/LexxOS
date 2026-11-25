@@ -11,6 +11,7 @@
 #include <lexxos/platform/platform.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint32_t samsungHeaderMarkUs = 4500;
@@ -45,6 +46,7 @@ bool CardputerIrTransmitter::initialize() {
 	if (!_config.isValid()) {
 		return false;
 	}
+
 	_ready = _initializeRmt();
 	return _ready;
 }
@@ -75,10 +77,12 @@ bool CardputerIrTransmitter::transmitSamsung(std::uint32_t code, std::uint8_t re
 		if (!_sendSamsungFrame(code)) {
 			return false;
 		}
+
 		if (frame + 1U < frames) {
 			esp_rom_delay_us(samsungFrameGapUs);
 		}
 	}
+
 	return true;
 }
 
@@ -97,6 +101,7 @@ bool CardputerIrTransmitter::_initializeRmt() {
 			_rmtChannel = nullptr;
 			return false;
 		}
+
 		_rmtChannel = channel;
 
 		rmt_carrier_config_t carrierConfig{};
@@ -105,6 +110,7 @@ bool CardputerIrTransmitter::_initializeRmt() {
 		if (rmt_apply_carrier(channel, &carrierConfig) != ESP_OK) {
 			return false;
 		}
+
 		if (rmt_enable(channel) != ESP_OK) {
 			return false;
 		}
@@ -117,8 +123,10 @@ bool CardputerIrTransmitter::_initializeRmt() {
 			_rmtEncoder = nullptr;
 			return false;
 		}
+
 		_rmtEncoder = encoder;
 	}
+
 	return true;
 }
 
@@ -126,6 +134,7 @@ bool CardputerIrTransmitter::_sendSamsungFrame(std::uint32_t code) const {
 	if (_rmtChannel == nullptr || _rmtEncoder == nullptr) {
 		return false;
 	}
+
 	auto const channel = static_cast<rmt_channel_handle_t>(_rmtChannel);
 	auto const encoder = static_cast<rmt_encoder_handle_t>(_rmtEncoder);
 
@@ -136,6 +145,7 @@ bool CardputerIrTransmitter::_sendSamsungFrame(std::uint32_t code) const {
 		auto const mask = static_cast<std::uint32_t>(1UL << (31U - bit));
 		symbols[index++] = symbol(samsungBitMarkUs, (code & mask) != 0 ? samsungOneSpaceUs : samsungZeroSpaceUs);
 	}
+
 	symbols[index++] = symbol(samsungBitMarkUs, 0);
 
 	rmt_transmit_config_t transmitConfig{};
@@ -144,6 +154,7 @@ bool CardputerIrTransmitter::_sendSamsungFrame(std::uint32_t code) const {
 	if (rmt_transmit(channel, encoder, symbols.data(), symbols.size() * sizeof(symbols[0]), &transmitConfig) != ESP_OK) {
 		return false;
 	}
+
 	return rmt_tx_wait_all_done(channel, 200) == ESP_OK;
 }
 

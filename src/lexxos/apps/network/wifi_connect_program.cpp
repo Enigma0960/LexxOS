@@ -5,6 +5,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::network_programs {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -14,41 +15,41 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec wifiConnectArguments[] = {
 	    {
-         .name = "timeout",
-         .shortName = 't',
-         .valueName = "ms",
-         .help = "maximum time to wait for connection",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "30000",
+	     .name = "timeout",
+	     .shortName = 't',
+	     .valueName = "ms",
+	     .help = "maximum time to wait for connection",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "30000",
 	     },
 	    {
-         .name = "auth",
-         .shortName = 'a',
-         .valueName = "auto|open|wpa|wpa2|mixed",
-         .help = "Wi-Fi authentication mode",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "auto",
+	     .name = "auth",
+	     .shortName = 'a',
+	     .valueName = "auto|open|wpa|wpa2|mixed",
+	     .help = "Wi-Fi authentication mode",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "auto",
 	     },
 	    {
-         .name = "ssid",
-         .valueName = "ssid",
-         .help = "Wi-Fi network SSID",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = true,
+	     .name = "ssid",
+	     .valueName = "ssid",
+	     .help = "Wi-Fi network SSID",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = true,
 	     },
 	    {
-         .name = "password",
-         .valueName = "password",
-         .help = "Wi-Fi network password",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .sensitive = true,
+	     .name = "password",
+	     .valueName = "password",
+	     .help = "Wi-Fi network password",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .sensitive = true,
 	     },
 	};
 

@@ -1,6 +1,6 @@
 # `sync`
 
-synchronize mounted writable filesystems.
+Сбрасывает отложенные записи файловых систем.
 
 ## Справка shell
 

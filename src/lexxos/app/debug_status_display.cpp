@@ -75,6 +75,7 @@ void lexxos::app::DebugStatusDisplay::drawStatic() {
 	if (board.current == nullptr) {
 		return;
 	}
+
 	auto const& descriptor = board.current();
 
 	debug_display::clear();
@@ -130,6 +131,7 @@ void lexxos::app::DebugStatusDisplay::refresh() {
 	} else {
 		memoryLine.append("N/A");
 	}
+
 	writeDisplayLine(4, memoryLine);
 
 	DisplayLine tasksLine;

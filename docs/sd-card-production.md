@@ -176,7 +176,7 @@ sd-debug: stored=0 dropped=0 seq=0
 minimum ever free heap остаётся с запасом
 ```
 
-Game Boy ROM regression:
+Регрессионная проверка ROM Game Boy:
 
 ```text
 fat-cache clear

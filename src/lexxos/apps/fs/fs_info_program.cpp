@@ -10,6 +10,7 @@
 #endif
 
 namespace lexxos::apps::filesystem_programs {
+
 namespace {
 
 	constexpr lexxos::apps::PrettyTableColumn vfsColumns[] = {
@@ -43,12 +44,14 @@ namespace {
 			row.setUnsigned64(2, info.maxBlockDevices);
 			return true;
 		}
+
 		if (rowIndex == 1) {
 			row.set(0, "filesystem-mounts");
 			row.setUnsigned64(1, info.filesystemMounts);
 			row.setUnsigned64(2, info.maxFilesystemMounts);
 			return true;
 		}
+
 		return false;
 	}
 
@@ -70,6 +73,7 @@ namespace {
 			lookup.found = true;
 			return false;
 		}
+
 		++lookup.current;
 		return true;
 	}
@@ -100,6 +104,7 @@ namespace {
 			lookup.found = true;
 			return false;
 		}
+
 		++lookup.current;
 		return true;
 	}

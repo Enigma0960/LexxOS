@@ -1,10 +1,10 @@
-#include <commands/command_selection.h>
-
 #include <lexxos/apps/picocalc/picocalc_info_program.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
+
+#include <commands/command_selection.h>
 
 #include <lexxos/apps/detail/i2c_program_support.h>
 #include <lexxos/devices/bus/i2c_bus.h>
@@ -35,37 +35,37 @@ namespace {
 
 	constexpr ProgramArgumentSpec picoCalcInfoArguments[] = {
 	    {
-         .name = "bus",
-         .shortName = 'b',
-         .valueName = "name",
-         .help = "I2C bus name",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
-         .defaultValue = "debug",
+	     .name = "bus",
+	     .shortName = 'b',
+	     .valueName = "name",
+	     .help = "I2C bus name",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
+	     .defaultValue = "debug",
 	     },
 	    {
-         .name = "address",
-         .shortName = 'a',
-         .valueName = "addr",
-         .help = "southbridge 7-bit I2C address",
-         .kind = ProgramArgumentKind::Option,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "0x1F",
+	     .name = "address",
+	     .shortName = 'a',
+	     .valueName = "addr",
+	     .help = "southbridge 7-bit I2C address",
+	     .kind = ProgramArgumentKind::Option,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "0x1F",
 	     },
 	    {
-         .name = "force",
-         .shortName = 'f',
-         .help = "deprecated alias for --direct-i2c",
-         .kind = ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "force",
+	     .shortName = 'f',
+	     .help = "deprecated alias for --direct-i2c",
+	     .kind = ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	    {
-         .name = "direct-i2c",
-         .help = "diagnostic-only direct reads when no southbridge service is registered",
-         .kind = ProgramArgumentKind::Flag,
-         .required = false,
+	     .name = "direct-i2c",
+	     .help = "diagnostic-only direct reads when no southbridge service is registered",
+	     .kind = ProgramArgumentKind::Flag,
+	     .required = false,
 	     },
 	};
 
@@ -355,6 +355,7 @@ int PicoCalcInfoProgram::run(lexxos::os::AppContext& context,
 		context.writeErrorLine("picocalc-info: southbridge did not respond to snapshot reads");
 		return 1;
 	}
+
 	writeSnapshotReport(context, snapshot);
 
 	return 0;

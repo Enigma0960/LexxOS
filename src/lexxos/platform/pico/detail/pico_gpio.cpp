@@ -50,6 +50,7 @@ bool lexxos::platform::configureGpioInput(GpioPin pin, GpioPull pull) {
 			gpio_pull_down(gpio);
 			break;
 	}
+
 	return true;
 }
 

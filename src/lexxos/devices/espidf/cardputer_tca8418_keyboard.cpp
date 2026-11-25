@@ -6,6 +6,7 @@
 #include <lexxos/platform/platform.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint8_t tca8418RegisterConfig = 0x01;
@@ -42,68 +43,68 @@ namespace {
 
 	constexpr Key keyMap[CardputerTca8418Keyboard::rowCount][CardputerTca8418Keyboard::columnCount] = {
 	    {
-         {KeyCode::Grave, '`', '~', Mod::None, KeyCode::Escape},
-         {KeyCode::Num1, '1', '!', Mod::None, KeyCode::F1},
-         {KeyCode::Num2, '2', '@', Mod::None, KeyCode::F2},
-         {KeyCode::Num3, '3', '#', Mod::None, KeyCode::F3},
-         {KeyCode::Num4, '4', '$', Mod::None, KeyCode::F4},
-         {KeyCode::Num5, '5', '%', Mod::None, KeyCode::F5},
-         {KeyCode::Num6, '6', '^', Mod::None, KeyCode::F6},
-         {KeyCode::Num7, '7', '&', Mod::None, KeyCode::F7},
-         {KeyCode::Num8, '8', '*', Mod::None, KeyCode::F8},
-         {KeyCode::Num9, '9', '(', Mod::None, KeyCode::F9},
-         {KeyCode::Num0, '0', ')', Mod::None, KeyCode::F10},
-         {KeyCode::Minus, '-', '_'},
-         {KeyCode::Equals, '=', '+'},
-         {KeyCode::Backspace, 0, 0, Mod::None, KeyCode::Delete},
+	     {KeyCode::Grave, '`', '~', Mod::None, KeyCode::Escape},
+	     {KeyCode::Num1, '1', '!', Mod::None, KeyCode::F1},
+	     {KeyCode::Num2, '2', '@', Mod::None, KeyCode::F2},
+	     {KeyCode::Num3, '3', '#', Mod::None, KeyCode::F3},
+	     {KeyCode::Num4, '4', '$', Mod::None, KeyCode::F4},
+	     {KeyCode::Num5, '5', '%', Mod::None, KeyCode::F5},
+	     {KeyCode::Num6, '6', '^', Mod::None, KeyCode::F6},
+	     {KeyCode::Num7, '7', '&', Mod::None, KeyCode::F7},
+	     {KeyCode::Num8, '8', '*', Mod::None, KeyCode::F8},
+	     {KeyCode::Num9, '9', '(', Mod::None, KeyCode::F9},
+	     {KeyCode::Num0, '0', ')', Mod::None, KeyCode::F10},
+	     {KeyCode::Minus, '-', '_'},
+	     {KeyCode::Equals, '=', '+'},
+	     {KeyCode::Backspace, 0, 0, Mod::None, KeyCode::Delete},
 	     },
 	    {
-         {KeyCode::Tab, '\t', '\t'},
-         {KeyCode::Q, 'q', 'Q'},
-         {KeyCode::W, 'w', 'W'},
-         {KeyCode::E, 'e', 'E'},
-         {KeyCode::R, 'r', 'R'},
-         {KeyCode::T, 't', 'T'},
-         {KeyCode::Y, 'y', 'Y'},
-         {KeyCode::U, 'u', 'U'},
-         {KeyCode::I, 'i', 'I'},
-         {KeyCode::O, 'o', 'O'},
-         {KeyCode::P, 'p', 'P'},
-         {KeyCode::LeftBracket, '[', '{'},
-         {KeyCode::RightBracket, ']', '}'},
-         {KeyCode::Backslash, '\\', '|'},
+	     {KeyCode::Tab, '\t', '\t'},
+	     {KeyCode::Q, 'q', 'Q'},
+	     {KeyCode::W, 'w', 'W'},
+	     {KeyCode::E, 'e', 'E'},
+	     {KeyCode::R, 'r', 'R'},
+	     {KeyCode::T, 't', 'T'},
+	     {KeyCode::Y, 'y', 'Y'},
+	     {KeyCode::U, 'u', 'U'},
+	     {KeyCode::I, 'i', 'I'},
+	     {KeyCode::O, 'o', 'O'},
+	     {KeyCode::P, 'p', 'P'},
+	     {KeyCode::LeftBracket, '[', '{'},
+	     {KeyCode::RightBracket, ']', '}'},
+	     {KeyCode::Backslash, '\\', '|'},
 	     },
 	    {
-         {KeyCode::Unknown, 0, 0, Mod::Fn},
-         {KeyCode::Unknown, 0, 0, Mod::Shift},
-         {KeyCode::A, 'a', 'A'},
-         {KeyCode::S, 's', 'S'},
-         {KeyCode::D, 'd', 'D'},
-         {KeyCode::F, 'f', 'F'},
-         {KeyCode::G, 'g', 'G'},
-         {KeyCode::H, 'h', 'H'},
-         {KeyCode::J, 'j', 'J'},
-         {KeyCode::K, 'k', 'K'},
-         {KeyCode::L, 'l', 'L'},
-         {KeyCode::Semicolon, ';', ':', Mod::None, KeyCode::Up},
-         {KeyCode::Apostrophe, '\'', '"'},
-         {KeyCode::Enter, '\r', '\r'},
+	     {KeyCode::Unknown, 0, 0, Mod::Fn},
+	     {KeyCode::Unknown, 0, 0, Mod::Shift},
+	     {KeyCode::A, 'a', 'A'},
+	     {KeyCode::S, 's', 'S'},
+	     {KeyCode::D, 'd', 'D'},
+	     {KeyCode::F, 'f', 'F'},
+	     {KeyCode::G, 'g', 'G'},
+	     {KeyCode::H, 'h', 'H'},
+	     {KeyCode::J, 'j', 'J'},
+	     {KeyCode::K, 'k', 'K'},
+	     {KeyCode::L, 'l', 'L'},
+	     {KeyCode::Semicolon, ';', ':', Mod::None, KeyCode::Up},
+	     {KeyCode::Apostrophe, '\'', '"'},
+	     {KeyCode::Enter, '\r', '\r'},
 	     },
 	    {
-         {KeyCode::Unknown, 0, 0, Mod::Ctrl},
-         {KeyCode::Unknown, 0, 0, Mod::Opt},
-         {KeyCode::Unknown, 0, 0, Mod::Alt},
-         {KeyCode::Z, 'z', 'Z'},
-         {KeyCode::X, 'x', 'X'},
-         {KeyCode::C, 'c', 'C'},
-         {KeyCode::V, 'v', 'V'},
-         {KeyCode::B, 'b', 'B'},
-         {KeyCode::N, 'n', 'N'},
-         {KeyCode::M, 'm', 'M'},
-         {KeyCode::Comma, ',', '<', Mod::None, KeyCode::Left},
-         {KeyCode::Period, '.', '>', Mod::None, KeyCode::Down},
-         {KeyCode::Slash, '/', '?', Mod::None, KeyCode::Right},
-         {KeyCode::Space, ' ', ' '},
+	     {KeyCode::Unknown, 0, 0, Mod::Ctrl},
+	     {KeyCode::Unknown, 0, 0, Mod::Opt},
+	     {KeyCode::Unknown, 0, 0, Mod::Alt},
+	     {KeyCode::Z, 'z', 'Z'},
+	     {KeyCode::X, 'x', 'X'},
+	     {KeyCode::C, 'c', 'C'},
+	     {KeyCode::V, 'v', 'V'},
+	     {KeyCode::B, 'b', 'B'},
+	     {KeyCode::N, 'n', 'N'},
+	     {KeyCode::M, 'm', 'M'},
+	     {KeyCode::Comma, ',', '<', Mod::None, KeyCode::Left},
+	     {KeyCode::Period, '.', '>', Mod::None, KeyCode::Down},
+	     {KeyCode::Slash, '/', '?', Mod::None, KeyCode::Right},
+	     {KeyCode::Space, ' ', ' '},
 	     },
 	};
 
@@ -162,10 +163,12 @@ void CardputerTca8418Keyboard::update() {
 		if (!_readEvent(event)) {
 			break;
 		}
+
 		if (event.valid) {
 			_setPhysicalKeyState(event.row, event.column, event.pressed);
 		}
 	}
+
 	_applyDebouncedState(now);
 
 	std::uint8_t ignored{};
@@ -249,6 +252,7 @@ bool CardputerTca8418Keyboard::_configureController() {
 	RawKeyEvent ignored{};
 	while (_readEvent(ignored)) {
 	}
+
 	_resetStateAfterControllerOverflow();
 
 	return _writeRegister(
@@ -350,6 +354,7 @@ void CardputerTca8418Keyboard::_applyDebouncedState(std::uint32_t timestampMs) {
 				} else {
 					_pendingTargetState &= ~bit;
 				}
+
 				_pendingSinceMs[_scanCode(row, column)] = timestampMs;
 				continue;
 			}
@@ -382,6 +387,7 @@ void CardputerTca8418Keyboard::_setKeyState(std::uint8_t row, std::uint8_t colum
 	} else {
 		_stableState &= ~bit;
 	}
+
 	_stableModifiers = _modifiersForState(_stableState);
 	_updatePressedKeyCache();
 
@@ -398,6 +404,7 @@ void CardputerTca8418Keyboard::_updatePressedKeyCache() {
 			if (!_isPressed(_stableState, row, column)) {
 				continue;
 			}
+
 			auto const index = _keyIndex(_keyAt(row, column).key);
 			if (index < _pressedKeys.size()) {
 				_pressedKeys[index] = true;
@@ -426,6 +433,7 @@ void CardputerTca8418Keyboard::_pushEvent(InputEventType type, std::uint8_t row,
 		if (definition.fnKey == KeyCode::Unknown) {
 			return;
 		}
+
 		eventKey = definition.fnKey;
 		// Fn is represented internally as InputModifierSym, but the translated
 		// Fn-layer key must behave like a standalone key.  Otherwise Fn+arrows are
@@ -456,6 +464,7 @@ bool CardputerTca8418Keyboard::_popEvent(InputEvent& event) {
 	if (_eventCount == 0) {
 		return false;
 	}
+
 	event = _events[_eventTail];
 	_eventTail = (_eventTail + 1) % _events.size();
 	--_eventCount;
@@ -467,18 +476,23 @@ std::uint8_t CardputerTca8418Keyboard::_modifiersForState(std::uint64_t state) c
 	if (_isPressed(state, 2, 0)) {
 		modifiers |= InputModifierSym;
 	}
+
 	if (_isPressed(state, 2, 1)) {
 		modifiers |= InputModifierShiftLeft;
 	}
+
 	if (_isPressed(state, 3, 0)) {
 		modifiers |= InputModifierCtrl;
 	}
+
 	if (_isPressed(state, 3, 1)) {
 		modifiers |= InputModifierSym;
 	}
+
 	if (_isPressed(state, 3, 2)) {
 		modifiers |= InputModifierAlt;
 	}
+
 	return modifiers;
 }
 

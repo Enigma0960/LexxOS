@@ -1,0 +1,21 @@
+{
+  "id": "picocalc_pico_w",
+  "name": "ClockworkPi PicoCalc / Pico W (JCS keyboard)",
+  "platform": "pico",
+  "preset": "manual",
+  "buildDir": "build/configurator/picocalc-pico-w-jcs",
+  "userPresetName": "user-pico-picocalc_pico_w_jcs",
+  "cmakeDefaults": {
+    "PICO_BOARD": "pico_w",
+    "LEXXOS_PICOCALC_KEYBOARD_FIRMWARE": "jcs"
+  },
+  "featureDefaults": {
+    "LEXXOS_PICO_USE_FREERTOS": "ON",
+    "LEXXOS_FEATURE_DISPLAY": "ON",
+    "LEXXOS_FEATURE_KEYBOARD": "ON",
+    "LEXXOS_FEATURE_SD_CARD": "ON",
+    "LEXXOS_FEATURE_FATFS": "ON",
+    "LEXXOS_FEATURE_PSRAM": "ON",
+    "LEXXOS_ENABLE_GAMEBOY": "OFF"
+  }
+}

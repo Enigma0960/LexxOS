@@ -1,8 +1,8 @@
 #include <lexxos/gameboy/ppu.h>
-#include <lexxos/gameboy/ppu_types.h>
 
 #include <cstring>
 
+#include <lexxos/gameboy/ppu_types.h>
 #include <lexxos/kernel/scheduler.h>
 
 namespace lexxos::gameboy {
@@ -63,6 +63,7 @@ namespace {
 			case 3:
 				return shadeBlack;
 		}
+
 		return shadeWhite;
 	}
 
@@ -143,6 +144,7 @@ namespace {
 			case 7:
 				return static_cast<std::uint8_t>((x < 4) == (y < 4) ? 0 : 3);
 		}
+
 		return 0;
 	}
 
@@ -166,6 +168,7 @@ namespace {
 		if (destination == nullptr || width <= 0) {
 			return;
 		}
+
 		for (int x = 0; x < width; ++x) {
 			destination[static_cast<std::size_t>(x)] = dynamicPaletteColor(framebuffer.pixel(sourceX + x, sourceY), palette);
 		}
@@ -186,11 +189,13 @@ namespace {
 		if (destination == nullptr || width <= 0) {
 			return;
 		}
+
 		auto* out = destination;
 		if ((sourceX & 0x03) != 0 || !isDefaultPalette(palette)) {
 			for (int x = 0; x < width; ++x) {
 				writeRgb565Byte(out, dynamicPaletteColor(framebuffer.pixel(sourceX + x, sourceY), palette));
 			}
+
 			return;
 		}
 
@@ -203,6 +208,7 @@ namespace {
 			out += packedBytes.size();
 			remaining -= pixelsPerPackedByte;
 		}
+
 		for (int x = width - remaining; x < width; ++x) {
 			writeRgb565Byte(out, dynamicPaletteColor(framebuffer.pixel(sourceX + x, sourceY), palette));
 		}
@@ -226,6 +232,7 @@ namespace {
 				writeRgb565Byte(out, color);
 				writeRgb565Byte(out, color);
 			}
+
 			return;
 		}
 
@@ -238,6 +245,7 @@ namespace {
 			out += packedBytes.size();
 			remaining -= pixelsPerPackedByte;
 		}
+
 		for (int x = width - remaining; x < width; ++x) {
 			auto const color = dynamicPaletteColor(framebuffer.pixel(sourceX + x, sourceY), palette);
 			writeRgb565Byte(out, color);
@@ -256,6 +264,7 @@ namespace {
 		auto const bit = static_cast<std::uint8_t>(7U - static_cast<std::uint8_t>(column));
 		return static_cast<std::uint8_t>(((low >> bit) & 0x01U) | (((high >> bit) & 0x01U) << 1U));
 	}
+
 } // namespace
 
 void Ppu::renderBackground(Bus& bus, FrameBuffer& framebuffer) const {
@@ -267,9 +276,11 @@ void Ppu::renderBackground(Bus& bus, FrameBuffer& framebuffer, BackgroundRenderO
 	if (options.forceLcdEnable) {
 		lcdc = static_cast<std::uint8_t>(lcdc | lcdControlLcdEnable);
 	}
+
 	if (options.forceBgEnable) {
 		lcdc = static_cast<std::uint8_t>(lcdc | lcdControlBgEnable);
 	}
+
 	if ((lcdc & lcdControlLcdEnable) == 0 || (lcdc & lcdControlBgEnable) == 0) {
 		framebuffer.clear(0);
 		return;
@@ -308,6 +319,7 @@ void Ppu::renderBackground(Bus& bus, FrameBuffer& framebuffer, BackgroundRenderO
 				auto const colorId = static_cast<std::uint8_t>(((low >> bit) & 0x01U) | (((high >> bit) & 0x01U) << 1U));
 				framebuffer.setPixel(x + column, y, mapPalette(bgp, colorId));
 			}
+
 			x += pixels;
 		}
 	};
@@ -323,6 +335,7 @@ void Ppu::renderBackground(Bus& bus, FrameBuffer& framebuffer, BackgroundRenderO
 		if (splitX > 0) {
 			renderRun(y, 0, splitX, bgMapBase, bgSourceY, scx);
 		}
+
 		auto const windowSourceY = static_cast<std::uint8_t>(static_cast<unsigned>(y - static_cast<int>(windowY)) & 0xFFU);
 		renderRun(y, splitX, screenWidth, windowMapBase, windowSourceY, -windowLeft);
 	}
@@ -333,6 +346,7 @@ void Ppu::renderSprites(Bus& bus, FrameBuffer& framebuffer, BackgroundRenderOpti
 	if (options.forceLcdEnable) {
 		lcdc = static_cast<std::uint8_t>(lcdc | lcdControlLcdEnable);
 	}
+
 	if ((lcdc & lcdControlLcdEnable) == 0 || (lcdc & lcdControlObjEnable) == 0) {
 		return;
 	}
@@ -474,6 +488,7 @@ void Ppu::renderTileMapPattern(Bus& bus, FrameBuffer& framebuffer) const {
 							shade = 3;
 						}
 					}
+
 					framebuffer.setPixel(tileX * 8 + column, tileY * 8 + row, shade);
 				}
 			}
@@ -526,6 +541,7 @@ void Ppu::renderBackgroundScan(Bus& bus, FrameBuffer& framebuffer) const {
 				if (x == 0 || y == 0) {
 					shade = 3;
 				}
+
 				framebuffer.setPixel(originX + x, originY + y, shade);
 			}
 		}
@@ -547,6 +563,7 @@ std::uint16_t Ppu::shadeToRgb565(std::uint8_t shade, Rgb565Palette const& palett
 		case 3:
 			return palette.shades[3];
 	}
+
 	return palette.shades[0];
 }
 
@@ -586,12 +603,15 @@ DisplayRenderInfo Ppu::layoutForDisplay(lexxos::devices::DisplayDevice const& di
 				height = displayHeight;
 				width = (displayHeight * screenWidth) / screenHeight;
 			}
+
 			if (width < 1) {
 				width = 1;
 			}
+
 			if (height < 1) {
 				height = 1;
 			}
+
 			info.scale = 0;
 			info.sourceX = 0;
 			info.sourceY = 0;
@@ -608,6 +628,7 @@ DisplayRenderInfo Ppu::layoutForDisplay(lexxos::devices::DisplayDevice const& di
 			    && height == screenHeight * exactScale) {
 				info.scale = exactScale;
 			}
+
 			return info;
 		}
 	}
@@ -617,25 +638,31 @@ DisplayRenderInfo Ppu::layoutForDisplay(lexxos::devices::DisplayDevice const& di
 	if (scaleY < scale) {
 		scale = scaleY;
 	}
+
 	if (scale > maxDisplayScale) {
 		scale = maxDisplayScale;
 	}
+
 	if (scale < 1) {
 		scale = 1;
 	}
+
 	info.scale = scale;
 
 	info.sourceWidth = display.width() / scale;
 	if (info.sourceWidth > screenWidth) {
 		info.sourceWidth = screenWidth;
 	}
+
 	if (info.sourceWidth < 1) {
 		info.sourceWidth = 1;
 	}
+
 	info.sourceHeight = display.height() / scale;
 	if (info.sourceHeight > screenHeight) {
 		info.sourceHeight = screenHeight;
 	}
+
 	if (info.sourceHeight < 1) {
 		info.sourceHeight = 1;
 	}
@@ -660,6 +687,7 @@ bool Ppu::blitFrameBuffer(
 		if (renderInfo != nullptr) {
 			*renderInfo = layoutForDisplay(display, mode);
 		}
+
 		return true;
 	}
 
@@ -792,6 +820,7 @@ bool Ppu::blitFrameBuffer(
 					return false;
 				}
 			}
+
 			if ((sourceY & 0x07) == 0x07) {
 				lexxos::kernel::yield();
 			}
@@ -822,9 +851,11 @@ std::uint16_t Ppu::tileMapBase(std::uint8_t lcdc, BackgroundMapMode mode) {
 	if (mode == BackgroundMapMode::Map9800) {
 		return bgMap0Address;
 	}
+
 	if (mode == BackgroundMapMode::Map9C00) {
 		return bgMap1Address;
 	}
+
 	return (lcdc & lcdControlBgMapSelect) != 0 ? bgMap1Address : bgMap0Address;
 }
 
@@ -833,9 +864,11 @@ std::uint8_t Ppu::backgroundPixel(Bus& bus, int x, int y, BackgroundRenderOption
 	if (options.forceLcdEnable) {
 		lcdc = static_cast<std::uint8_t>(lcdc | lcdControlLcdEnable);
 	}
+
 	if (options.forceBgEnable) {
 		lcdc = static_cast<std::uint8_t>(lcdc | lcdControlBgEnable);
 	}
+
 	if ((lcdc & lcdControlLcdEnable) == 0 || (lcdc & lcdControlBgEnable) == 0) {
 		return 0;
 	}
@@ -858,6 +891,7 @@ std::uint8_t Ppu::backgroundPixel(Bus& bus, int x, int y, BackgroundRenderOption
 		sourceY = static_cast<std::uint8_t>(static_cast<unsigned>(y + scy) & 0xFFU);
 		sourceX = static_cast<std::uint8_t>(static_cast<unsigned>(x + scx) & 0xFFU);
 	}
+
 	auto const tileY = static_cast<std::uint16_t>(sourceY / 8U);
 	auto const tileX = static_cast<std::uint16_t>(sourceX / 8U);
 	auto const tileLine = static_cast<std::uint16_t>(sourceY % 8U);
@@ -892,6 +926,7 @@ void seedPpuDemoBackground(Bus& bus) {
 				low = static_cast<std::uint8_t>(low | ((shade & 0x01U) << bit));
 				high = static_cast<std::uint8_t>(high | (((shade >> 1U) & 0x01U) << bit));
 			}
+
 			auto const address = static_cast<std::uint16_t>(tileDataUnsignedAddress + tile * 16U + row * 2U);
 			bus.write8(address, low);
 			bus.write8(static_cast<std::uint16_t>(address + 1U), high);

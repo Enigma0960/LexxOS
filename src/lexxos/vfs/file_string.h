@@ -58,10 +58,11 @@ namespace detail {
 			case OpenStatus::InvalidPath:
 				return ReadStatus::InvalidPath;
 			case OpenStatus::ReadOnlyFilesystem:
-			case OpenStatus::NotWritable:
+			case OpenStatus::NotWritable       :
 			case OpenStatus::NoSpace:
 				return ReadStatus::NotReadable;
 		}
+
 		return ReadStatus::NotReadable;
 	}
 
@@ -82,7 +83,7 @@ namespace detail {
 		return requiredCapacity == 0 || (output != nullptr && outputCapacity >= requiredCapacity);
 	}
 
-} // namespace detail
+} // namespace lexxos::vfs::detail
 
 inline FileStringReadResult readString(
     FileHandle& file,
@@ -106,6 +107,7 @@ inline FileStringReadResult readString(
 		if (detail::needsTerminator(options.terminator)) {
 			output[0] = '\0';
 		}
+
 		return result;
 	}
 
@@ -113,6 +115,7 @@ inline FileStringReadResult readString(
 	if (result.status == ReadStatus::Ok && detail::needsTerminator(options.terminator)) {
 		output[result.bytesRead] = '\0';
 	}
+
 	return result;
 }
 
@@ -142,6 +145,7 @@ inline FileStringReadResult readString(
 		    .bufferTooSmall = false,
 		};
 	}
+
 	if (!file.seek(offset)) {
 		return FileStringReadResult{
 		    .status = ReadStatus::InvalidPath,
@@ -150,6 +154,7 @@ inline FileStringReadResult readString(
 		    .bufferTooSmall = false,
 		};
 	}
+
 	return readString(file, output, outputCapacity, options);
 }
 

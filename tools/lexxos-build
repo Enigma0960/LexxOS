@@ -310,7 +310,7 @@ def check_executable(name: str, command: str) -> PreflightCheck:
 
 
 def default_pico_sdk_path() -> Path:
-    return Path(os.environ.get("PICO_SDK_PATH", Path.home() / ".pico-sdk" / "sdk" / "2.2.0"))
+    return Path(os.environ.get("PICO_SDK_PATH", Path.home() / ".pico-sdk" / "apps/sdk" / "2.2.0"))
 
 
 def default_pico_toolchain_path() -> Path:

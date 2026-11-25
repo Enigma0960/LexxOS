@@ -1,6 +1,6 @@
 # `gbemu-config`
 
-show or initialize Game Boy emulator settings.
+Показывает или создаёт настройки эмулятора Game Boy.
 
 ## Назначение
 

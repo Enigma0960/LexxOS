@@ -7,6 +7,9 @@
 #if LEXXOS_LCD_CONSOLE_TARGET_ENABLED
 	#include <lexxos/app/detail/picocalc_lcd_console_renderer.h>
 
+	#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+		#include <lexxos/platform/platform.h>
+	#endif
 namespace {
 
 lexxos::app::picocalc_lcd_console::detail::LcdConsoleRenderer& renderer() {
@@ -19,7 +22,21 @@ lexxos::app::picocalc_lcd_console::detail::LcdConsoleRenderer& renderer() {
 namespace lexxos::app::picocalc_lcd_console {
 
 void initialize(lexxos::os::OperatingSystem& operatingSystem) {
-	renderer().initialize(operatingSystem);
+	#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-wrapper] acquiring renderer\n");
+	#endif
+
+	auto& instance = renderer();
+
+	#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-wrapper] renderer acquired\n");
+	#endif
+
+	instance.initialize(operatingSystem);
+
+	#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-wrapper] renderer initialized\n");
+	#endif
 }
 
 void write(std::string_view text) {

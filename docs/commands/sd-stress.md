@@ -1,6 +1,6 @@
 # `sd-stress`
 
-run repeated FAT create/read/delete test.
+Повторяет тест создания, чтения и удаления файлов FAT.
 
 ## Справка shell
 

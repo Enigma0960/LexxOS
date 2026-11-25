@@ -20,19 +20,19 @@ struct WifiRuntimeStatus {
 	std::uint8_t signalLevel{0};
 };
 
-[[nodiscard]] WifiRuntimeStatus readWifiRuntimeStatus(lexxos::platform::BoardDescriptor const& board);
+[[nodiscard]] WifiRuntimeStatus readWifiRuntimeStatus(lexxos::platform::LegacyBoardDescriptor const& board);
 
 [[nodiscard]] int runWifiConnect(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board);
+    lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] int runWifiStatus(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board);
+    lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] int runWifiScan(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board);
+    lexxos::platform::LegacyBoardDescriptor const& board);
 
 } // namespace lexxos::apps::network_programs::detail

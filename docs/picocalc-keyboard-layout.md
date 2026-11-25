@@ -1,7 +1,7 @@
-# PicoCalc keyboard layout
+# Раскладка клавиатуры PicoCalc
 
 Документ фиксирует реализованную и проверенную раскладку клавиатуры ClockworkPi PicoCalc для текущей STM32 firmware.
-Дальнейшие cleanup-задачи вынесены в [`docs/todo/roadmap.md`](todo/roadmap.md).
+Дальнейшие cleanup-задачи вынесены в [дорожную карту](../roadmap.md).
 
 ## Слои физической клавиатуры
 
@@ -24,7 +24,7 @@ Mapping реализован в `src/lexxos/devices/input/picocalc_keyboard_layo
 
 - добавлены `KeyCode` для всех базовых латинских букв `A..Z`;
 - добавлены `KeyCode` для основных ASCII punctuation keys: `Tab`, grave, minus, equals, brackets, backslash, semicolon,
-  apostrophe, comma, period, slash;
+  апостроф, запятая, точка, косая черта;
 - добавлены `KeyCode` для `F1..F10`, `Break`, `Home`, `End`, `Delete` и `Insert`;
 - PicoCalc mapping покрывает базовые ASCII-коды и shifted punctuation variants;
 - PicoCalc mapping больше не отбрасывает function-key/system-key scan codes как `Unknown` без `character`;

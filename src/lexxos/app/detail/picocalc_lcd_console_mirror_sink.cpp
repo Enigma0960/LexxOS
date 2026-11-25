@@ -1,11 +1,24 @@
 #include <lexxos/app/detail/picocalc_lcd_console_mirror_sink.h>
 
 #include <lexxos/app/picocalc_lcd_console.h>
+#include <lexxos/feature.h>
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	#include <lexxos/platform/platform.h>
+#endif
 
 namespace lexxos::app::detail {
 
 void PicoCalcLcdConsoleMirrorSink::initialize(lexxos::os::OperatingSystem& operatingSystem) {
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-sink] initialize entered\n");
+#endif
+
 	lexxos::app::picocalc_lcd_console::initialize(operatingSystem);
+
+#if FEATURE_ENABLED(DISPLAY_TEST_TRACE)
+	lexxos::platform::writeConsole("[lcd-sink] initialize returned\n");
+#endif
 }
 
 void PicoCalcLcdConsoleMirrorSink::write(std::string_view text) {

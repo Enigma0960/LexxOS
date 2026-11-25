@@ -41,6 +41,7 @@ bool hasNestedMountTargetSlash(std::string_view target) {
 			return true;
 		}
 	}
+
 	return false;
 }
 
@@ -51,6 +52,7 @@ lexxos::vfs::UnmountStatus unmountFilesystemImpl(
 	if (target.empty() || target.size() + 1 > lexxos::vfs::maxPathLength) {
 		return lexxos::vfs::UnmountStatus::InvalidTarget;
 	}
+
 	for (auto& mount : filesystems) {
 		if (mount.used && lexxos::vfs::detail::equals(mount.path.data(), target)) {
 			auto status = lexxos::vfs::UnmountStatus::Ok;
@@ -61,6 +63,7 @@ lexxos::vfs::UnmountStatus unmountFilesystemImpl(
 					return status;
 				}
 			}
+
 			mount = {};
 			return status;
 		}
@@ -75,9 +78,11 @@ void lexxos::vfs::Vfs::initializeMountTable() {
 	for (auto& mount : _blockDevices) {
 		mount = {};
 	}
+
 	for (auto& mount : _filesystems) {
 		mount = {};
 	}
+
 	for (auto& factory : _filesystemFactories) {
 		factory = {};
 	}
@@ -88,10 +93,12 @@ lexxos::vfs::detail::BlockDeviceMount* lexxos::vfs::Vfs::findBlockDeviceByPath(s
 		if (!mount.used) {
 			continue;
 		}
+
 		if (detail::equals(path, mount.path.data()) || detail::equals(path, mount.name.data())) {
 			return &mount;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -128,6 +135,7 @@ bool lexxos::vfs::Vfs::listBlockDevices(DirectoryVisitor visitor, void* userData
 	if (!detail::visitEntry(visitor, userData, "null", NodeType::RegularFile)) {
 		return false;
 	}
+
 	for (auto const& mount : _blockDevices) {
 		if (!mount.used) {
 			continue;
@@ -140,6 +148,7 @@ bool lexxos::vfs::Vfs::listBlockDevices(DirectoryVisitor visitor, void* userData
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -160,6 +169,7 @@ bool lexxos::vfs::Vfs::listMountTargets(DirectoryVisitor visitor, void* userData
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -183,6 +193,7 @@ bool lexxos::vfs::Vfs::registerBlockDevice(std::string_view name, lexxos::device
 		if (!registerMountPath(mount, name)) {
 			return false;
 		}
+
 		mount.used = true;
 		mount.device = device;
 		return true;
@@ -205,15 +216,19 @@ lexxos::vfs::MountStatus lexxos::vfs::Vfs::mountFilesystem(
 	if (source.empty() || source.size() + 1 > maxPathLength) {
 		return MountStatus::InvalidSource;
 	}
+
 	if (target.empty() || target.size() + 1 > maxPathLength) {
 		return MountStatus::InvalidTarget;
 	}
+
 	if (filesystem == nullptr || !filesystem->isReady()) {
 		return MountStatus::InvalidSource;
 	}
+
 	if (hasNestedMountTargetSlash(target)) {
 		return MountStatus::TargetOutsideMountRoot;
 	}
+
 	if (blockDevice(source) == nullptr) {
 		return MountStatus::SourceNotFound;
 	}
@@ -228,12 +243,15 @@ lexxos::vfs::MountStatus lexxos::vfs::Vfs::mountFilesystem(
 		if (mount.used) {
 			continue;
 		}
+
 		if (!detail::copyText(source, mount.source.data(), mount.source.size())) {
 			return MountStatus::InvalidSource;
 		}
+
 		if (!detail::copyText(target, mount.path.data(), mount.path.size())) {
 			return MountStatus::InvalidTarget;
 		}
+
 		mount.filesystem = filesystem;
 		mount.used = true;
 		return MountStatus::Ok;
@@ -265,10 +283,12 @@ lexxos::vfs::SyncStatus lexxos::vfs::Vfs::sync() {
 		if (!mount.used || mount.filesystem == nullptr) {
 			continue;
 		}
+
 		if (!mount.filesystem->sync()) {
 			return SyncStatus::Failed;
 		}
 	}
+
 	return SyncStatus::Ok;
 }
 
@@ -298,6 +318,7 @@ bool lexxos::vfs::Vfs::visitMounts(MountVisitor visitor, void* userData) {
 		if (!mount.used || mount.filesystem == nullptr) {
 			continue;
 		}
+
 		if (!visitor(
 		        {.source = mount.source.data(),
 		            .target = mount.path.data(),
@@ -326,6 +347,7 @@ lexxos::vfs::VfsInfo lexxos::vfs::Vfs::vfsInfo() {
 			++info.blockDevices;
 		}
 	}
+
 	for (auto const& mount : _filesystems) {
 		if (mount.used) {
 			++info.filesystemMounts;
@@ -341,6 +363,7 @@ lexxos::vfs::detail::FilesystemFactoryEntry* lexxos::vfs::Vfs::findFilesystemFac
 			return &entry;
 		}
 	}
+
 	return nullptr;
 }
 
@@ -362,9 +385,11 @@ bool lexxos::vfs::Vfs::registerFilesystemFactory(
 		if (entry.used) {
 			continue;
 		}
+
 		if (!detail::copyText(type, entry.type.data(), entry.type.size())) {
 			return false;
 		}
+
 		entry.factory = factory;
 		entry.userData = userData;
 		entry.used = true;

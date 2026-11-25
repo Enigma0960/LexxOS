@@ -92,6 +92,7 @@ void invalidateReadAheadCache(BYTE drive) {
 	if (g_readAheadCache.valid && g_readAheadCache.drive != drive) {
 		return;
 	}
+
 	g_readAheadCache.valid = false;
 	g_readAheadCache.drive = 0xFF;
 	g_readAheadCache.firstSector = 0;
@@ -157,6 +158,7 @@ void countWriteRequest(std::size_t blockCount) {
 	if (!device.initialize()) {
 		return false;
 	}
+
 	return device.readBlocks(firstBlock, buffer, blockCount);
 }
 
@@ -177,6 +179,7 @@ void countWriteRequest(std::size_t blockCount) {
 			++g_diskWriteStats.failures;
 			return false;
 		}
+
 		g_diskWriteStats.writtenSectors += static_cast<std::uint32_t>(std::min<std::size_t>(chunkBlocks, UINT32_MAX));
 		currentBlock += chunkBlocks;
 		currentBuffer += chunkBlocks * 512U;
@@ -185,6 +188,7 @@ void countWriteRequest(std::size_t blockCount) {
 			lexxos::kernel::yield();
 		}
 	}
+
 	return true;
 }
 
@@ -223,6 +227,7 @@ void countWriteRequest(std::size_t blockCount) {
 	if (!g_readAheadCache.valid || g_readAheadCache.drive != drive) {
 		return false;
 	}
+
 	if (sector < g_readAheadCache.firstSector) {
 		return false;
 	}
@@ -248,6 +253,7 @@ bool lexxos::fs::fat::fatfs_backend::acquireDrive(lexxos::devices::BlockDevice& 
 		if (slot.used) {
 			continue;
 		}
+
 		slot.used = true;
 		slot.device = &device;
 		outputDrive = static_cast<BYTE>(index);
@@ -256,6 +262,7 @@ bool lexxos::fs::fat::fatfs_backend::acquireDrive(lexxos::devices::BlockDevice& 
 #endif
 		return true;
 	}
+
 	return false;
 }
 
@@ -264,6 +271,7 @@ void lexxos::fs::fat::fatfs_backend::releaseDrive(BYTE drive) {
 	if (slot == nullptr) {
 		return;
 	}
+
 	invalidateReadAheadCache(drive);
 	*slot = {};
 }
@@ -333,6 +341,7 @@ DSTATUS lexxosDiskInitialize(BYTE pdrv) {
 	if (device->isReady() || device->initialize()) {
 		return device->isReadOnly() ? STA_PROTECT : 0;
 	}
+
 	return STA_NOINIT;
 }
 
@@ -349,6 +358,7 @@ DRESULT lexxosDiskRead(BYTE pdrv, BYTE* buff, LBA_t sector, UINT count) {
 	if (device == nullptr || buff == nullptr || count == 0) {
 		return RES_PARERR;
 	}
+
 	if (!device->isReady()) {
 		return RES_NOTRDY;
 	}
@@ -357,6 +367,7 @@ DRESULT lexxosDiskRead(BYTE pdrv, BYTE* buff, LBA_t sector, UINT count) {
 		if (readBlocksWithDiskioRecovery(*device, static_cast<std::uint64_t>(sector), buff, static_cast<std::size_t>(count))) {
 			return RES_OK;
 		}
+
 		return RES_ERROR;
 	}
 
@@ -370,6 +381,7 @@ DRESULT lexxosDiskRead(BYTE pdrv, BYTE* buff, LBA_t sector, UINT count) {
 			if (!fillReadAheadCache(*device, pdrv, currentSector)) {
 				return RES_ERROR;
 			}
+
 			if (!copyFromReadAheadCache(pdrv, currentSector, output, remainingSectors, copiedSectors)) {
 				return RES_ERROR;
 			}
@@ -382,6 +394,7 @@ DRESULT lexxosDiskRead(BYTE pdrv, BYTE* buff, LBA_t sector, UINT count) {
 			lexxos::kernel::yield();
 		}
 	}
+
 	return RES_OK;
 }
 
@@ -409,6 +422,7 @@ DRESULT lexxosDiskIoctl(BYTE pdrv, BYTE cmd, void* buff) {
 	if (device == nullptr) {
 		return RES_PARERR;
 	}
+
 	if (!device->isReady()) {
 		return RES_NOTRDY;
 	}
@@ -420,18 +434,21 @@ DRESULT lexxosDiskIoctl(BYTE pdrv, BYTE cmd, void* buff) {
 			if (buff == nullptr) {
 				return RES_PARERR;
 			}
+
 			*static_cast<LBA_t*>(buff) = static_cast<LBA_t>(device->blockCount());
 			return RES_OK;
 		case GET_SECTOR_SIZE:
 			if (buff == nullptr) {
 				return RES_PARERR;
 			}
+
 			*static_cast<WORD*>(buff) = static_cast<WORD>(device->blockSizeBytes());
 			return RES_OK;
 		case GET_BLOCK_SIZE:
 			if (buff == nullptr) {
 				return RES_PARERR;
 			}
+
 			*static_cast<DWORD*>(buff) = 1;
 			return RES_OK;
 		default:

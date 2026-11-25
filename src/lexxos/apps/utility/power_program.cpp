@@ -17,6 +17,7 @@
 #endif
 
 namespace lexxos::apps::utility_programs {
+
 namespace {
 
 #if FEATURE_ENABLED(PICO_CALC)
@@ -41,15 +42,19 @@ namespace {
 		if (status.raw == 0) {
 			return "empty-or-disconnected";
 		}
+
 		if (percent <= 1) {
 			return "critical";
 		}
+
 		if (percent <= 20) {
 			return "low";
 		}
+
 		if (percent < 66) {
 			return "medium";
 		}
+
 		return "good";
 	}
 
@@ -78,6 +83,7 @@ namespace {
 			context.writeLine("unavailable");
 			return;
 		}
+
 		lexxos::apps::writeUnsigned(context, value);
 		context.write(" (");
 		lexxos::apps::writeHex8(context, value);
@@ -97,6 +103,7 @@ namespace {
 			case lexxos::devices::PicoCalcSouthbridgeCommandKind::PowerOff:
 				return "poweroff";
 		}
+
 		return "unknown";
 	}
 
@@ -113,6 +120,7 @@ namespace {
 			case lexxos::devices::PicoCalcSouthbridgeCommandState::Refused:
 				return "refused";
 		}
+
 		return "unknown";
 	}
 
@@ -129,6 +137,7 @@ namespace {
 				lexxos::apps::writeUnsigned(context, status.acceptedValue);
 			}
 		}
+
 		context.writeLine("");
 	}
 #endif
@@ -137,12 +146,15 @@ namespace {
 		if (percent <= 1) {
 			return "critical";
 		}
+
 		if (percent <= 20) {
 			return "low";
 		}
+
 		if (percent < 66) {
 			return "medium";
 		}
+
 		return "good";
 	}
 
@@ -155,18 +167,21 @@ namespace {
 			lexxos::apps::writeUnsigned(context, status.voltageMv);
 			context.write("mV");
 		}
+
 		if (status.percentValid) {
 			context.write(" percent=");
 			lexxos::apps::writeUnsigned(context, status.percent);
 			context.write("% level=");
 			context.write(platformBatteryLevelName(status.percent));
 		}
+
 		context.write(" charging=");
 		if (status.chargingValid) {
 			context.write(status.charging ? "yes" : "no");
 		} else {
 			context.write("unavailable");
 		}
+
 		context.writeLine("");
 	}
 
@@ -180,6 +195,7 @@ namespace {
 			lexxos::apps::writeUnsigned(context, settings.dimTimeoutMs / 1000U);
 			context.write("s");
 		}
+
 		context.write(" dim-backlight=");
 		lexxos::apps::writeUnsigned(context, settings.dimBacklight);
 		context.write(" timeout=");
@@ -189,6 +205,7 @@ namespace {
 			lexxos::apps::writeUnsigned(context, settings.timeoutMs / 1000U);
 			context.write("s");
 		}
+
 		context.write(" mode=");
 		context.write(lexxos::devices::toString(settings.mode));
 		context.write(" config=");
@@ -202,6 +219,7 @@ namespace {
 		if (display == nullptr) {
 			return false;
 		}
+
 		context.write("display: ");
 		context.write(display->name());
 		context.write(" ready=");
@@ -212,12 +230,14 @@ namespace {
 		} else {
 			context.write("unsupported");
 		}
+
 		context.write(" backlight=");
 		if (display->supportsBacklight()) {
 			lexxos::apps::writeUnsigned(context, display->backlight());
 		} else {
 			context.write("unsupported");
 		}
+
 		context.writeLine("");
 		writeDisplayIdleSettings(context);
 		return true;
@@ -280,6 +300,7 @@ int PowerProgram::run(
 	} else {
 		context.writeLine("unavailable");
 	}
+
 	context.writeLine("power-key: not-keyboard-fifo");
 	context.writeLine("keyboard-backlight-write: use backlight kbd <0..255>; firmware may quantize accepted values");
 	writeByteField(

@@ -9,16 +9,17 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec arguments[] = {
 	    {
-         .name = "mode",
-         .valueName = "mode",
-         .help = "SPI clock mode 0..3; without argument prints current mode",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "mode",
+	     .valueName = "mode",
+	     .help = "SPI clock mode 0..3; without argument prints current mode",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	};
 

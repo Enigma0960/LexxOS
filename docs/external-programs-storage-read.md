@@ -2,7 +2,7 @@
 
 Внешние программы получили первый файловый ABI: чтение файлов через capability `storage-read`.
 
-## Capability
+## Разрешение доступа
 
 Программа, которая хочет читать VFS/SD, должна быть упакована с capability:
 
@@ -12,9 +12,9 @@ python3 tools/lexx_pack.py app.bin app.lexx --cap console,storage-read
 
 Без `storage-read` системный вызов `open_read` вернёт ошибку.
 
-## SDK API
+## Программный интерфейс SDK
 
-В `sdk/lexx/lexx.h` добавлены функции:
+В `apps/sdk/lexx/lexx.h` добавлены функции:
 
 ```cpp
 int lexx::open_read(char const* path);
@@ -46,13 +46,13 @@ int lexx::close(lexx::uint32_t fd);
 Добавлен пример:
 
 ```text
-examples/lexx/cat
+apps/examples/lexx/cat
 ```
 
 Сборка:
 
 ```sh
-cd examples/lexx/cat
+cd apps/examples/lexx/cat
 make clean
 make
 ```

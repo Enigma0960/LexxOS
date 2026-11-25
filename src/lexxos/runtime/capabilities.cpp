@@ -7,9 +7,14 @@
 
 namespace {
 
-lexxos::platform::BoardDescriptor const& activeBoard(lexxos::platform::PlatformServices const& platform) {
+lexxos::platform::LegacyBoardDescriptor const& activeBoard(lexxos::platform::PlatformServices const& platform) {
 	auto const& board = platform.board;
+#if defined(LEXXOS_EDITION_CE)
+	static constexpr lexxos::platform::LegacyBoardDescriptor fallback{};
+	return board.current != nullptr ? board.current() : fallback;
+#else
 	return board.current != nullptr ? board.current() : lexxos::platform::board();
+#endif
 }
 
 void addDisplayCapabilities(lexxos::runtime::CapabilitySet& capabilities, lexxos::devices::DeviceManager const& devices) {
@@ -24,6 +29,7 @@ void addDisplayCapabilities(lexxos::runtime::CapabilitySet& capabilities, lexxos
 		if (display->nativeFormat() == lexxos::devices::PixelFormat::Rgb565) {
 			capabilities.add(lexxos::runtime::Capability::DisplayRgb565);
 		}
+
 		if (display->supportsPowerMode()) {
 			capabilities.add(lexxos::runtime::Capability::DisplayPowerMode);
 		}
@@ -34,15 +40,19 @@ void addDeviceRegistryCapabilities(lexxos::runtime::CapabilitySet& capabilities,
 	if (devices.blockDeviceCount() > 0) {
 		capabilities.add(lexxos::runtime::Capability::StorageBlock);
 	}
+
 	if (devices.inputDeviceCount() > 0) {
 		capabilities.add(lexxos::runtime::Capability::InputKeyboard);
 	}
+
 	if (devices.pointingDeviceCount() > 0) {
 		capabilities.add(lexxos::runtime::Capability::InputPointer);
 	}
+
 	if (devices.gamepadDeviceCount() > 0) {
 		capabilities.add(lexxos::runtime::Capability::InputGamepad);
 	}
+
 	if (devices.picoCalcSouthbridgeServiceCount() > 0) {
 		capabilities.add(lexxos::runtime::Capability::PicoCalcSouthbridge);
 	}
@@ -50,38 +60,48 @@ void addDeviceRegistryCapabilities(lexxos::runtime::CapabilitySet& capabilities,
 
 void addBoardCapabilities(
     lexxos::runtime::CapabilitySet& capabilities,
-    lexxos::platform::BoardDescriptor const& board,
+    lexxos::platform::LegacyBoardDescriptor const& board,
     lexxos::platform::PlatformServices const& platform) {
 	if (lexxos::platform::effectiveSdInterface(board) != lexxos::platform::SdInterface::None) {
 		capabilities.add(lexxos::runtime::Capability::StorageRemovable);
 	}
+
 	if (board.audioBeep.isValid() || board.audioCodec.isValid()) {
 		capabilities.add(lexxos::runtime::Capability::AudioTone);
 	}
+
 	if (board.audioCodec.isValid()) {
 		capabilities.add(lexxos::runtime::Capability::AudioPcm);
 	}
+
 	if (board.wireless.wifi) {
 		capabilities.add(lexxos::runtime::Capability::WirelessWifi);
 	}
+
 	if (board.wireless.bluetooth) {
 		capabilities.add(lexxos::runtime::Capability::WirelessBluetooth);
 	}
+
 	if (board.psram.isQuadSpiLike()) {
 		capabilities.add(lexxos::runtime::Capability::ExternalPsram);
 	}
+
 	if (board.userGpio.isValid()) {
 		capabilities.add(lexxos::runtime::Capability::GpioUser);
 	}
+
 	if (board.softwareRtc.isValid()) {
 		capabilities.add(lexxos::runtime::Capability::RtcSoftware);
 	}
+
 	if (platform.power.reboot != nullptr) {
 		capabilities.add(lexxos::runtime::Capability::PowerReboot);
 	}
+
 	if (platform.power.readBattery != nullptr) {
 		capabilities.add(lexxos::runtime::Capability::PowerBattery);
 	}
+
 	if (platform.flashRegions.findRegion != nullptr) {
 		capabilities.add(lexxos::runtime::Capability::FlashNamedRegions);
 	}

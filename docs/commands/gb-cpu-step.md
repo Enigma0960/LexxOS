@@ -1,6 +1,6 @@
 # `gb-cpu-step`
 
-step Game Boy CPU core.
+Пошагово выполняет инструкции CPU Game Boy.
 
 ## Справка shell
 

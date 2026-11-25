@@ -1,6 +1,6 @@
 # Сборка релизных архивов
 
-Единая команда собирает 12 firmware-архивов и один архив приложений:
+Полная сборка создаёт 15 архивов: 13 прошивок, гостевые приложения и SDK LexxCE для ESP32.
 
 ```sh
 cmake --preset release
@@ -15,14 +15,16 @@ python3 tools/release.py
 
 Матрица: `m5stack_cardputer_adv`, `picocalc_pico`, `picocalc_pico_w`,
 `picocalc_pico2`, `picocalc_pico2w`, `jc_esp32p4_m3_dev`; для каждой minimal/full.
-В архив apps попадают только программы, собранные из `apps/` (fileman, pacman,
-snake, tetris), не примеры hello/cat из `examples/`.
+PicoCalc / Luckfox Lyra M поставляется в одном профиле `picocalc-lyra-release` (FreeRTOS и JCS).
+Архив apps сохраняет состав 0.1.0: Fileman, Pacman, Snake и Tetris.
+Точные имена файлов указаны в `manifest.json` архива.
 
 ## Требования
 
 Установить обычные зависимости [сборки проекта](build.md): CMake/Ninja, Python,
 ESP-IDF и его Python/toolchains, Pico SDK и Arm toolchain, RV32I guest toolchain.
-Инициализировать FreeRTOS submodule на записанном commit. Скрипт не устанавливает SDK
+Инициализировать подмодули FreeRTOS и lwjson на записанных коммитах.
+Скрипт не устанавливает SDK
 и не подменяет локальные инструменты. Публичные presets определяют версии/пути SDK;
 CMakeUserPresets.json и старые sdkconfig в сборку архива не попадают.
 
@@ -33,14 +35,29 @@ CMakeUserPresets.json и старые sdkconfig в сборку архива н�
 
 ## Выходные файлы
 
-`dist/LexxOS-<version>/` содержит ZIP для каждого выбранного профиля, apps ZIP,
-общий `SHA256SUMS` и `release.json`. Внутри каждого ZIP:
+`dist/LexxOS-<version>/` содержит ZIP выбранных компонентов, общий `SHA256SUMS` и `release.json`.
+В архивы прошивок входят:
 
 - UF2/ELF для Pico либо BIN/ELF, sdkconfig и flash.json для ESP32;
 - INSTALL.txt: модуль, порядок установки, команда esptool с фактическими offsets;
 - manifest.json с commit, исходным хешем, профилем и SHA256 файлов;
 - внутренний SHA256SUMS, лицензии и notices проекта/зависимостей;
 - конфигурация платы, feature flags и каталог команд для firmware.
+
+В архиве Lyra находятся `firmware.bin`, `firmware.elf` и инструменты
+сборки FIT и обновления загрузочного раздела на macOS. Для обновления требуется
+совместимая загрузочная SD и собственный шаблон FIT из прошивки платы или резервной
+копии раздела. Артефакты для установки с нуля собираются по [инструкции порта Lyra](../ports/lyra/README.md).
+
+Архив `LexxCE-<версия>-sdk-esp32.zip` содержит архивы ядра, порта ESP-IDF,
+кооперативного и FreeRTOS-компонентов в `lib/`, каталог `include/` с заголовком
+проверки совместимости и шесть автономных примеров в `examples/`. В комплект
+входят `blink`, `button_led`, `i2c_sensor`, `spi_devices`, `analog_pwm` и
+`analog_output`.
+В `sdk.json` указаны версии ESP-IDF и GCC, параметры платформы, режим по умолчанию и SHA256 каждой библиотеки. Выбор
+исполнения описан в `execution.md`.
+`INSTALL.txt` описывает сборку примера из распакованного комплекта. В архив входят
+лицензии, релизный манифест и контрольные суммы.
 
 PicoCalc использует southbridge profile `jcs`, как публичные presets; это указано
 в инструкции каждого архива. Для factory southbridge нужен отдельный согласованный
@@ -64,10 +81,14 @@ SDK notices копируются с вложенными лицензиями, �
 python3 tools/release.py --plan
 python3 tools/release.py --boards jc_esp32p4_m3_dev --flavors minimal full
 python3 tools/release.py --apps-only
+python3 tools/release.py --ce-only
+python3 tools/release.py --lyra-only
 python3 tools/release.py --jobs 4 --output /path/to/releases
 ```
 
-Apps добавляются и к ограниченной firmware-матрице. Для проверки незакоммиченной
+При явном выборе `--boards` или `--flavors` собираются выбранные прошивки и приложения.
+SDK входит в полную матрицу. Для отдельной сборки SDK используйте `--ce-only` или цель
+`cmake --build build/release --target release-ce-sdk` после конфигурации пресета `release`. Для проверки незакоммиченной
 реализации использовать `--allow-dirty` (в CMake: `-DLEXXOS_RELEASE_ALLOW_DIRTY=ON`).
 Получаются явно помеченные `-dev-<source-hash>` архивы; они не представляются
 чистой сборкой commit. Копируются фактические рабочие файлы, не staged-копии.

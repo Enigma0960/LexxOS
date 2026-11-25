@@ -131,13 +131,15 @@ std::size_t lexxos::platform::readConsoleAvailable(char* buffer, std::size_t cap
 		if (usbValue < 0) {
 			break;
 		}
+
 		buffer[count++] = static_cast<char>(usbValue);
 	}
 #endif
 
-	drainConsoleUartRx();
+	// The RX interrupt is the sole producer for the UART ring once enabled.
 	while (count < capacity && popUartRxByte(buffer[count])) {
 		++count;
 	}
+
 	return count;
 }

@@ -34,5 +34,6 @@ namespace rtc {
 		std::uint8_t _address{defaultAddress};
 	};
 
-} // namespace rtc
+} // namespace lexxos::devices::rtc
+
 } // namespace lexxos::devices

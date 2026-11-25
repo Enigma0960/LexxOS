@@ -1,5 +1,3 @@
-#include <lexxos/platform/platform.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -10,13 +8,13 @@
 #include <esp_partition.h>
 #include <esp_system.h>
 #include <esp_timer.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-
+#include <lexxos/devices/espidf/espidf_ethernet.h>
 #include <lexxos/platform/espidf/detail/espidf_console.h>
 #include <lexxos/platform/espidf/detail/espidf_gpio.h>
-
-#include <lexxos/devices/espidf/espidf_ethernet.h>
+#include <lexxos/platform/platform.h>
 
 namespace {
 
@@ -69,6 +67,7 @@ std::uint8_t estimateBatteryPercent(std::uint16_t voltageMv) {
 	if (voltageMv <= cardputerBatteryEmptyMv) {
 		return 0;
 	}
+
 	if (voltageMv >= cardputerBatteryFullMv) {
 		return 100;
 	}
@@ -82,6 +81,7 @@ bool initializeBatteryAdc() {
 	if (g_batteryAdc.initialized) {
 		return g_batteryAdc.handle != nullptr;
 	}
+
 	g_batteryAdc.initialized = true;
 
 	adc_unit_t unit{};
@@ -215,7 +215,7 @@ void lexxos::platform::initialize() {
 	}
 }
 
-lexxos::platform::BoardDescriptor const& lexxos::platform::board() {
+lexxos::platform::LegacyBoardDescriptor const& lexxos::platform::board() {
 	return activeBoardDescriptor();
 }
 

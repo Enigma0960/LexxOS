@@ -6,6 +6,7 @@
 #include <lexxos/platform/stm32/detail/stm32_gpio.h>
 
 namespace lexxos::devices::stm32::detail {
+
 namespace {
 
 	constexpr std::uint32_t peripheralBase = 0x40000000U;
@@ -45,6 +46,7 @@ namespace {
 		if (data == nullptr) {
 			return;
 		}
+
 		for (std::size_t index = 0; index < size; ++index) {
 			writeData8(data[index]);
 		}
@@ -78,6 +80,7 @@ bool configureParallelTftBus(lexxos::platform::ParallelTftDisplayPins const& con
 	    || !configureAlternateFunction(config.write, 12U, GpioPull::None, 3U)) {
 		return false;
 	}
+
 	for (auto const pin : config.data) {
 		if (!configureAlternateFunction(pin, 12U, GpioPull::None, 3U)) {
 			return false;

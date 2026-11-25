@@ -6,19 +6,22 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
-import shutil
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
 import zipfile
 
+from pathlib import Path
+
 ROOT = Path(__file__).resolve().parents[1]
 BOARDS = ('m5stack_cardputer_adv', 'picocalc_pico', 'picocalc_pico_w',
           'picocalc_pico2', 'picocalc_pico2w', 'jc_esp32p4_m3_dev')
+LYRA_PROFILE = 'picocalc-lyra-release'
+RELEASE_APPS = ('fileman', 'pacman', 'snake', 'tetris')
 
 
 def output(cmd, cwd=ROOT):
@@ -36,7 +39,7 @@ def write_json(path, value):
 def run(cmd, cwd, log, env):
     print('+', ' '.join(map(str, cmd)), flush=True)
     with log.open('w') as stream:
-        result = subprocess.run(list(map(str, cmd)), cwd=cwd, env=env,
+        result = subprocess.run(list(map(str, cmd)), cwd=cwd, env=env, check=False,
                                 stdout=stream, stderr=subprocess.STDOUT)
     if result.returncode:
         raise RuntimeError(f'Command failed ({result.returncode}); log: {log}\n'
@@ -55,7 +58,9 @@ def snapshot(root, destination):
     names = output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], root).split('\0')
     for name in names:
         source = root / name
-        if not name or name == 'CMakeUserPresets.json' or Path(name).parts[0] in {'build', 'dist'}:
+        if (not name or name == 'CMakeUserPresets.json'
+                or Path(name).parts[0] in {'build', 'dist'}
+                or Path(name).parts[:2] == ('apps', 'tamapoke')):
             continue
         if source.is_file():
             copy_file(source, destination / name)
@@ -69,6 +74,7 @@ def snapshot(root, destination):
         for file in output(['git', 'ls-files', '-z'], root / name).split('\0'):
             if file and (root / name / file).is_file():
                 copy_file(root / name / file, destination / name / file)
+    check_private_paths(destination)
     digest = hashlib.sha256()
     for p in sorted(destination.rglob('*')):
         if p.is_file():
@@ -84,7 +90,9 @@ def collect_licenses(source, destination, apache_license=None):
         for name in files:
             p = Path(directory) / name
             lower = name.lower()
-            if lower.startswith(('license', 'licence', 'copying', 'copyright', 'notice')) or 'licenses' in p.relative_to(source).parts:
+            if lower.startswith(
+                    ('license', 'licence', 'copying', 'copyright', 'notice')) or 'licenses' in p.relative_to(
+                source).parts:
                 copy_file(p, destination / p.relative_to(source))
                 count += 1
     if not count:
@@ -106,11 +114,10 @@ def collect_licenses(source, destination, apache_license=None):
             copy_file(path, destination / path.relative_to(source))
 
 
-
 def common(source, package):
     for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md'):
         copy_file(source / name, package / name)
-    shutil.copytree(source / 'licenses', package / 'licenses/project')
+    shutil.copytree(source / 'third_party/licenses', package / 'licenses/project')
 
 
 def release_environment(source, epoch):
@@ -126,11 +133,14 @@ def release_environment(source, epoch):
     return env
 
 
-def check_private_paths(package):
-    private = (str(Path.home()).encode(), str(ROOT).encode())
-    for path in sorted(package.rglob('*')):
-        if path.is_file() and any(value in path.read_bytes() for value in private):
-            raise RuntimeError('Local build path in release payload: ' + path.relative_to(package).as_posix())
+def check_private_paths(tree):
+    roots = b'|'.join(re.escape(os.fsencode(path)) for path in (Path.home(), ROOT))
+    private = re.compile(rb'(?:' + roots + rb')(?![\w.-])')
+    for path in sorted(tree.rglob('*')):
+        if not path.is_file():
+            continue
+        if private.search(path.read_bytes()):
+            raise RuntimeError('Local path in release files: ' + path.relative_to(tree).as_posix())
 
 
 def archive(package, archive_path, metadata, epoch):
@@ -153,18 +163,38 @@ def archive(package, archive_path, metadata, epoch):
 
 
 def read_cache(path):
-    return dict(re.findall(r'^([A-Za-z_][A-Za-z0-9_]*):[^=\n]*=(.*)$', path.read_text(), re.M))
+    return dict(re.findall(r'^([A-Za-z_][A-Za-z0-9_]*):[^=\n]*=(.*)$', path.read_text(), re.MULTILINE))
 
 
-def package_firmware(source, build, package, board, metadata):
+def copy_generated_configuration(package, cache):
+    generated_path = cache.get('LEXXOS_GENERATED_INCLUDE_DIR')
+    if not generated_path:
+        raise RuntimeError('Missing LEXXOS_GENERATED_INCLUDE_DIR in CMakeCache.txt')
+
+    generated_include = Path(generated_path)
+    for name in ('board_list.h', 'feature_list.h', 'commands/commands.json'):
+        copy_file(generated_include / name, package / 'configuration' / name)
+
+
+def prepare_firmware_package(source, build, package, metadata):
     common(source, package)
     collect_licenses(source / 'third_party/FreeRTOS', package / 'licenses/FreeRTOS')
     collect_licenses(source / 'third_party/fatfs', package / 'licenses/FatFs')
+    copy_file(source / 'docs/licenses/NotoSansMono-OFL-1.1.txt',
+              package / 'licenses/NotoSansMono-OFL-1.1.txt')
     cache = read_cache(build / 'CMakeCache.txt')
-    metadata['compiler'] = {}
-    for key in ('CMAKE_C_COMPILER', 'CMAKE_CXX_COMPILER'):
-        if key in cache:
-            metadata['compiler'][key] = output([cache[key], '--version']).splitlines()[0]
+    if cache.get('LEXXOS_FEATURE_LWJSON') == 'ON':
+        copy_file(source / 'third_party/lwjson/LICENSE', package / 'licenses/lwjson/LICENSE')
+    metadata['compiler'] = {
+        key: output([cache[key], '--version']).splitlines()[0]
+        for key in ('CMAKE_C_COMPILER', 'CMAKE_CXX_COMPILER') if key in cache
+    }
+    copy_generated_configuration(package, cache)
+    return cache
+
+
+def package_firmware(source, build, package, board, metadata):
+    cache = prepare_firmware_package(source, build, package, metadata)
     if board.startswith('picocalc'):
         copy_file(build / 'src/lexxos.uf2', package / 'firmware.uf2')
         copy_file(build / 'src/lexxos.elf', package / 'firmware.elf')
@@ -172,7 +202,9 @@ def package_firmware(source, build, package, board, metadata):
         collect_licenses(sdk, package / 'licenses/pico-sdk')
         metadata['pico_board'] = cache['PICO_BOARD']
         version_file = sdk / 'pico_sdk_version.cmake'
-        metadata['pico_sdk_version'] = {k.lower(): v for k, v in re.findall(r'set\(PICO_SDK_VERSION_(MAJOR|MINOR|REVISION) (\d+)\)', version_file.read_text())}
+        metadata['pico_sdk_version'] = {k.lower(): v for k, v in
+                                        re.findall(r'set\(PICO_SDK_VERSION_(MAJOR|MINOR|REVISION) (\d+)\)',
+                                                   version_file.read_text())}
         metadata['keyboard_firmware'] = cache.get('LEXXOS_PICOCALC_KEYBOARD_FIRMWARE')
         (package / 'INSTALL.txt').write_text(
             f'LexxOS for {board}\nUse only with the indicated Pico module.\n'
@@ -207,52 +239,156 @@ def package_firmware(source, build, package, board, metadata):
         copy_file(build / 'sdkconfig', package / 'sdkconfig')
         write_json(package / 'flash.json', args)
         chip = args['extra_esptool_args']['chip']
-        command = 'python -m esptool --chip ' + chip + ' --port PORT write-flash ' + ' '.join(args['write_flash_args'] + portable)
+        command = 'python -m esptool --chip ' + chip + ' --port PORT write-flash ' + ' '.join(
+            args['write_flash_args'] + portable)
         (package / 'INSTALL.txt').write_text(
             f'LexxOS for {board}\nInstall esptool 5.x in your Python environment.\n'
             'Extract this archive, open a terminal in its directory, replace PORT with the serial port.\n'
             + command + '\nWrites bootloader, partition table and application. No erase-flash is required.\n'
-            'Back up existing board flash data before changing partition layouts. SD is not formatted.\n'
-            'Does not update the JC ESP32-C6 coprocessor. Use compatible Hosted firmware separately.\n'
-            'Hardware regression is separate from a successful build.\n')
-    for name in ('board_list.h', 'feature_list.h', 'commands/commands.json'):
-        copy_file(build / 'generated/include' / name, package / 'configuration' / name)
+                        'Back up existing board flash data before changing partition layouts. SD is not formatted.\n'
+                        'Does not update the JC ESP32-C6 coprocessor. Use compatible Hosted firmware separately.\n'
+                        'Hardware regression is separate from a successful build.\n')
+
+
+def build_lyra_firmware(source, work, staged, label, meta, epoch, env, jobs):
+    profile = LYRA_PROFILE
+    run(['cmake', '--preset', profile, '-DLEXXOS_APPS=OFF'],
+        source, work / f'{profile}-configure.log', env)
+    run(['cmake', '--build', '--preset', profile, '--target', 'lexxos', '--parallel', jobs],
+        source, work / f'{profile}-build.log', env)
+    build = source / 'build' / profile
+    package = work / f'LexxOS-{label}-{profile}'
+    detail = dict(meta, profile=profile, board='picocalc_lyra')
+    cache = prepare_firmware_package(source, build, package, detail)
+    detail['scheduler'] = cache['LEXXOS_RK3506_SCHEDULER']
+    detail['keyboard_firmware'] = cache['LEXXOS_PICOCALC_KEYBOARD_FIRMWARE']
+    for suffix in ('bin', 'elf'):
+        copy_file(build / f'lexxos.{suffix}', package / f'firmware.{suffix}')
+    for script in ('rk3506_pack_fit.py', 'flash_rk3506_macos.py'):
+        copy_file(source / 'tools' / script, package / 'tools' / script)
+    (package / 'INSTALL.txt').write_text(
+        'LexxOS for PicoCalc with Luckfox Lyra M (RK3506G2).\n'
+        f'Southbridge firmware: {detail["keyboard_firmware"]}.\n'
+        'Use an existing board-compatible Luckfox boot SD and an unsigned FIT template '
+        'from your board firmware or a previous boot partition backup.\n'
+        'Build the FIT for the boot partition in the extracted directory:\n'
+        '  python3 tools/rk3506_pack_fit.py --template boot-template.img --input firmware.bin --output lexxos.img\n'
+        'On macOS, use the interactive updater (includes backup and readback verification):\n'
+        '  python3 tools/flash_rk3506_macos.py --image lexxos.img --backup-dir backups\n'
+        'For initial installation on a blank card, see ports/lyra/README.md in the LexxOS source.\n')
+    archive(package, staged / f'{package.name}.zip', detail, epoch)
+
+
+def build_ce_sdk(source, work, staged, label, meta, epoch, env, jobs):
+    profile = 'ce-sdk-esp32'
+    flags = [f'-DCMAKE_{lang}_FLAGS={env[key]}' for lang, key in
+             (('C', 'CFLAGS'), ('CXX', 'CXXFLAGS'), ('ASM', 'ASMFLAGS'))]
+    run(['cmake', '--preset', profile, *flags], source, work / f'{profile}-configure.log', env)
+    run(['cmake', '--build', '--preset', profile, '--parallel', jobs],
+        source, work / f'{profile}-build.log', env)
+    build = source / 'build' / profile
+    sdk = build / 'sdk/esp32'
+    package = work / f'LexxCE-{label}-sdk-esp32'
+    common(source, package)
+    shutil.copytree(sdk / 'lib', package / 'lib')
+    shutil.copytree(sdk / 'include', package / 'include')
+    copy_file(sdk / 'manifest.json', package / 'sdk.json')
+    for guide in ('digital-input.md', 'digital-output.md', 'board-gpio.md', 'spi.md', 'execution.md', 'analog-pwm.md',
+                  'analog-output.md'):
+        copy_file(source / 'ce' / guide, package / guide)
+    for example in ('blink', 'button_led', 'i2c_sensor', 'spi_devices', 'analog_pwm', 'analog_output'):
+        shutil.copytree(source / 'ce/examples' / example, package / 'examples' / example)
+    idf = Path(json.loads((build / 'project_description.json').read_text())['idf_path'])
+    copy_file(idf / 'LICENSE', package / 'licenses/esp-idf/LICENSE')
+    collect_licenses(idf / 'components/freertos', package / 'licenses/esp-idf/components/freertos')
+    (package / 'INSTALL.txt').write_text(
+        'SDK LexxCE для ESP32\n\n'
+        'Распакуйте ZIP. Версии ESP-IDF и GCC указаны в sdk.json.\n'
+        'В терминале соответствующей версии ESP-IDF из корня распакованного комплекта выполните:\n'
+        '  idf.py -C examples/blink -DLEXXOS_CE_SDK="$PWD" build\n\n'
+        'Для собственного проекта используйте ядро, порт и один компонент исполнения из lib/, а также include/.\n'
+        'Пример кнопки и светодиода: examples/button_led/README.md.\n'
+        'Поиск устройств I²C и проверка BME280: examples/i2c_sensor/README.md.\n'
+        'Два SPI-устройства на общей шине: examples/spi_devices/README.md.\n'
+        'Потенциометр и яркость LED: examples/analog_pwm/README.md.\n'
+        'Ступенчатый выход ЦАП: examples/analog_output/README.md.\n'
+        'Выбор cooperative/freertos описан в execution.md.\n'
+        'Настройка платы и GPIO описана в README.md каждого примера.\n')
+    archive(package, staged / f'{package.name}.zip', dict(meta, profile=profile, target='esp32'), epoch)
+
+
+def build_apps(source, work, staged, label, meta, epoch, env, jobs):
+    run(['cmake', '--preset', 'apps'], source, work / 'apps-configure.log', env)
+    targets = [f'app-{name}' for name in RELEASE_APPS]
+    run(['cmake', '--build', '--preset', 'apps', '--parallel', jobs, '--target', *targets],
+        source, work / 'apps-build.log', env)
+    package = work / ('LexxOS-' + label + '-apps')
+    package.mkdir()
+    common(source, package)
+    for name in RELEASE_APPS:
+        filename = f'{name}.lexx'
+        copy_file(source / 'build/apps' / filename, package / 'lexx' / filename)
+    (package / 'INSTALL.txt').write_text(
+        'Copy lexx/ to the root of the SD card. Run /mnt/sd/lexx/NAME.lexx from LexxOS.\n'
+        'Included applications: fileman, pacman, snake, tetris.\n')
+    archive(package, staged / (package.name + '.zip'), dict(meta, profile='apps'), epoch)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--boards', nargs='+', choices=BOARDS, default=list(BOARDS))
-    parser.add_argument('--flavors', nargs='+', choices=('minimal', 'full'), default=['minimal', 'full'])
-    parser.add_argument('--apps-only', action='store_true')
-    parser.add_argument('--allow-dirty', action='store_true', help='Create explicitly marked development archives from working files')
+    parser.add_argument('--boards', nargs='+', choices=BOARDS)
+    parser.add_argument('--flavors', nargs='+', choices=('minimal', 'full'))
+    only = parser.add_mutually_exclusive_group()
+    only.add_argument('--apps-only', action='store_true')
+    only.add_argument('--ce-only', action='store_true', help='Build only the ESP32 LexxCE SDK archive')
+    only.add_argument('--lyra-only', action='store_true', help='Build only the PicoCalc Lyra firmware archive')
+    parser.add_argument('--allow-dirty', action='store_true',
+                        help='Create explicitly marked development archives from working files')
     parser.add_argument('--output', type=Path, default=ROOT / 'dist')
     parser.add_argument('--jobs', type=int, default=min(8, os.cpu_count() or 2))
     parser.add_argument('--plan', action='store_true')
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error('--jobs must be positive')
-    profiles = [] if args.apps_only else [f'{flavor}-{board}' for board in dict.fromkeys(args.boards) for flavor in dict.fromkeys(args.flavors)]
+    if (args.ce_only or args.lyra_only) and (args.boards or args.flavors):
+        parser.error('--ce-only and --lyra-only cannot be combined with --boards or --flavors')
+    full = not (args.apps_only or args.ce_only or args.lyra_only or args.boards or args.flavors)
+    profiles = []
+    if not (args.apps_only or args.ce_only or args.lyra_only):
+        profiles = [f'{flavor}-{board}' for board in dict.fromkeys(args.boards or BOARDS)
+                    for flavor in dict.fromkeys(args.flavors or ('minimal', 'full'))]
+    artifacts = profiles.copy()
+    if full or args.lyra_only:
+        artifacts.append(LYRA_PROFILE)
+    if not (args.ce_only or args.lyra_only):
+        artifacts.append('apps')
+    if full or args.ce_only:
+        artifacts.append('ce-sdk-esp32')
     if args.plan:
-        print('\n'.join(profiles + ['apps']))
+        print('\n'.join(artifacts))
         return
     dirty = output(['git', 'status', '--porcelain', '--untracked-files=normal'])
     if dirty and not args.allow_dirty:
-        raise RuntimeError('Release requires a clean working tree and index. Commit changes first, or use --allow-dirty for development archives.')
-    version = re.search(r'set\(LEXXOS_VERSION "([^"]+)"\)', (ROOT / 'cmake/Version.cmake').read_text())[1]
+        raise RuntimeError(
+            'Release requires a clean working tree and index. Commit changes first, or use --allow-dirty for development archives.')
+    version = re.search(r'set\(LEXXOS_VERSION "([^"]+)"\)', (ROOT / 'config/cmake/Version.cmake').read_text())[1]
     commit = output(['git', 'rev-parse', 'HEAD'])
     epoch = int(output(['git', 'show', '-s', '--format=%ct', 'HEAD']))
-    base = ROOT / 'build/release-runs';base.mkdir(parents=True, exist_ok=True)
+    base = ROOT / 'build/release-runs'
+    base.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix='run-', dir=base))
-    source = work / 'source';source.mkdir()
+    source = work / 'source'
+    source.mkdir()
     digest = snapshot(ROOT, source)
     label = version + ('-dev-' + digest[:12] if dirty else '')
     destination = args.output.resolve() / ('LexxOS-' + label)
     if destination.exists():
         raise RuntimeError('Output already exists; choose another --output: ' + str(destination))
     env = release_environment(source, epoch)
-    staged = work / 'archives';staged.mkdir()
-    meta = {'version':version, 'commit':commit, 'dirty':bool(dirty), 'source_sha256':digest,
-            'source_date_epoch':epoch, 'cmake':output(['cmake','--version']).splitlines()[0]}
+    staged = work / 'archives'
+    staged.mkdir()
+    meta = {'version': version, 'commit': commit, 'dirty': bool(dirty), 'source_sha256': digest,
+            'source_date_epoch': epoch, 'cmake': output(['cmake', '--version']).splitlines()[0]}
     print('Build logs and sources:', work, flush=True)
     for profile in profiles:
         board = profile.split('-', 1)[1]
@@ -263,35 +399,32 @@ def main():
             # Explicit flags are also inherited by its bootloader subproject.
             configure += [f'-DCMAKE_{lang}_FLAGS={env[key]}' for lang, key in
                           (('C', 'CFLAGS'), ('CXX', 'CXXFLAGS'), ('ASM', 'ASMFLAGS'))]
-        run(configure, source, work / (profile+'-configure.log'), env)
-        run(['cmake', '--build', build, '--parallel', args.jobs], source, work / (profile+'-build.log'), env)
-        package = work / ('LexxOS-'+label+'-'+profile);package.mkdir()
+        run(configure, source, work / (profile + '-configure.log'), env)
+        run(['cmake', '--build', build, '--parallel', args.jobs], source, work / (profile + '-build.log'), env)
+        package = work / ('LexxOS-' + label + '-' + profile)
+        package.mkdir()
         detail = dict(meta, profile=profile, board=board)
         package_firmware(source, build, package, board, detail)
-        archive(package, staged / (package.name+'.zip'), detail, epoch)
-    run(['cmake','--preset','apps'],source,work/'apps-configure.log',env)
-    run(['cmake','--build','--preset','apps','--parallel',args.jobs],source,work/'apps-build.log',env)
-    package = work / ('LexxOS-'+label+'-apps');package.mkdir();common(source, package)
-    apps = sorted((source/'build/apps').glob('*.lexx'))
-    if not apps:
-        raise RuntimeError('No apps built')
-    for path in apps:
-        if not (source/'apps'/path.stem/'CMakeLists.txt').is_file():
-            raise RuntimeError('Unexpected executable outside apps/: '+path.name)
-        copy_file(path, package/'lexx'/path.name)
-    (package/'INSTALL.txt').write_text('Copy lexx/ to the root of the SD card. Run /mnt/sd/lexx/NAME.lexx from LexxOS.\nOnly applications built from apps/ are included; examples/ are excluded.\n')
-    archive(package, staged/(package.name+'.zip'),dict(meta,profile='apps'),epoch)
-    (staged/'SHA256SUMS').write_text(''.join(f'{sha(p)}  {p.name}\n' for p in sorted(staged.glob('*.zip'))))
-    write_json(staged/'release.json',dict(meta,profiles=profiles+['apps'],archives=[p.name for p in sorted(staged.glob('*.zip'))]))
-    destination.parent.mkdir(parents=True,exist_ok=True)
+        archive(package, staged / (package.name + '.zip'), detail, epoch)
+    if LYRA_PROFILE in artifacts:
+        build_lyra_firmware(source, work, staged, label, meta, epoch, env, args.jobs)
+    if 'apps' in artifacts:
+        build_apps(source, work, staged, label, meta, epoch, env, args.jobs)
+    if 'ce-sdk-esp32' in artifacts:
+        build_ce_sdk(source, work, staged, label, meta, epoch, env, args.jobs)
+    (staged / 'SHA256SUMS').write_text(''.join(f'{sha(p)}  {p.name}\n' for p in sorted(staged.glob('*.zip'))))
+    write_json(staged / 'release.json',
+               dict(meta, profiles=artifacts, archives=[p.name for p in sorted(staged.glob('*.zip'))]))
+    destination.parent.mkdir(parents=True, exist_ok=True)
     # Destination appears only after the complete selected matrix has succeeded.
-    incoming = Path(tempfile.mkdtemp(prefix='.lexxos-',dir=destination.parent))
+    incoming = Path(tempfile.mkdtemp(prefix='.lexxos-', dir=destination.parent))
     try:
-        shutil.copytree(staged,incoming,dirs_exist_ok=True)
+        shutil.copytree(staged, incoming, dirs_exist_ok=True)
         incoming.rename(destination)
     finally:
-        if incoming.exists():shutil.rmtree(incoming)
-    print('Release archives:',destination)
+        if incoming.exists():
+            shutil.rmtree(incoming)
+    print('Release archives:', destination)
 
 
 if __name__ == '__main__':

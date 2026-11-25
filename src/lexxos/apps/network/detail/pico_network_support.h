@@ -25,7 +25,7 @@ struct WifiRuntimeStatus {
 [[nodiscard]] int runWifiConnectOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board);
+    lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] bool queryNetworkTimeOnPico(
     lexxos::os::AppContext& context,
     std::string_view server,
@@ -35,14 +35,14 @@ struct WifiRuntimeStatus {
 [[nodiscard]] int runWifiStatusOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board);
+    lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] int runPingOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board);
+    lexxos::platform::LegacyBoardDescriptor const& board);
 [[nodiscard]] int runWifiScanOnPico(
     lexxos::os::AppContext& context,
     lexxos::program::ParsedArguments const& arguments,
-    lexxos::platform::BoardDescriptor const& board);
+    lexxos::platform::LegacyBoardDescriptor const& board);
 
 } // namespace lexxos::apps::network_programs::pico_detail

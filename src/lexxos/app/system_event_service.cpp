@@ -19,10 +19,6 @@ namespace sd_card = lexxos::devices::sd_card;
 
 namespace {
 
-#if FEATURE_ENABLED(SD_CARD)
-constexpr std::uint8_t sdDetectDebounceSamples = 3;
-constexpr std::uint32_t sdDetectDebounceIntervalMs = 25;
-#endif
 constexpr std::uint32_t systemEventIntervalMs = 100;
 
 void writeConsole(lexxos::platform::PlatformServices const& platform, std::string_view text) {
@@ -82,6 +78,7 @@ bool lexxos::app::SystemEventService::processPending() {
 		processed = true;
 		handle(event);
 	}
+
 	return processed;
 }
 
@@ -90,33 +87,15 @@ void lexxos::app::SystemEventService::pollSdCardDetect() {
 	if (!storageHotPlugAvailable()) {
 		return;
 	}
+
 	if (!sd_card::hasCardDetect()) {
 		return;
 	}
 
 	bool const currentSample = sd_card::isCardInserted();
-	if (!_sdDetectInitialized) {
-		_sdDetectInitialized = true;
-		_stableSdInserted = currentSample;
-		_previousSdSample = currentSample;
-		_stableSdSamples = 0;
-		return;
+	if (_sdHotplug.observe(currentSample)) {
+		postSdCardDetectChange(currentSample);
 	}
-
-	if (currentSample == _previousSdSample) {
-		if (_stableSdSamples < sdDetectDebounceSamples) {
-			++_stableSdSamples;
-		}
-	} else {
-		_previousSdSample = currentSample;
-		_stableSdSamples = 1;
-	}
-
-	if (_stableSdSamples < sdDetectDebounceSamples || currentSample == _stableSdInserted) {
-		return;
-	}
-
-	postSdCardDetectChange(currentSample);
 }
 #endif
 
@@ -161,12 +140,14 @@ void lexxos::app::SystemEventService::handle(SystemEvent const& event) {
 			if (storageHotPlugAvailable()) {
 				processSdCardDetectInterrupt();
 			}
+
 			break;
 		case SystemEventType::SdCardInserted:
 			writeConsoleLine(_platformServices, "sd card: inserted");
 			if (storageHotPlugAvailable() && _sdAutomount != nullptr) {
 				_sdAutomount->mount("inserted");
 			}
+
 			armSdCardDetectInterrupt();
 			break;
 		case SystemEventType::SdCardRemoved:
@@ -174,15 +155,16 @@ void lexxos::app::SystemEventService::handle(SystemEvent const& event) {
 			if (storageHotPlugAvailable() && _sdAutomount != nullptr) {
 				_sdAutomount->unmount("removed");
 			}
+
 			armSdCardDetectInterrupt();
 			break;
 #else
 		case SystemEventType::SdCardDetectChanged:
-		case SystemEventType::SdCardInserted:
+		case SystemEventType::SdCardInserted     :
 		case SystemEventType::SdCardRemoved:
 			break;
 #endif
-		case SystemEventType::Input:
+		case SystemEventType::Input            :
 		case SystemEventType::PowerOffRequested:
 		case SystemEventType::ShutdownRequested:
 			break;
@@ -199,15 +181,13 @@ void lexxos::app::SystemEventService::initializeSdCardDetectState() {
 	if (!storageHotPlugAvailable()) {
 		return;
 	}
+
 	if (!sd_card::hasCardDetect()) {
 		return;
 	}
 
 	bool const inserted = sd_card::isCardInserted();
-	_sdDetectInitialized = true;
-	_stableSdInserted = inserted;
-	_previousSdSample = inserted;
-	_stableSdSamples = sdDetectDebounceSamples;
+	_sdHotplug.initialize(inserted);
 	_sdDetectInterruptPending.store(false);
 }
 
@@ -216,6 +196,7 @@ void lexxos::app::SystemEventService::armSdCardDetectInterrupt() {
 		_sdDetectInterruptEnabled = false;
 		return;
 	}
+
 	if (!sd_card::hasCardDetect()) {
 		_sdDetectInterruptEnabled = false;
 		return;
@@ -247,20 +228,13 @@ void lexxos::app::SystemEventService::processSdCardDetectInterrupt() {
 	if (!storageHotPlugAvailable()) {
 		return;
 	}
+
 	bool inserted = false;
 	if (!readDebouncedSdCardState(inserted)) {
 		return;
 	}
 
-	if (!_sdDetectInitialized) {
-		_sdDetectInitialized = true;
-		_stableSdInserted = inserted;
-		_previousSdSample = inserted;
-		_stableSdSamples = sdDetectDebounceSamples;
-		return;
-	}
-
-	if (inserted != _stableSdInserted) {
+	if (_sdHotplug.acceptStable(inserted)) {
 		postSdCardDetectChange(inserted);
 	}
 }
@@ -269,35 +243,25 @@ bool lexxos::app::SystemEventService::readDebouncedSdCardState(bool& inserted) {
 	if (!storageHotPlugAvailable()) {
 		return false;
 	}
+
 	if (!sd_card::hasCardDetect()) {
 		return false;
 	}
 
-	bool stableSample = sd_card::isCardInserted();
-	std::uint8_t stableSamples = 1;
-	while (stableSamples < sdDetectDebounceSamples && !lexxos::kernel::isShutdownRequested()) {
-		lexxos::kernel::sleepMs(sdDetectDebounceIntervalMs);
-		bool const sample = sd_card::isCardInserted();
-		if (sample == stableSample) {
-			++stableSamples;
-		} else {
-			stableSample = sample;
-			stableSamples = 1;
-		}
-	}
-
-	inserted = stableSample;
-	return stableSamples >= sdDetectDebounceSamples;
+	return SdHotplugPolicy::readStable({
+	                                       .sample = [](void*) { return sd_card::isCardInserted(); },
+	                                       .sleepMs = [](void*, std::uint32_t ms) { lexxos::kernel::sleepMs(ms); },
+	                                       .stopped = [](void*) { return lexxos::kernel::isShutdownRequested(); },
+	                                   },
+	    inserted);
 }
 
 void lexxos::app::SystemEventService::postSdCardDetectChange(bool inserted) {
 	if (!storageHotPlugAvailable()) {
 		return;
 	}
-	_stableSdInserted = inserted;
-	_previousSdSample = inserted;
-	_stableSdSamples = sdDetectDebounceSamples;
-	if (!post({.type = _stableSdInserted ? SystemEventType::SdCardInserted : SystemEventType::SdCardRemoved})) {
+
+	if (!post({.type = inserted ? SystemEventType::SdCardInserted : SystemEventType::SdCardRemoved})) {
 		writeConsoleLine(_platformServices, "system event: queue full, sd card event dropped");
 	}
 }

@@ -41,7 +41,11 @@ Pcf8563Rtc::Pcf8563Rtc(I2cBus& bus, std::uint8_t address)
 }
 
 bool Pcf8563Rtc::probe() {
-	return _bus != nullptr && _bus->probe(_address);
+	if (_bus == nullptr) {
+		return false;
+	}
+	I2cBusTransaction transaction{*_bus};
+	return transaction && _bus->probe(_address);
 }
 
 bool Pcf8563Rtc::readDateTime(DateTime& output) {
@@ -54,15 +58,19 @@ bool Pcf8563Rtc::readDateTime(DateTime& output) {
 	if (!fromBcd(static_cast<std::uint8_t>(registers[0] & 0x7FU), 59U, value.second)) {
 		return false;
 	}
+
 	if (!fromBcd(static_cast<std::uint8_t>(registers[1] & 0x7FU), 59U, value.minute)) {
 		return false;
 	}
+
 	if (!fromBcd(static_cast<std::uint8_t>(registers[2] & 0x3FU), 23U, value.hour)) {
 		return false;
 	}
+
 	if (!fromBcd(static_cast<std::uint8_t>(registers[3] & 0x3FU), 31U, value.day) || value.day == 0U) {
 		return false;
 	}
+
 	if (!fromBcd(static_cast<std::uint8_t>(registers[5] & 0x1FU), 12U, value.month) || value.month == 0U) {
 		return false;
 	}
@@ -71,6 +79,7 @@ bool Pcf8563Rtc::readDateTime(DateTime& output) {
 	if (!fromBcd(registers[6], 99U, year)) {
 		return false;
 	}
+
 	value.year = static_cast<std::uint16_t>((registers[5] & monthCenturyMask) != 0U ? 2100U + year : 2000U + year);
 	if (!isValidDate(value)) {
 		return false;

@@ -1,41 +1,44 @@
 #include <lexxos/app/program_input.h>
 
-#include <lexxos/app/detail/program_input_queue.h>
-#include <lexxos/lifecycle/event_bus.h>
+#include <lexxos/app/program_input_service.h>
 
 namespace lexxos::app::program_input {
-namespace {
 
-	detail::ProgramInputQueue& queue() {
-		static detail::ProgramInputQueue instance;
-		return instance;
-	}
+ProgramInputService& defaultService() {
+	static ProgramInputService instance{lifecycle::defaultEventBus()};
+	return instance;
+}
 
-} // namespace
+bool setInputMode(std::uint32_t processId, InputMode mode) {
+	return defaultService().setInputMode(processId, mode);
+}
 
-void publish(lexxos::devices::InputEvent const& event) {
-	queue().publish(event);
-	(void) lexxos::lifecycle::defaultEventBus().publish({
-	    .type = lexxos::lifecycle::EventType::Input,
-	    .timestampMs = event.timestampMs,
-	    .input = event,
-	});
+InputMode inputMode(std::uint32_t processId) {
+	return defaultService().inputMode(processId);
+}
+
+void releaseInputMode(std::uint32_t processId) {
+	return defaultService().releaseInputMode(processId);
+}
+
+void publish(devices::InputEvent const& event) {
+	return defaultService().publish(event);
 }
 
 void reset(EventCursor& cursor) {
-	queue().reset(cursor);
+	return defaultService().reset(cursor);
 }
 
 std::uint32_t sequence() {
-	return queue().sequence();
+	return defaultService().sequence();
 }
 
-bool pollEvent(EventCursor& cursor, lexxos::devices::InputEvent& event) {
-	return queue().pollEvent(cursor, event);
+bool pollEvent(EventCursor& cursor, devices::InputEvent& event) {
+	return defaultService().pollEvent(cursor, event);
 }
 
-bool latestEvent(lexxos::devices::InputEvent& event) {
-	return queue().latestEvent(event);
+bool latestEvent(devices::InputEvent& event) {
+	return defaultService().latestEvent(event);
 }
 
 } // namespace lexxos::app::program_input

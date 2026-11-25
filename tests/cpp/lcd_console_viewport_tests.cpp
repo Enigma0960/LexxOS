@@ -1,11 +1,11 @@
+#include <cstdlib>
+#include <iostream>
+#include <string_view>
+
 #include <lexxos/app/detail/picocalc_lcd_console_config.h>
 #include <lexxos/app/detail/picocalc_lcd_console_layout.h>
 #include <lexxos/app/detail/picocalc_lcd_console_terminal_state.h>
 #include <lexxos/devices/display_device.h>
-
-#include <cstdlib>
-#include <iostream>
-#include <string_view>
 
 namespace {
 
@@ -150,6 +150,41 @@ void checkCarriageReturnResetsHorizontalView() {
 	expect(terminal.viewLeftColumn() == 0, "carriage return should restore the visible prompt edge");
 }
 
+void checkWrapToVisibleColumns() {
+	HookState hooks;
+	auto terminal = testTerminal(hooks);
+	terminal.setWrapToVisibleColumns(true);
+
+	feed(terminal, "abcdefghijklmnopqrstuvwxy");
+	expect(terminal.viewLeftColumn() == 0, "soft-wrapped output must not pan the viewport");
+	expect(terminal.cursorY() == 2 && terminal.cursorX() == 1, "25 characters on a 12-column display use three rows");
+	expect(terminal.screen().cell(0, 0) == 'a', "first row must keep its first character");
+	expect(terminal.screen().cell(11, 0) == 'l', "first row must end at visible column 11");
+	expect(terminal.screen().cell(0, 1) == 'm', "second row must start with the next character");
+	expect(terminal.screen().cell(11, 1) == 'x', "second row must end at visible column 11");
+	expect(terminal.screen().cell(0, 2) == 'y', "third row must start with the last character");
+}
+
+void checkCrLfAtWrapBoundary() {
+	HookState hooks;
+	auto terminal = testTerminal(hooks);
+	terminal.setWrapToVisibleColumns(true);
+
+	feed(terminal, "abcdefghijkl\r\nZ");
+	expect(terminal.cursorY() == 1 && terminal.cursorX() == 1, "CR/LF after exactly 12 columns must advance one row");
+	expect(terminal.screen().cell(0, 1) == 'Z', "following line should begin in column zero");
+}
+
+void checkExplicitColumnIsClampedToVisibleWidth() {
+	HookState hooks;
+	auto terminal = testTerminal(hooks);
+	terminal.setWrapToVisibleColumns(true);
+
+	feed(terminal, "\x1B[200GQ");
+	expect(terminal.viewLeftColumn() == 0, "ANSI cursor motion must not pan wrapped output");
+	expect(terminal.screen().cell(11, 0) == 'Q', "ANSI column 200 must clamp to column 12");
+}
+
 void checkSgrAttributesAreStoredPerCell() {
 	HookState hooks;
 	auto terminal = testTerminal(hooks);
@@ -164,12 +199,88 @@ void checkSgrAttributesAreStoredPerCell() {
 	    "SGR reset should restore default cell attributes");
 }
 
+void checkSoftwareScrollFlushBudget() {
+	namespace config = lexxos::app::picocalc_lcd_console::detail;
+	expect(config::maxScrollRowsPerFlush >= 37, "tail view must publish a complete page");
+	expect(config::charactersPerFlush(100, false) > 0, "interactive output must advance");
+	expect(config::charactersPerFlush(6000, false) > config::charactersPerFlush(100, false), "backlog must drain faster than normal output");
+	expect(config::charactersPerFlush(6000, true) > 0, "page invalidation must not stop text ingestion");
+	HookState hooks;
+	auto terminal = testTerminal(hooks);
+	terminal.setWrapToVisibleColumns(true);
+	feed(terminal, "first\nsecond\nthird\nfourth\nfifth\n");
+	expect(hooks.scrollRedrawRow == 0, "software scroll must request repaint");
+	auto const history = terminal.scrollback().count();
+	expect(history > 0 && terminal.viewFollowTail(), "batched output must preserve history and follow tail");
+}
+
+void checkRowRotationAndHistory() {
+	namespace lcd = lexxos::app::picocalc_lcd_console::detail;
+	lcd::LcdConsoleScreenBuffer screen;
+	screen.clearCells();
+	screen.clearDirtyCells();
+	for (int row = 0; row < 4; ++row) {
+		for (int x = 0; x < 12; ++x) {
+			screen.cell(x, row) = static_cast<char>('A' + row);
+			screen.attribute(x, row) = static_cast<std::uint8_t>(row + 1);
+		}
+	}
+
+	for (int turn = 0; turn < 40; ++turn) {
+		char cells[3][12]{};
+		std::uint8_t attributes[3][12]{};
+		for (int row = 0; row < 3; ++row) {
+			for (int x = 0; x < 12; ++x) {
+				cells[row][x] = screen.cell(x, row + 1);
+				attributes[row][x] = screen.attribute(x, row + 1);
+			}
+		}
+
+		screen.advanceLine(12, 4);
+		for (int row = 0; row < 3; ++row) {
+			for (int x = 0; x < 12; ++x) {
+				expect(screen.cell(x, row) == cells[row][x] && screen.attribute(x, row) == attributes[row][x], "row rotation repeated stale cells or attributes");
+			}
+		}
+
+		for (int x = 0; x < 12; ++x) {
+			expect(screen.cell(x, 3) == ' ' && screen.attribute(x, 3) == lcd::defaultCellAttribute, "reused row must be blank");
+			screen.cell(x, 3) = static_cast<char>('a' + turn % 26);
+			screen.attribute(x, 3) = static_cast<std::uint8_t>(turn);
+		}
+	}
+
+	screen.clearCells();
+	expect(screen.cell(0, 0) == ' ', "clear did not reset row ring");
+	HookState hooks;
+	auto terminal = testTerminal(hooks);
+	for (char c = 'A'; c <= 'T'; ++c) {
+		terminal.writeCharacterWithoutCursor(c);
+		feed(terminal, "\r\n");
+	}
+
+	expect(terminal.screen().cell(0, 0) == 'R' && terminal.screen().cell(0, 1) == 'S' && terminal.screen().cell(0, 2) == 'T' && terminal.screen().cell(0, 3) == ' ', "tail contains repeated old rows");
+	expect(terminal.scrollback().count() == 17 && terminal.scrollback().cell(0, 0, 12) == 'A' && terminal.scrollback().cell(16, 0, 12) == 'Q', "history lost order after row-ring wraps");
+	(void) terminal.moveScrollbackView(-4);
+	expect(!terminal.viewFollowTail(), "manual navigation must detach from tail");
+	auto const top = terminal.viewTopLine();
+	feed(terminal, "U\r\n");
+	expect(terminal.viewTopLine() == top, "new output moved a manually selected page");
+	(void) terminal.resetView();
+	expect(terminal.viewFollowTail(), "return to tail failed");
+}
+
 } // namespace
 
 int main() {
 	checkCursorFollowShiftsRight();
 	checkCursorFollowReturnsLeft();
 	checkCarriageReturnResetsHorizontalView();
+	checkWrapToVisibleColumns();
+	checkCrLfAtWrapBoundary();
+	checkExplicitColumnIsClampedToVisibleWidth();
 	checkSgrAttributesAreStoredPerCell();
+	checkSoftwareScrollFlushBudget();
+	checkRowRotationAndHistory();
 	return 0;
 }

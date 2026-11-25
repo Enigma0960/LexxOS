@@ -13,13 +13,20 @@ LexxOS — мой проект для свободного времени. Я з
 
 — Igor Supryadkin
 
+## Сообщество и поддержка
+
+**Сообщество:** [Telegram-канал](https://t.me/lexx_os_channel) · [Telegram-группа](https://t.me/lexx_os) · [GitHub](https://github.com/Enigma0960/LexxOS)
+
+**Поддержать проект:** [Boosty](https://boosty.to/enigma0960) · [Patreon](https://www.patreon.com/cw/enigma0960) · [DonationAlerts](https://www.donationalerts.com/r/enigma0960)
+
 ## О системе
 
 LexxOS — экспериментальная встраиваемая операционная система для микроконтроллерных плат.
 Проект включает shell, программы и runtime, VFS с tmpfs/FatFs, драйверы устройств,
 UART/LCD-консоль и host/simulator для разработки без платы.
 
-Идёт подготовка первой публичной версии **0.1.0**. Версия ОС и Python-пакета эмулятора — **0.1.0**; выпуск ещё не опубликован.
+Готовится выпуск **0.1.1**. Предыдущая версия доступна
+как [публичный prerelease 0.1.0](https://github.com/Enigma0960/LexxOS/releases/tag/v0.1.0).
 Задачи, известные недоработки и критерии выпуска собраны в [roadmap.md](roadmap.md).
 Наличие профиля платы в исходниках не означает, что текущий код прошёл аппаратную проверку.
 
@@ -38,11 +45,12 @@ cmake --build --preset minimal-host_native
 
 Попробуйте `help`, `version`, `board`, `tasks`, `ls /`, `ls /proc`, `cat /sys/board`, `exit`.
 Host предоставляет программные заглушки для оборудования. Для виртуальных SD, display и input
-используйте [Python simulator](emulator/README.md).
+используйте [Python simulator](tools/emulator/README.md).
 
 ## Платформы и возможности
 
-В исходниках есть backend для host, Raspberry Pi Pico (RP2040/RP2350), STM32F407 и ESP-IDF.
+В исходниках есть реализации для компьютера, Raspberry Pi Pico (RP2040/RP2350), STM32F407, ESP-IDF
+и Rockchip RK3506 (PicoCalc / Luckfox Lyra M).
 Профили включают семейство Pico, ClockworkPi PicoCalc, M5Stack и JC-ESP32P4-M3-DEV.
 Pinout, доступные устройства и ограничения описаны в [профилях плат](docs/boards.md).
 
@@ -81,11 +89,13 @@ cmake --build --preset minimal-dev_pico
 ```
 
 Артефакты Pico находятся в `build/minimal-dev_pico/src/`: `lexxos.elf`, `lexxos.bin`, `lexxos.hex`, `lexxos.uf2`.
-Все платы имеют публичные `minimal-<board>` и `full-<board>` presets.
+Основная матрица плат использует `minimal-<board>` и `full-<board>`;
+для Lyra предусмотрен отдельный релизный профиль `picocalc-lyra-release`.
 Матрицу можно собрать через `tools/lexxos-build all-minimal all-full --keep-going`.
-GUI сам собирает библиотеку и запускает ОС: `python emulator/lexxos_emu/gui.py --profile full`.
+GUI сам собирает библиотеку и запускает ОС: `python tools/emulator/lexxos_emu/gui.py --profile full`.
 
 Настройка SDK, ESP-IDF environment, feature flags и другие цели описаны в [инструкции сборки](docs/build.md).
+Для сборки внешних проектов доступны [пакеты CMake](docs/cmake-packages.md).
 
 ## Публичный набор 0.1.0
 
@@ -94,14 +104,17 @@ JC-ESP32P4-M3-DEV; отдельный apps ZIP. Все 12 профилей со�
 проверенность и известные ограничения указаны в [описании выпуска](docs/release-0.1.0.md).
 PicoCalc-образы используют JCS southbridge firmware.
 
-Архивы из чистого commit собираются автоматически:
+## Сборка следующего выпуска
+
+Полная сборка из чистого commit включает также SDK LexxCE для ESP32.
 
 ```sh
 cmake --preset release
 cmake --build --preset release
 ```
 
-Результат: 13 ZIP, `SHA256SUMS`, `release.json` в `dist/LexxOS-0.1.0/`.
+В `dist/LexxOS-<версия>/` появятся 15 ZIP, `SHA256SUMS` и `release.json`.
+Чтобы собрать только библиотеку CE с заголовками и примером, используйте `python3 tools/release.py --ce-only`.
 Подробнее — [упаковка релиза](docs/release-packaging.md).
 
 ## Гостевые приложения
@@ -125,11 +138,14 @@ ctest --test-dir build/host-checks --output-on-failure
 
 [Проверки разработки](docs/development-checks.md) описывают C++ contracts, статические проверки
 и генерацию документации команд. [Аппаратные тест-планы](docs/tests/README.md) и
-[simulator regression](emulator/README.md) дополняют host checks.
+[simulator regression](tools/emulator/README.md) дополняют host checks.
 
 ## Документация
 
 - [Индекс документации](docs/README.md)
+- [PicoCalc / Luckfox Lyra M: единое руководство](docs/boards/picocalc_lyra_m.md)
+- [План встраиваемого ядра LexxCE](docs/lexxce-plan.md)
+- [SDK и графическая библиотека](docs/lexxos-sdk-graphics-roadmap-v2.md)
 - [Команды shell](docs/commands/README.md)
 - [Матрица команд и условий сборки](docs/command-matrix.md)
 - [SD production-профиль](docs/sd-card-production.md) и [FatFs](docs/fatfs-backend.md)
@@ -137,6 +153,8 @@ ctest --test-dir build/host-checks --output-on-failure
 - [JC-ESP32P4-M3-DEV](docs/boards/jc_esp32p4_m3_dev.md)
 - [CLion](docs/clion.md) и [OpenOCD](docs/openocd-local.md)
 - [Подготовка выпуска 0.1.0: состав, ограничения и checklist](docs/release-0.1.0.md)
+- [Выпуск 0.1.1: изменения, проверки и ограничения](docs/release-0.1.1.md)
+- [Состояние перехода к новой архитектуре](docs/hardware-migration-first-step.md)
 - [План выпуска 0.1.0 и дальнейших работ](roadmap.md)
 
 ## Лицензия
@@ -144,3 +162,7 @@ ctest --test-dir build/host-checks --output-on-failure
 Собственный код LexxOS распространяется под [Apache-2.0](LICENSE).
 Авторство указано в [NOTICE](NOTICE), сторонние компоненты — в
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Структура исходников, утилит и локальных данных описана в
+[структуре проекта](docs/project-layout.md). Временные данные и дампы находятся
+в `work/`, результаты сборки — в `build/`, релизные файлы — в `dist/`.

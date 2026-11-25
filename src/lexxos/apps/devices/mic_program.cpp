@@ -13,6 +13,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::device_programs {
+
 namespace {
 
 	using lexxos::program::ProgramLaunchMode;
@@ -23,40 +24,40 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec micArguments[] = {
 	    {
-         .name = "seconds",
-         .shortName = 's',
-         .valueName = "seconds",
-         .help = "sample or loopback duration",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "3",
+	     .name = "seconds",
+	     .shortName = 's',
+	     .valueName = "seconds",
+	     .help = "sample or loopback duration",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "3",
 	     },
 	    {
-         .name = "gain",
-         .shortName = 'g',
-         .valueName = "1..16",
-         .help = "digital gain for loopback output",
-         .kind = lexxos::program::ProgramArgumentKind::Option,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
-         .defaultValue = "4",
+	     .name = "gain",
+	     .shortName = 'g',
+	     .valueName = "1..16",
+	     .help = "digital gain for loopback output",
+	     .kind = lexxos::program::ProgramArgumentKind::Option,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
+	     .defaultValue = "4",
 	     },
 	    {
-         .name = "action",
-         .valueName = "action",
-         .help = "info, sample or loopback",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "action",
+	     .valueName = "action",
+	     .help = "info, sample or loopback",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "name",
-         .valueName = "name",
-         .help = "microphone device name",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "name",
+	     .valueName = "name",
+	     .help = "microphone device name",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -65,9 +66,11 @@ namespace {
 		if (scaled > std::numeric_limits<std::int16_t>::max()) {
 			return std::numeric_limits<std::int16_t>::max();
 		}
+
 		if (scaled < std::numeric_limits<std::int16_t>::min()) {
 			return std::numeric_limits<std::int16_t>::min();
 		}
+
 		return static_cast<std::int16_t>(scaled);
 	}
 
@@ -91,9 +94,11 @@ namespace {
 			if (framePeak > peak) {
 				peak = framePeak;
 			}
+
 			sum += left;
 			sum += right;
 		}
+
 		auto const sampleCount = frameCount * 2U;
 		return {
 		    .peak = peak,
@@ -105,6 +110,7 @@ namespace {
 		if (gain <= 1) {
 			return;
 		}
+
 		for (std::size_t index = 0; index < frameCount; ++index) {
 			frames[index].left = applyGain(frames[index].left, gain);
 			frames[index].right = applyGain(frames[index].right, gain);
@@ -146,6 +152,7 @@ namespace {
 			context.writeErrorLine("mic: capture failed");
 			return 1;
 		}
+
 		auto const stats = computeStats(frames.data(), framesRead);
 		context.write("mic: frames=");
 		writeUnsigned(context, static_cast<std::uint32_t>(framesRead));
@@ -175,6 +182,7 @@ namespace {
 			context.writeErrorLine("mic: invalid seconds value");
 			return 2;
 		}
+
 		if (!parseUnsigned32(arguments.valueOr("gain", "4"), gain) || gain == 0 || gain > 16) {
 			context.writeErrorLine("mic: invalid gain value");
 			return 2;
@@ -209,10 +217,12 @@ namespace {
 				context.writeErrorLine("mic: capture failed");
 				return 1;
 			}
+
 			auto const stats = computeStats(frames.data(), framesRead);
 			if (stats.peak > peak) {
 				peak = stats.peak;
 			}
+
 			applyGainInPlace(frames.data(), framesRead, gain);
 			if (!audio->playPcmBuffer({
 			        .channel = lexxos::devices::AudioChannel::Stereo,
@@ -273,20 +283,25 @@ int MicProgram::run(
 		context.writeErrorLine("mic: microphone is not registered");
 		return 1;
 	}
+
 	if (!mic->isReady()) {
 		context.writeErrorLine("mic: microphone is not ready");
 		return 1;
 	}
+
 	if (action == "info") {
 		writeInfo(context, *mic);
 		return 0;
 	}
+
 	if (action == "sample") {
 		return runSample(context, *mic);
 	}
+
 	if (action == "loopback") {
 		return runLoopback(context, *mic, arguments);
 	}
+
 	context.writeErrorLine("mic: supported actions are info, sample and loopback");
 	return 2;
 }

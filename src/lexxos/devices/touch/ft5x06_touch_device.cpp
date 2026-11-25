@@ -7,6 +7,7 @@
 #include <lexxos/platform/platform.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint8_t ft5x06StatusRegister = 0x02;
@@ -22,12 +23,15 @@ namespace {
 			low = high;
 			high = temporary;
 		}
+
 		if (value < low) {
 			return low;
 		}
+
 		if (value > high) {
 			return high;
 		}
+
 		return value;
 	}
 
@@ -40,11 +44,13 @@ namespace {
 		if (displayExtent <= 1 || rawMin == rawMax) {
 			return 0;
 		}
+
 		if (rawMin > rawMax) {
 			auto const temporary = rawMin;
 			rawMin = rawMax;
 			rawMax = temporary;
 		}
+
 		auto const clamped = clampInt(value, rawMin, rawMax);
 		auto const range = static_cast<std::int64_t>(rawMax - rawMin);
 		auto mapped = static_cast<std::int32_t>(
@@ -52,6 +58,7 @@ namespace {
 		if (invert) {
 			mapped = displayExtent - 1 - mapped;
 		}
+
 		return clampInt(mapped, 0, displayExtent - 1);
 	}
 
@@ -71,14 +78,17 @@ bool Ft5x06TouchDevice::initialize() {
 	if (!_config.isValid() || _config.controller != lexxos::platform::TouchPanelKind::FocalTechFt5x06 || !_bus.isReady()) {
 		return false;
 	}
+
 	if (_tryAddress(_config.address)) {
 		_ready = true;
 		return true;
 	}
+
 	if (_config.address != ft5x06FallbackAddress && _tryAddress(ft5x06FallbackAddress)) {
 		_ready = true;
 		return true;
 	}
+
 	return false;
 }
 
@@ -101,6 +111,7 @@ PointingDeviceState Ft5x06TouchDevice::state() const {
 		result.y = touch.contacts[0].y;
 		result.buttons = PointingButtonLeft;
 	}
+
 	return result;
 }
 
@@ -121,17 +132,20 @@ bool Ft5x06TouchDevice::applyTouchCalibration(TouchCalibration const& calibratio
 	if (!calibration.valid || calibration.rawMinX == calibration.rawMaxX || calibration.rawMinY == calibration.rawMaxY || calibration.displayWidth <= 1 || calibration.displayHeight <= 1) {
 		return false;
 	}
+
 	auto normalized = calibration;
 	if (normalized.rawMinX > normalized.rawMaxX) {
 		auto const temporary = normalized.rawMinX;
 		normalized.rawMinX = normalized.rawMaxX;
 		normalized.rawMaxX = temporary;
 	}
+
 	if (normalized.rawMinY > normalized.rawMaxY) {
 		auto const temporary = normalized.rawMinY;
 		normalized.rawMinY = normalized.rawMaxY;
 		normalized.rawMaxY = temporary;
 	}
+
 	_touch.calibration = normalized;
 	return true;
 }
@@ -152,6 +166,7 @@ bool Ft5x06TouchDevice::_tryAddress(std::uint8_t address) {
 	if (!_readRegister(address, ft5x06StatusRegister, &ignored, 1)) {
 		return false;
 	}
+
 	(void) _readRegister(address, ft5x06ChipIdRegister, &ignored, 1);
 	_address = address;
 	return true;
@@ -165,10 +180,12 @@ bool Ft5x06TouchDevice::_readRegister(
 	if (address == 0 || data == nullptr || size == 0) {
 		return false;
 	}
+
 	I2cBusTransaction transaction{_bus};
 	if (!transaction) {
 		return false;
 	}
+
 	return _bus.write(address, &reg, 1) && _bus.read(address, data, size);
 }
 
@@ -203,6 +220,7 @@ void Ft5x06TouchDevice::_poll() const {
 	for (auto& contact : _touch.contacts) {
 		contact = {};
 	}
+
 	_touch.connected = true;
 	_touch.maxContacts = ft5x06MaxContacts;
 	_touch.contactCount = contactCount;

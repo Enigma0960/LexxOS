@@ -9,16 +9,17 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs {
+
 namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec arguments[] = {
 	    {
-         .name = "profile",
-         .valueName = "safe|default|performance|fast-read",
-         .help = "profile to apply: safe=1MHz, default=50MHz CMD18 read, performance=60MHz",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "profile",
+	     .valueName = "safe|default|performance|fast-read",
+	     .help = "profile to apply: safe=1MHz, default=50MHz CMD18 read, performance=60MHz",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -87,6 +88,7 @@ int SdProfileProgram::run(lexxos::os::AppContext& context, lexxos::program::Prog
 		context.writeLine("sd-profile: set mode failed");
 		return 1;
 	}
+
 	lexxos::devices::sd_card::setReadCrcValidation(crc);
 	lexxos::devices::sd_card::setMultiBlockRead(multiBlock);
 	lexxos::devices::sd_card::setHighSpeedWritesEnabled(highSpeedWrites);

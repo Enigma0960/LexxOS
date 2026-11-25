@@ -6,6 +6,7 @@
 #include <lexxos/vfs/vfs.h>
 
 namespace lexxos::apps::music::midi::detail {
+
 namespace {
 
 	bool readBytes(vfs::FileHandle& file, void* data, std::size_t size) {
@@ -97,6 +98,7 @@ namespace {
 			hasFirstData = false;
 			return true;
 		}
+
 		return readU8(file, position, end, value);
 	}
 
@@ -140,6 +142,7 @@ char const* midiLoadStatusMessage(MidiLoadStatus status) {
 		case MidiLoadStatus::MissingTracks:
 			return "missing MIDI track chunks";
 	}
+
 	return "unknown MIDI error";
 }
 
@@ -156,9 +159,11 @@ MidiLoadStatus loadMidiFile(vfs::FileHandle& file, MidiFile& midiFile) {
 	    || !readU32(file, position, fileSize, chunkSize)) {
 		return MidiLoadStatus::InvalidFile;
 	}
+
 	if (!chunkIdEquals(chunkId, "MThd")) {
 		return MidiLoadStatus::InvalidHeader;
 	}
+
 	if (chunkSize < 6 || chunkSize > fileSize - position) {
 		return MidiLoadStatus::InvalidHeader;
 	}
@@ -172,18 +177,22 @@ MidiLoadStatus loadMidiFile(vfs::FileHandle& file, MidiFile& midiFile) {
 	    || !readU16(file, position, headerEnd, division)) {
 		return MidiLoadStatus::InvalidHeader;
 	}
+
 	if (!file.seek(headerEnd)) {
 		return MidiLoadStatus::InvalidHeader;
 	}
+
 	position = headerEnd;
 
 	if (formatType > static_cast<std::uint16_t>(MidiFormat::MultiTrack)
 	    || (division & 0x8000U) != 0) {
 		return MidiLoadStatus::UnsupportedTiming;
 	}
+
 	if (formatType == static_cast<std::uint16_t>(MidiFormat::SingleTrack) && expectedTracks != 1) {
 		return MidiLoadStatus::InvalidHeader;
 	}
+
 	if (expectedTracks > maxMidiTracks) {
 		return MidiLoadStatus::TooManyTracks;
 	}
@@ -206,6 +215,7 @@ MidiLoadStatus loadMidiFile(vfs::FileHandle& file, MidiFile& midiFile) {
 		if (chunkSize > fileSize - trackBegin) {
 			return MidiLoadStatus::TruncatedChunk;
 		}
+
 		auto const trackEnd = trackBegin + chunkSize;
 
 		if (chunkIdEquals(chunkId, "MTrk")) {
@@ -238,6 +248,7 @@ bool primeTracks(vfs::FileHandle& file, MidiFile& midiFile) {
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -247,6 +258,7 @@ bool readNextTrackEvent(vfs::FileHandle& file, TrackCursor& track, MidiState con
 		track.done = true;
 		return true;
 	}
+
 	if (!file.seek(track.position)) {
 		return false;
 	}
@@ -255,6 +267,7 @@ bool readNextTrackEvent(vfs::FileHandle& file, TrackCursor& track, MidiState con
 	if (!readVariable(file, track.position, track.end, delta)) {
 		return false;
 	}
+
 	track.tick += delta;
 
 	std::uint8_t first = 0;
@@ -269,6 +282,7 @@ bool readNextTrackEvent(vfs::FileHandle& file, TrackCursor& track, MidiState con
 		if (track.runningStatus == 0) {
 			return false;
 		}
+
 		status = track.runningStatus;
 		firstData = first;
 		hasFirstData = true;
@@ -345,6 +359,7 @@ bool readNextTrackEvent(vfs::FileHandle& file, TrackCursor& track, MidiState con
 			if (!seekForward(file, track.position, track.end, size)) {
 				return false;
 			}
+
 			event.type = MidiEventType::EndOfTrack;
 			track.done = true;
 			track.event = event;
@@ -357,6 +372,7 @@ bool readNextTrackEvent(vfs::FileHandle& file, TrackCursor& track, MidiState con
 			if (!readBytes(file, track.position, track.end, bytes, sizeof(bytes))) {
 				return false;
 			}
+
 			event.type = MidiEventType::SetTempo;
 			event.tempo = (static_cast<std::uint32_t>(bytes[0]) << 16U)
 			    | (static_cast<std::uint32_t>(bytes[1]) << 8U)
@@ -376,6 +392,7 @@ bool readNextTrackEvent(vfs::FileHandle& file, TrackCursor& track, MidiState con
 		    || !seekForward(file, track.position, track.end, size)) {
 			return false;
 		}
+
 		track.event = event;
 		track.hasEvent = true;
 		return true;

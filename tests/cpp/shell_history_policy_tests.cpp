@@ -55,7 +55,7 @@ int main() {
 	if (!historyLineAllowed("echo " + longPlainToken, lookup, &specs)) {
 		return 5;
 	}
-	
+
 	if (historyLineAllowed("echo " + longPlainToken + " wifi-connect secret", lookup, &specs)) {
 		return 6;
 	}

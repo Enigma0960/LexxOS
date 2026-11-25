@@ -1,6 +1,6 @@
 # `gamepad-live`
 
-run a live gamepad input test.
+Проверяет события геймпада в реальном времени.
 
 ## Справка shell
 

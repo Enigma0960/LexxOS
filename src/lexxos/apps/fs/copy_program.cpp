@@ -19,27 +19,29 @@ using lexxos::program::ProgramMemoryClass;
 namespace {
 
 	using PathBuffer = std::array<char, lexxos::vfs::maxPathLength>;
-	using CopyBuffer = std::array<char, 128>;
+	// The copy buffer belongs to ProgramMemoryArena, not the task stack.
+	// Copying large files does not require a file-sized allocation.
+	using CopyBuffer = std::array<char, 1024>;
 
 	constexpr std::uint32_t copyWorkspaceBytes =
 	    static_cast<std::uint32_t>((lexxos::vfs::maxPathLength * 2U) + sizeof(CopyBuffer) + alignof(CopyBuffer));
 
 	constexpr lexxos::program::ProgramArgumentSpec copyProgramArguments[] = {
 	    {
-         .name = "source",
-         .valueName = "source",
-         .help = "readable VFS source file",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "source",
+	     .valueName = "source",
+	     .help = "readable VFS source file",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	    {
-         .name = "target",
-         .valueName = "target",
-         .help = "writable VFS target file",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "target",
+	     .valueName = "target",
+	     .help = "writable VFS target file",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	};
 
@@ -84,6 +86,7 @@ namespace {
 				context.writeLine(lexxos::vfs::toString(readStatus));
 				return false;
 			}
+
 			if (bytesRead == 0) {
 				break;
 			}
@@ -96,8 +99,10 @@ namespace {
 				context.writeLine(lexxos::vfs::toString(writeStatus));
 				return false;
 			}
+
 			bytesCopied += bytesRead;
 		}
+
 		return true;
 	}
 
@@ -113,7 +118,10 @@ ProgramDescriptor CopyProgram::descriptor() {
 	    .handler = run,
 	    .runtime = {
 	                .launchMode = ProgramLaunchMode::ForegroundTask,
-	                .stackSizeBytes = 4096,
+	                // RK3506 measured 4,256 bytes maximum stack use copying
+	        // fileman.lexx. 8 KiB leaves 3,936 bytes of headroom;
+	        // the 1 KiB transfer buffer remains in ProgramMemoryArena.
+	        .stackSizeBytes = 8192,
 	                .priority = 1,
 	                .memoryClass = ProgramMemoryClass::InternalOnly,
 	                .externalMemoryQuotaBytes = 0,
@@ -172,12 +180,21 @@ int CopyProgram::run(
 		return 1;
 	}
 
-	// Transfer all bytes, then close both handles before verification.
+	// A successful write() may still fail at f_sync/f_close. Never report
+	// a successful copy until the destination has been explicitly finished.
 	std::uint64_t bytesCopied = 0;
 	bool const copied = copyFileToFile(context, sourcePath->data(), source, targetPath->data(), target, *copyBuffer, bytesCopied);
-	target.close();
+	auto const finishStatus = target.finish();
 	source.close();
 	if (!copied) {
+		return 1;
+	}
+
+	if (finishStatus != lexxos::vfs::WriteStatus::Ok) {
+		context.write("cp: ");
+		context.write(targetPath->data());
+		context.write(": close failed: ");
+		context.writeLine(lexxos::vfs::toString(finishStatus));
 		return 1;
 	}
 
@@ -190,12 +207,14 @@ int CopyProgram::run(
 			context.writeLine(": target verification failed: not found after copy");
 			return 1;
 		}
+
 		if (targetStat.type != lexxos::vfs::NodeType::RegularFile) {
 			context.write("cp: ");
 			context.write(targetPath->data());
 			context.writeLine(": target verification failed: not a regular file");
 			return 1;
 		}
+
 		if (targetStat.sizeBytes != bytesCopied) {
 			context.write("cp: ");
 			context.write(targetPath->data());

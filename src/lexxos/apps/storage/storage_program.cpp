@@ -24,20 +24,20 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec storageArguments[] = {
 	    {
-         .name = "action",
-         .valueName = "action",
-         .help = "optional action: probe, read0, read or diag",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "action",
+	     .valueName = "action",
+	     .help = "optional action: probe, read0, read or diag",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "block",
-         .valueName = "block",
-         .help = "block number for storage read",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "block",
+	     .valueName = "block",
+	     .help = "block number for storage read",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	};
 
@@ -67,12 +67,14 @@ namespace {
 				context.write(" ");
 				writeHexByte(context, block[row * 16 + column]);
 			}
+
 			context.write("  ");
 			for (std::size_t column = 0; column < 16; ++column) {
 				auto const value = block[row * 16 + column];
 				char const character = isPrintableAscii(value) ? static_cast<char>(value) : '.';
 				context.write(std::string_view{&character, 1});
 			}
+
 			context.writeLine("");
 		}
 	}
@@ -123,6 +125,7 @@ int StorageProgram::run(lexxos::os::AppContext& context, lexxos::program::Progra
 		if (!allocateSector(context, sector)) {
 			return 1;
 		}
+
 		(void) readStorageBlock0(context, *sector);
 		return 0;
 	}
@@ -148,6 +151,7 @@ int StorageProgram::run(lexxos::os::AppContext& context, lexxos::program::Progra
 		if (!allocateSector(context, sector)) {
 			return 1;
 		}
+
 		if (!device->readBlocks(block, sector->data(), 1)) {
 			context.writeLine("storage read: failed");
 			return 1;
@@ -166,9 +170,11 @@ int StorageProgram::run(lexxos::os::AppContext& context, lexxos::program::Progra
 		if (!allocateSector(context, sector)) {
 			return 1;
 		}
+
 		if (readStorageBlock0(context, *sector)) {
 			printStorageBlock0Summary(context, *sector);
 		}
+
 		writeStorageSummary(context);
 		return 0;
 	}

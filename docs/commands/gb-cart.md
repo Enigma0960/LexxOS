@@ -1,6 +1,6 @@
 # `gb-cart`
 
-test Game Boy cartridge mapper.
+Проверяет контроллер отображения памяти картриджа Game Boy.
 
 ## Справка shell
 

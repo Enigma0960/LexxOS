@@ -12,6 +12,7 @@
 #include <lexxos/platform/platform.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint32_t minFrequencyHz = 20;
@@ -74,47 +75,47 @@ namespace {
 
 	constexpr CodecRegister es8311OutputEnableSequence[] = {
 	    {0x31,           es8311DacMute},
-	    {0x0D,	                0xFA},
-	    {0x44,	                0x08},
-	    {0x44,	                0x08},
-	    {0x01,	                0x30},
-	    {0x02,	                0x00},
-	    {0x03,	                0x10},
-	    {0x16,	                0x24},
-	    {0x04,	                0x10},
-	    {0x05,	                0x00},
-	    {0x0B,	                0x00},
-	    {0x0C,	                0x00},
-	    {0x10,	                0x1F},
-	    {0x11,	                0x7F},
-	    {0x00,	                0x80},
-	    {0x01,	                0xBF},
-	    {0x02,	                0x18},
-	    {0x03,	                0x10},
-	    {0x04,	                0x10},
-	    {0x05,	                0x00},
-	    {0x06,	                0x03},
-	    {0x07,	                0x00},
-	    {0x08,	                0xFF},
-	    {0x09,	                0x0C},
-	    {0x0A,	                0x0C},
-	    {0x13,	                0x10},
-	    {0x1B,	                0x0A},
-	    {0x1C,	                0x6A},
-	    {0x44,	                0x58},
-	    {0x00,	                0x80},
-	    {0x01,	                0xBF},
-	    {0x09,	                0x0C},
-	    {0x0A,	                0x0C},
-	    {0x17,	                0xBF},
-	    {0x0E,	                0x02},
-	    {0x12,	                0x00},
-	    {0x14,	                0x1A},
-	    {0x0D,	                0x01},
-	    {0x15,	                0x40},
+	    {0x0D,                    0xFA},
+	    {0x44,                    0x08},
+	    {0x44,                    0x08},
+	    {0x01,                    0x30},
+	    {0x02,                    0x00},
+	    {0x03,                    0x10},
+	    {0x16,                    0x24},
+	    {0x04,                    0x10},
+	    {0x05,                    0x00},
+	    {0x0B,                    0x00},
+	    {0x0C,                    0x00},
+	    {0x10,                    0x1F},
+	    {0x11,                    0x7F},
+	    {0x00,                    0x80},
+	    {0x01,                    0xBF},
+	    {0x02,                    0x18},
+	    {0x03,                    0x10},
+	    {0x04,                    0x10},
+	    {0x05,                    0x00},
+	    {0x06,                    0x03},
+	    {0x07,                    0x00},
+	    {0x08,                    0xFF},
+	    {0x09,                    0x0C},
+	    {0x0A,                    0x0C},
+	    {0x13,                    0x10},
+	    {0x1B,                    0x0A},
+	    {0x1C,                    0x6A},
+	    {0x44,                    0x58},
+	    {0x00,                    0x80},
+	    {0x01,                    0xBF},
+	    {0x09,                    0x0C},
+	    {0x0A,                    0x0C},
+	    {0x17,                    0xBF},
+	    {0x0E,                    0x02},
+	    {0x12,                    0x00},
+	    {0x14,                    0x1A},
+	    {0x0D,                    0x01},
+	    {0x15,                    0x40},
 	    {0x32, es8311DacVolumeMinus6Db},
-	    {0x37,	                0x08},
-	    {0x45,	                0x00},
+	    {0x37,                    0x08},
+	    {0x45,                    0x00},
 	    {0x31,           es8311DacMute},
 	};
 
@@ -193,23 +194,29 @@ bool EspIdfEs8311AudioDevice::initialize() {
 	if (_ready) {
 		return true;
 	}
+
 	if (!_config.isValid() || _controlBus == nullptr || !_controlBus->isReady()) {
 		return false;
 	}
+
 	if (!_configureAmplifier()) {
 		return false;
 	}
+
 	if (!_controlBus->probe(_config.i2cAddress)) {
 		return false;
 	}
+
 	if (!_initializeI2s()) {
 		_releaseI2s();
 		return false;
 	}
+
 	if (!_initializeCodec()) {
 		_releaseI2s();
 		return false;
 	}
+
 	_ready = true;
 	return true;
 }
@@ -228,11 +235,12 @@ std::uint32_t EspIdfEs8311AudioDevice::preferredPcmSampleRateHz() const {
 
 bool EspIdfEs8311AudioDevice::supportsChannel(AudioChannel channel) const {
 	switch (channel) {
-		case AudioChannel::Left:
+		case AudioChannel::Left :
 		case AudioChannel::Right:
 		case AudioChannel::Stereo:
 			return _config.hasOutput();
 	}
+
 	return false;
 }
 
@@ -262,6 +270,7 @@ bool EspIdfEs8311AudioDevice::playTone(AudioToneRequest const& request) {
 	if (!_ready && !initialize()) {
 		return false;
 	}
+
 	(void) _flushResampledOutput();
 	_resetPcmResampler();
 	if (!supportsChannel(request.channel)
@@ -277,15 +286,18 @@ bool EspIdfEs8311AudioDevice::playTone(AudioToneRequest const& request) {
 	if (!_prepareOutput(sampleRate)) {
 		return false;
 	}
+
 	auto framesRemaining = static_cast<std::uint32_t>((static_cast<std::uint64_t>(sampleRate) * request.durationMs) / 1000ULL);
 	if (framesRemaining == 0) {
 		framesRemaining = 1;
 	}
+
 	auto const totalFrames = framesRemaining;
 	auto fadeFrames = static_cast<std::uint32_t>((static_cast<std::uint64_t>(sampleRate) * toneFadeMs) / 1000ULL);
 	if (fadeFrames > totalFrames / 2U) {
 		fadeFrames = totalFrames / 2U;
 	}
+
 	auto const phaseStep = static_cast<std::uint32_t>((static_cast<std::uint64_t>(request.frequencyHz) << 32U) / sampleRate);
 	std::uint32_t phase = 0;
 	std::uint32_t frameIndex = 0;
@@ -301,6 +313,7 @@ bool EspIdfEs8311AudioDevice::playTone(AudioToneRequest const& request) {
 				if (frameIndex < fadeFrames) {
 					gain = static_cast<std::uint32_t>((static_cast<std::uint64_t>(frameIndex) * 255ULL) / fadeFrames);
 				}
+
 				auto const framesToEnd = totalFrames - frameIndex - 1U;
 				if (framesToEnd < fadeFrames) {
 					auto const tailGain = static_cast<std::uint32_t>((static_cast<std::uint64_t>(framesToEnd) * 255ULL) / fadeFrames);
@@ -308,8 +321,10 @@ bool EspIdfEs8311AudioDevice::playTone(AudioToneRequest const& request) {
 						gain = tailGain;
 					}
 				}
+
 				sample = static_cast<std::int16_t>((static_cast<std::int32_t>(sample) * static_cast<std::int32_t>(gain)) / 255);
 			}
+
 			frames[index] = {
 			    .left = request.channel == AudioChannel::Right ? static_cast<std::int16_t>(0) : sample,
 			    .right = request.channel == AudioChannel::Left ? static_cast<std::int16_t>(0) : sample,
@@ -320,6 +335,7 @@ bool EspIdfEs8311AudioDevice::playTone(AudioToneRequest const& request) {
 		if (!_writePcmFrames(frames.data(), chunkFrames, request.channel, false)) {
 			return false;
 		}
+
 		framesRemaining -= chunkFrames;
 	}
 
@@ -336,6 +352,7 @@ bool EspIdfEs8311AudioDevice::playPcmBuffer(AudioPcmBufferRequest const& request
 	if (!_ready && !initialize()) {
 		return false;
 	}
+
 	if (!supportsPcmBuffer()
 	    || !supportsChannel(request.channel)
 	    || request.frames == nullptr
@@ -345,21 +362,26 @@ bool EspIdfEs8311AudioDevice::playPcmBuffer(AudioPcmBufferRequest const& request
 	    || _txHandle == nullptr) {
 		return false;
 	}
+
 	if (!_prepareOutput(_nativeSampleRateHz())) {
 		return false;
 	}
+
 	++_pcmStats.bufferCalls;
 	_pcmStats.sampleRateHz = request.sampleRateHz;
 	if (request.sampleRateHz == _nativeSampleRateHz()) {
 		if (!_flushResampledOutput()) {
 			return false;
 		}
+
 		_resetPcmResampler();
 		return _writePcmFrames(request.frames, request.frameCount, request.channel, true);
 	}
+
 	if (!_writePcmFramesResampled(request.frames, request.frameCount, request.channel, request.sampleRateHz)) {
 		return false;
 	}
+
 	_pcmStats.framesQueued += request.frameCount;
 	_pcmStats.framesWritten += request.frameCount;
 	return true;
@@ -373,6 +395,7 @@ bool EspIdfEs8311AudioDevice::drainPcmOutput(std::uint32_t timeoutMs) {
 		_releaseI2s();
 		return false;
 	}
+
 	auto const silenceWritten = _writeSilence(static_cast<std::uint32_t>((static_cast<std::uint64_t>(_nativeSampleRateHz()) * silenceTailMs) / 1000ULL));
 	auto const muted = _setCodecMute(true);
 	auto const ampOff = _setAmplifierEnabled(false);
@@ -417,9 +440,11 @@ bool EspIdfEs8311AudioDevice::capturePcm(MicrophonePcmCaptureRequest const& requ
 	if (request.framesRead != nullptr) {
 		*request.framesRead = 0;
 	}
+
 	if (!_ready && !initialize()) {
 		return false;
 	}
+
 	auto const sampleRate = request.sampleRateHz == 0 ? _nativeSampleRateHz() : request.sampleRateHz;
 	if (!_config.hasInput()
 	    || request.frames == nullptr
@@ -429,6 +454,7 @@ bool EspIdfEs8311AudioDevice::capturePcm(MicrophonePcmCaptureRequest const& requ
 	    || _rxHandle == nullptr) {
 		return false;
 	}
+
 	if (!_prepareInput() || !_ensureI2sSampleRate(sampleRate)) {
 		return false;
 	}
@@ -444,10 +470,12 @@ bool EspIdfEs8311AudioDevice::capturePcm(MicrophonePcmCaptureRequest const& requ
 	if (i2s_channel_read(rx, request.frames, requestedBytes, &bytesRead, request.timeoutMs) != ESP_OK) {
 		return false;
 	}
+
 	auto const framesRead = bytesRead / sizeof(AudioPcmFrame);
 	if (request.framesRead != nullptr) {
 		*request.framesRead = framesRead;
 	}
+
 	return framesRead != 0;
 }
 
@@ -456,6 +484,7 @@ bool EspIdfEs8311AudioDevice::_configureAmplifier() {
 		_amplifierConfigured = true;
 		return true;
 	}
+
 	if (_amplifierConfigured) {
 		return true;
 	}
@@ -476,6 +505,7 @@ bool EspIdfEs8311AudioDevice::_configureAmplifier() {
 		_amplifierConfigured = false;
 		return false;
 	}
+
 	_amplifierEnabled = false;
 	return true;
 }
@@ -485,13 +515,16 @@ bool EspIdfEs8311AudioDevice::_setAmplifierEnabled(bool enabled) {
 		_amplifierEnabled = false;
 		return true;
 	}
+
 	if (!_amplifierConfigured && !_configureAmplifier()) {
 		return false;
 	}
+
 	auto const level = gpioLevelFor(_config.amplifierEnableLevel, enabled);
 	if (gpio_set_level(outputGpio(_config.amplifierEnable), level) != ESP_OK) {
 		return false;
 	}
+
 	_amplifierEnabled = enabled;
 	return true;
 }
@@ -540,27 +573,34 @@ bool EspIdfEs8311AudioDevice::_initializeI2s() {
 		if (rx != nullptr) {
 			(void) i2s_del_channel(rx);
 		}
+
 		return false;
 	}
+
 	if (rx != nullptr && i2s_channel_init_std_mode(rx, &stdConfig) != ESP_OK) {
 		if (tx != nullptr) {
 			(void) i2s_del_channel(tx);
 		}
+
 		(void) i2s_del_channel(rx);
 		return false;
 	}
+
 	if (tx != nullptr && i2s_channel_enable(tx) != ESP_OK) {
 		if (rx != nullptr) {
 			(void) i2s_del_channel(rx);
 		}
+
 		(void) i2s_del_channel(tx);
 		return false;
 	}
+
 	if (rx != nullptr && i2s_channel_enable(rx) != ESP_OK) {
 		if (tx != nullptr) {
 			(void) i2s_channel_disable(tx);
 			(void) i2s_del_channel(tx);
 		}
+
 		(void) i2s_del_channel(rx);
 		return false;
 	}
@@ -578,10 +618,12 @@ bool EspIdfEs8311AudioDevice::_initializeCodec() {
 		if (!_writeCodecRegister(reg.reg, reg.value)) {
 			return false;
 		}
+
 		if (reg.reg == 0x00) {
 			_sleepMs(5);
 		}
 	}
+
 	_codecMuted = true;
 	return true;
 }
@@ -602,6 +644,7 @@ bool EspIdfEs8311AudioDevice::_ensureI2sSampleRate(std::uint32_t sampleRateHz) {
 	if ((_txHandle == nullptr && _rxHandle == nullptr) || sampleRateHz == 0) {
 		return false;
 	}
+
 	if (_currentSampleRateHz == sampleRateHz) {
 		return true;
 	}
@@ -611,10 +654,12 @@ bool EspIdfEs8311AudioDevice::_ensureI2sSampleRate(std::uint32_t sampleRateHz) {
 	if (_txEnabled && i2s_channel_disable(tx) != ESP_OK) {
 		return false;
 	}
+
 	_txEnabled = false;
 	if (_rxEnabled && i2s_channel_disable(rx) != ESP_OK) {
 		return false;
 	}
+
 	_rxEnabled = false;
 
 	i2s_std_clk_config_t clockConfig = I2S_STD_CLK_DEFAULT_CONFIG(sampleRateHz);
@@ -623,6 +668,7 @@ bool EspIdfEs8311AudioDevice::_ensureI2sSampleRate(std::uint32_t sampleRateHz) {
 	if (tx != nullptr && i2s_channel_reconfig_std_clock(tx, &clockConfig) != ESP_OK) {
 		return false;
 	}
+
 	if (rx != nullptr && i2s_channel_reconfig_std_clock(rx, &clockConfig) != ESP_OK) {
 		return false;
 	}
@@ -630,10 +676,12 @@ bool EspIdfEs8311AudioDevice::_ensureI2sSampleRate(std::uint32_t sampleRateHz) {
 	if (tx != nullptr && i2s_channel_enable(tx) != ESP_OK) {
 		return false;
 	}
+
 	_txEnabled = tx != nullptr;
 	if (rx != nullptr && i2s_channel_enable(rx) != ESP_OK) {
 		return false;
 	}
+
 	_rxEnabled = rx != nullptr;
 
 	_currentSampleRateHz = sampleRateHz;
@@ -645,6 +693,7 @@ bool EspIdfEs8311AudioDevice::_setCodecMute(bool mute) {
 	if (!_writeCodecRegister(0x31, value)) {
 		return false;
 	}
+
 	_codecMuted = mute;
 	return true;
 }
@@ -653,16 +702,20 @@ bool EspIdfEs8311AudioDevice::_prepareOutput(std::uint32_t sampleRateHz) {
 	if (!_ensureI2sSampleRate(sampleRateHz)) {
 		return false;
 	}
+
 	if (!_codecMuted) {
 		return true;
 	}
+
 	auto const primeFrames = static_cast<std::uint32_t>((static_cast<std::uint64_t>(sampleRateHz) * outputPrimeMs) / 1000ULL);
 	if (primeFrames != 0 && !_writeSilence(primeFrames)) {
 		return false;
 	}
+
 	if (!_setAmplifierEnabled(true)) {
 		return false;
 	}
+
 	_sleepMs(5);
 	return _setCodecMute(false);
 }
@@ -671,11 +724,13 @@ bool EspIdfEs8311AudioDevice::_prepareInput() {
 	if (_inputPrepared) {
 		return true;
 	}
+
 	for (auto const& reg : es8311InputEnableSequence) {
 		if (!_writeCodecRegister(reg.reg, reg.value)) {
 			return false;
 		}
 	}
+
 	_inputPrepared = true;
 	return true;
 }
@@ -694,6 +749,7 @@ bool EspIdfEs8311AudioDevice::_flushResampledOutput() {
 	if (_resampleOutputCount == 0) {
 		return true;
 	}
+
 	auto const ok = _writePcmFrames(_resampleOutput.data(), _resampleOutputCount, _resampleOutputChannel, false);
 	_resampleOutputCount = 0;
 	return ok;
@@ -721,6 +777,7 @@ bool EspIdfEs8311AudioDevice::_writePcmFramesResampled(
 	if (_resampleOutputCount != 0 && _resampleOutputChannel != channel && !_flushResampledOutput()) {
 		return false;
 	}
+
 	_resampleOutputChannel = channel;
 
 	if (!_resampleHasPrevious) {
@@ -735,8 +792,10 @@ bool EspIdfEs8311AudioDevice::_writePcmFramesResampled(
 			if (_resampleOutputCount >= _resampleOutput.size() && !_flushResampledOutput()) {
 				return false;
 			}
+
 			_resamplePhaseQ32 += _resampleStepQ32;
 		}
+
 		_resamplePhaseQ32 -= resampleOneQ32;
 		_resamplePrevious = current;
 	}
@@ -772,17 +831,21 @@ bool EspIdfEs8311AudioDevice::_writePcmFrames(
 					break;
 			}
 		}
+
 		auto const bytes = chunkFrames * sizeof(AudioPcmFrame);
 		std::size_t bytesWritten = 0;
 		if (i2s_channel_write(tx, mapped.data(), bytes, &bytesWritten, 1000) != ESP_OK || bytesWritten != bytes) {
 			return false;
 		}
+
 		if (countStats) {
 			_pcmStats.framesQueued += chunkFrames;
 			_pcmStats.framesWritten += chunkFrames;
 		}
+
 		offset += chunkFrames;
 	}
+
 	return true;
 }
 
@@ -790,14 +853,17 @@ bool EspIdfEs8311AudioDevice::_writeSilence(std::uint32_t frames) {
 	if (_txHandle == nullptr) {
 		return false;
 	}
+
 	std::array<AudioPcmFrame, framesPerChunk> silence{};
 	while (frames != 0) {
 		auto const chunkFrames = frames < silence.size() ? frames : static_cast<std::uint32_t>(silence.size());
 		if (!_writePcmFrames(silence.data(), chunkFrames, AudioChannel::Stereo, false)) {
 			return false;
 		}
+
 		frames -= chunkFrames;
 	}
+
 	return true;
 }
 
@@ -806,21 +872,26 @@ void EspIdfEs8311AudioDevice::_releaseI2s() {
 		(void) _setAmplifierEnabled(false);
 		return;
 	}
+
 	(void) _setAmplifierEnabled(false);
 	auto* const tx = static_cast<i2s_chan_handle_t>(_txHandle);
 	auto* const rx = static_cast<i2s_chan_handle_t>(_rxHandle);
 	if (_txEnabled) {
 		(void) i2s_channel_disable(tx);
 	}
+
 	if (_rxEnabled) {
 		(void) i2s_channel_disable(rx);
 	}
+
 	if (tx != nullptr) {
 		(void) i2s_del_channel(tx);
 	}
+
 	if (rx != nullptr) {
 		(void) i2s_del_channel(rx);
 	}
+
 	_txHandle = nullptr;
 	_rxHandle = nullptr;
 	_currentSampleRateHz = 0;
@@ -836,30 +907,6 @@ void EspIdfEs8311AudioDevice::_sleepMs(std::uint32_t milliseconds) const {
 		return;
 	}
 	lexxos::platform::sleepMs(milliseconds);
-}
-
-EspIdfEs8311MicrophoneDevice::EspIdfEs8311MicrophoneDevice(EspIdfEs8311AudioDevice& codec)
-    : _codec(codec) {
-}
-
-std::string_view EspIdfEs8311MicrophoneDevice::name() const {
-	return _codec.microphoneName();
-}
-
-bool EspIdfEs8311MicrophoneDevice::isReady() const {
-	return _codec.isReady();
-}
-
-bool EspIdfEs8311MicrophoneDevice::supportsPcmCapture() const {
-	return _codec.supportsPcmCapture();
-}
-
-std::uint32_t EspIdfEs8311MicrophoneDevice::preferredPcmSampleRateHz() const {
-	return _codec.preferredCaptureSampleRateHz();
-}
-
-bool EspIdfEs8311MicrophoneDevice::capturePcm(MicrophonePcmCaptureRequest const& request) {
-	return _codec.capturePcm(request);
 }
 
 } // namespace lexxos::devices

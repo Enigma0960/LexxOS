@@ -56,6 +56,7 @@ void writeSamples(lexxos::os::AppContext& context, std::string_view label, std::
 		context.write(" ");
 		context.write("\x1B[0m");
 	}
+
 	context.writeLine("");
 }
 
@@ -69,6 +70,7 @@ void writeBackgroundSamples(lexxos::os::AppContext& context, std::string_view la
 		context.write(" ");
 		context.write("\x1B[0m");
 	}
+
 	context.writeLine("");
 }
 

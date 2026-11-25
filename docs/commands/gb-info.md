@@ -1,6 +1,6 @@
 # `gb-info`
 
-show Game Boy ROM cartridge header.
+Показывает заголовок ROM-картриджа Game Boy.
 
 ## Справка shell
 

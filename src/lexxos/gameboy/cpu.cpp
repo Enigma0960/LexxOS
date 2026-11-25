@@ -64,6 +64,7 @@ std::string_view toString(CpuStepStatus status) {
 		case CpuStepStatus::BusReadError:
 			return "bus-read-error";
 	}
+
 	return "unknown";
 }
 
@@ -118,6 +119,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 		result.status = CpuStepStatus::BusReadError;
 		return result;
 	}
+
 	result.opcode = opcode;
 	result.cycles = 4;
 
@@ -130,6 +132,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 			result.status = CpuStepStatus::BusReadError;
 			return result;
 		}
+
 		writeRegister(bus, destination, value);
 		result.cycles = destination == 6 || source == 6 ? 8 : 4;
 		return result;
@@ -171,6 +174,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				cpA(value);
 				break;
 		}
+
 		result.cycles = source == 6 ? 8 : 4;
 		return result;
 	}
@@ -185,6 +189,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			setBc(value);
 			result.cycles = 12;
 			break;
@@ -208,6 +213,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			result.cycles = 8;
 			break;
 		case 0x07: {
@@ -223,6 +229,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			bus.write16(address, _sp);
 			result.cycles = 20;
 			break;
@@ -251,6 +258,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			result.cycles = 8;
 			break;
 		case 0x0F: {
@@ -272,6 +280,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			setDe(value);
 			result.cycles = 12;
 			break;
@@ -295,6 +304,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			result.cycles = 8;
 			break;
 		case 0x17: {
@@ -311,6 +321,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			_pc = static_cast<std::uint16_t>(_pc + static_cast<std::int8_t>(value));
 			result.cycles = 12;
 			break;
@@ -338,6 +349,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			result.cycles = 8;
 			break;
 		case 0x1F: {
@@ -357,6 +369,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			auto const conditionCode = static_cast<std::uint8_t>((opcode >> 3U) & 0x03U);
 			if (condition(conditionCode)) {
 				_pc = static_cast<std::uint16_t>(_pc + static_cast<std::int8_t>(offset));
@@ -364,6 +377,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 			} else {
 				result.cycles = 8;
 			}
+
 			break;
 		}
 		case 0x21: {
@@ -372,6 +386,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			setHl(value);
 			result.cycles = 12;
 			break;
@@ -396,6 +411,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			result.cycles = 8;
 			break;
 		case 0x27:
@@ -425,6 +441,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			result.cycles = 8;
 			break;
 		case 0x2F:
@@ -438,6 +455,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			_sp = value;
 			result.cycles = 12;
 			break;
@@ -471,6 +489,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			bus.write8Fast(hl(), value);
 			result.cycles = 12;
 			break;
@@ -504,6 +523,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			result.cycles = 8;
 			break;
 		case 0x3F: {
@@ -529,6 +549,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 			} else {
 				result.cycles = 8;
 			}
+
 			break;
 		}
 		case 0xC1:
@@ -544,6 +565,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			auto const conditionCode = static_cast<std::uint8_t>((opcode >> 3U) & 0x03U);
 			if (condition(conditionCode)) {
 				_pc = address;
@@ -551,6 +573,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 			} else {
 				result.cycles = 12;
 			}
+
 			break;
 		}
 		case 0xC3: {
@@ -559,6 +582,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			_pc = address;
 			result.cycles = 16;
 			break;
@@ -572,6 +596,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			auto const conditionCode = static_cast<std::uint8_t>((opcode >> 3U) & 0x03U);
 			if (condition(conditionCode)) {
 				push16(bus, _pc);
@@ -580,6 +605,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 			} else {
 				result.cycles = 12;
 			}
+
 			break;
 		}
 		case 0xC5:
@@ -592,6 +618,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			addA(value, false);
 			result.cycles = 8;
 			break;
@@ -620,6 +647,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			push16(bus, _pc);
 			_pc = address;
 			result.cycles = 24;
@@ -631,6 +659,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			addA(value, true);
 			result.cycles = 8;
 			break;
@@ -649,6 +678,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			subA(value, false);
 			result.cycles = 8;
 			break;
@@ -666,6 +696,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			subA(value, true);
 			result.cycles = 8;
 			break;
@@ -676,6 +707,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			bus.write8Fast(static_cast<std::uint16_t>(0xFF00U + offset), _a);
 			result.cycles = 12;
 			break;
@@ -698,6 +730,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			andA(value);
 			result.cycles = 8;
 			break;
@@ -708,6 +741,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			addSpSigned(static_cast<std::int8_t>(value));
 			result.cycles = 16;
 			break;
@@ -722,6 +756,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			bus.write8Fast(address, _a);
 			result.cycles = 16;
 			break;
@@ -732,6 +767,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			xorA(value);
 			result.cycles = 8;
 			break;
@@ -742,6 +778,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			_a = bus.read8Fast(static_cast<std::uint16_t>(0xFF00U + offset));
 			result.cycles = 12;
 			break;
@@ -769,6 +806,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			orA(value);
 			result.cycles = 8;
 			break;
@@ -779,6 +817,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			auto const signedValue = static_cast<std::int8_t>(value);
 			auto const unsignedOffset = static_cast<std::uint16_t>(static_cast<std::uint8_t>(value));
 			auto const spValue = _sp;
@@ -799,6 +838,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			_a = bus.read8Fast(address);
 			result.cycles = 16;
 			break;
@@ -812,6 +852,7 @@ CpuStepResult Cpu::step(Bus& bus) {
 				result.status = CpuStepStatus::BusReadError;
 				return result;
 			}
+
 			cpA(value);
 			result.cycles = 8;
 			break;
@@ -951,6 +992,7 @@ std::uint8_t Cpu::readRegister(Bus& bus, std::uint8_t index, lexxos::vfs::ReadSt
 		case 7:
 			return _a;
 	}
+
 	return 0xFF;
 }
 
@@ -1074,18 +1116,22 @@ void Cpu::daa() {
 		if (flag(flagH) || (_a & 0x0FU) > 0x09U) {
 			correction |= 0x06U;
 		}
+
 		if (carry || _a > 0x99U) {
 			correction |= 0x60U;
 			carry = true;
 		}
+
 		_a = static_cast<std::uint8_t>(_a + correction);
 	} else {
 		if (flag(flagH)) {
 			correction |= 0x06U;
 		}
+
 		if (carry) {
 			correction |= 0x60U;
 		}
+
 		_a = static_cast<std::uint8_t>(_a - correction);
 	}
 
@@ -1105,6 +1151,7 @@ bool Cpu::condition(std::uint8_t conditionCode) const {
 		case 3:
 			return flag(flagC);
 	}
+
 	return false;
 }
 
@@ -1129,6 +1176,7 @@ CpuStepResult Cpu::executeCb(Bus& bus, CpuStepResult result) {
 		result.status = CpuStepStatus::BusReadError;
 		return result;
 	}
+
 	result.prefixedOpcode = opcode;
 
 	auto const operationGroup = static_cast<std::uint8_t>((opcode >> 6U) & 0x03U);
@@ -1181,6 +1229,7 @@ CpuStepResult Cpu::executeCb(Bus& bus, CpuStepResult result) {
 				value = static_cast<std::uint8_t>(value >> 1U);
 				break;
 		}
+
 		writeRegister(bus, registerIndex, value);
 		_f = 0;
 		setFlag(flagZ, value == 0);

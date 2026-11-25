@@ -3,10 +3,12 @@
 #include <array>
 #include <cstdint>
 #include <new>
+#include <string_view>
 
 #include <lexxos/apps/common/core_programs_support.h>
 #include <lexxos/fs/fat/fat_volume.h>
 #include <lexxos/os/app_context.h>
+#include <lexxos/os/storage_mount_policy.h>
 #include <lexxos/program/program_memory_arena.h>
 #include <lexxos/vfs/vfs.h>
 
@@ -24,12 +26,12 @@ namespace {
 
 	constexpr lexxos::program::ProgramArgumentSpec umountArguments[] = {
 	    {
-         .name = "target",
-         .valueName = "target",
-         .help = "VFS mount target path",
-         .kind = lexxos::program::ProgramArgumentKind::Positional,
-         .valueType = lexxos::program::ProgramArgumentValueType::Path,
-         .required = true,
+	     .name = "target",
+	     .valueName = "target",
+	     .help = "VFS mount target path",
+	     .kind = lexxos::program::ProgramArgumentKind::Positional,
+	     .valueType = lexxos::program::ProgramArgumentValueType::Path,
+	     .required = true,
 	     },
 	};
 
@@ -87,7 +89,7 @@ int UmountProgram::run(
 	}
 
 	// Unmount and preserve the VFS status in diagnostics.
-	auto const status = lexxos::fs::fat::unmount(target->data());
+	auto const status = lexxos::fs::fat::unmount(context.vfs(), target->data());
 	if (status != lexxos::vfs::UnmountStatus::Ok) {
 		context.write("umount: ");
 		context.write(target->data());
@@ -95,6 +97,11 @@ int UmountProgram::run(
 		context.writeLine(lexxos::vfs::toString(status));
 		return 1;
 	}
+
+	if (auto* const policy = context.storageMountPolicy()) {
+		policy->unmounted(target->data());
+	}
+
 	context.write("unmounted ");
 	context.writeLine(target->data());
 	return 0;

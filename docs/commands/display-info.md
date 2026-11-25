@@ -1,6 +1,6 @@
 # `display-info`
 
-show display device information.
+Показывает сведения об устройстве дисплея.
 
 ## Справка shell
 

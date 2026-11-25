@@ -4,6 +4,7 @@
 #include <lexxos/platform/platform_services.h>
 
 namespace lexxos::devices {
+
 namespace {
 
 	constexpr std::uint8_t phaseReadAttempts = 3;
@@ -107,6 +108,7 @@ bool SegaGenesisGamepad::_readPhase(bool selectHigh, std::uint16_t& port) {
 		port = sample;
 		return true;
 	}
+
 	return false;
 }
 

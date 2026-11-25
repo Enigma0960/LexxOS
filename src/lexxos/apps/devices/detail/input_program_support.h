@@ -7,13 +7,17 @@
 #include <lexxos/devices/device_manager.h>
 
 namespace lexxos::devices {
+
 class InputDevice;
 struct InputEvent;
+
 } // namespace lexxos::devices
 
 namespace lexxos::os {
+
 class AppContext;
-}
+
+} // namespace lexxos::os
 
 namespace lexxos::apps::device_programs::detail {
 

@@ -1,6 +1,7 @@
 #include <lexxos/platform/stm32/detail/stm32_gpio.h>
 
 namespace lexxos::platform::stm32::detail {
+
 namespace {
 
 	constexpr std::uint32_t peripheralBase = 0x40000000U;
@@ -59,6 +60,7 @@ namespace {
 				value = 2;
 				break;
 		}
+
 		GPIO_PUPDR(pin.base) = (GPIO_PUPDR(pin.base) & ~(3U << (pin.bit * 2U))) | (value << (pin.bit * 2U));
 	}
 

@@ -4,6 +4,7 @@
 #include <lexxos/os/app_context.h>
 
 namespace lexxos::apps::storage_programs::detail {
+
 namespace {
 
 	[[nodiscard]] bool isFallbackDiagnostic(lexxos::devices::SdCardDiagnosticCode code) {
@@ -33,16 +34,19 @@ void printDiagnosticEntry(lexxos::os::AppContext& context, lexxos::devices::SdCa
 		context.write(" cmd=");
 		writeUnsigned(context, entry.command);
 	}
+
 	if (entry.r1 != 0xFFFFFFFFU) {
 		context.write(" r1=0x");
 		writeHex32(context, entry.r1);
 	}
+
 	if (entry.blockCount != 0) {
 		context.write(" block=");
 		writeUnsigned64(context, entry.block);
 		context.write(" count=");
 		writeUnsigned(context, entry.blockCount);
 	}
+
 	context.writeLine("");
 }
 

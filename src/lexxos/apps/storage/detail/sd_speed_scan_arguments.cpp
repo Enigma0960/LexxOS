@@ -11,6 +11,7 @@
 #include <lexxos/program/arguments.h>
 
 namespace lexxos::apps::storage_programs::detail {
+
 namespace {
 
 	using lexxos::program::ProgramArgumentKind;
@@ -19,76 +20,76 @@ namespace {
 
 	constexpr ProgramArgumentSpec sdSpeedScanArguments[] = {
 	    {
-         .name = "max-hz",
-         .valueName = "max-hz",
-         .help = "maximum SPI baud rate to test",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = true,
+	     .name = "max-hz",
+	     .valueName = "max-hz",
+	     .help = "maximum SPI baud rate to test",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = true,
 	     },
 	    {
-         .name = "step-hz",
-         .valueName = "step-hz",
-         .help = "baud rate decrement between attempts",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = true,
+	     .name = "step-hz",
+	     .valueName = "step-hz",
+	     .help = "baud rate decrement between attempts",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = true,
 	     },
 	    {
-         .name = "blocks",
-         .valueName = "blocks",
-         .help = "optional 512-byte blocks per FAT file, default: 64, max: 1024",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "blocks",
+	     .valueName = "blocks",
+	     .help = "optional 512-byte blocks per FAT file, default: 64, max: 1024",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	    {
-         .name = "files",
-         .valueName = "files",
-         .help = "optional FAT file count, default: 8, max: 64",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::Unsigned,
-         .required = false,
+	     .name = "files",
+	     .valueName = "files",
+	     .help = "optional FAT file count, default: 8, max: 64",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::Unsigned,
+	     .required = false,
 	     },
 	    {
-         .name = "scope",
-         .valueName = "read|rw",
-         .help = "optional probe scope: read-only raw scan or explicit raw+FAT write/read, default: read",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "scope",
+	     .valueName = "read|rw",
+	     .help = "optional probe scope: read-only raw scan or explicit raw+FAT write/read, default: read",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "batch",
-         .valueName = "batch=1|2",
-         .help = "optional raw read batch size; 1 uses CMD17, 2 uses CMD18",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "batch",
+	     .valueName = "batch=1|2",
+	     .help = "optional raw read batch size; 1 uses CMD17, 2 uses CMD18",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "start",
-         .valueName = "start=<block>",
-         .help = "optional first raw block for diagnostics",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "start",
+	     .valueName = "start=<block>",
+	     .help = "optional first raw block for diagnostics",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "dma",
-         .valueName = "dma=on|off",
-         .help = "optional raw payload transfer mode; off forces blocking SPI instead of DMA",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "dma",
+	     .valueName = "dma=on|off",
+	     .help = "optional raw payload transfer mode; off forces blocking SPI instead of DMA",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	    {
-         .name = "fast-write",
-         .valueName = "fast-write=on|off",
-         .help = "optional high-speed FAT write guard override for rw scope",
-         .kind = ProgramArgumentKind::Positional,
-         .valueType = ProgramArgumentValueType::String,
-         .required = false,
+	     .name = "fast-write",
+	     .valueName = "fast-write=on|off",
+	     .help = "optional high-speed FAT write guard override for rw scope",
+	     .kind = ProgramArgumentKind::Positional,
+	     .valueType = ProgramArgumentValueType::String,
+	     .required = false,
 	     },
 	};
 
@@ -97,10 +98,12 @@ namespace {
 			output = SpeedScanScope::ReadOnly;
 			return true;
 		}
+
 		if (text == "rw" || text == "write" || text == "full") {
 			output = SpeedScanScope::ReadWrite;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -109,6 +112,7 @@ namespace {
 		if (equalPosition == std::string_view::npos || equalPosition == 0 || equalPosition + 1 >= token.size()) {
 			return false;
 		}
+
 		key = token.substr(0, equalPosition);
 		value = token.substr(equalPosition + 1);
 		return true;
@@ -120,6 +124,7 @@ namespace {
 				return true;
 			}
 		}
+
 		return false;
 	}
 
@@ -141,6 +146,7 @@ namespace {
 		if (splitKeyValue(positional, key, value)) {
 			return keyMatches(key, aliases) ? value : std::string_view{};
 		}
+
 		return positional;
 	}
 
@@ -162,6 +168,7 @@ bool parseSdSpeedScanConfig(
 		context.writeLine("");
 		return false;
 	}
+
 	if (!lexxos::apps::parseUnsigned32(stepHzText, config.stepHz) || config.stepHz == 0) {
 		context.writeLine("sd-speed-scan: step-hz must be > 0");
 		return false;
@@ -238,6 +245,7 @@ bool resolveSdSpeedScanRawStart(
 		context.writeLine("sd-speed-scan: raw start/count is outside device range");
 		return false;
 	}
+
 	return true;
 }
 

@@ -1,6 +1,6 @@
 # `display-test`
 
-draw a test pattern or benchmark display throughput.
+Рисует тестовое изображение или измеряет скорость вывода на дисплей.
 
 ## Справка shell
 

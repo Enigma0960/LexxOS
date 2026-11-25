@@ -1,15 +1,15 @@
+#include <cstdlib>
+#include <iostream>
+
 #include <lexxos/app/program_input.h>
 #include <lexxos/devices/device_manager.h>
 #include <lexxos/lifecycle/event_bus.h>
 #include <lexxos/program/program.h>
 #include <lexxos/program/program_manager.h>
 #include <lexxos/program/program_supervisor.h>
-#include <lexxos/runtime/runtime_profile.h>
+#include <lexxos/runtime/selected_runtime_profile.h>
 #include <lexxos/shell/shell.h>
 #include <lexxos/vfs/vfs.h>
-
-#include <cstdlib>
-#include <iostream>
 
 namespace {
 

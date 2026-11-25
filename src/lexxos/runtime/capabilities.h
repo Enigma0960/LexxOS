@@ -4,11 +4,15 @@
 #include <string_view>
 
 namespace lexxos::devices {
+
 class DeviceManager;
+
 } // namespace lexxos::devices
 
 namespace lexxos::platform {
+
 struct PlatformServices;
+
 } // namespace lexxos::platform
 
 namespace lexxos::runtime {
@@ -110,6 +114,7 @@ private:
 			return descriptor.name;
 		}
 	}
+
 	return "unknown";
 }
 

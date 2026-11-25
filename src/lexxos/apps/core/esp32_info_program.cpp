@@ -95,24 +95,31 @@ void writeChipFeatures(lexxos::os::AppContext& context, std::uint32_t features) 
 	if ((features & CHIP_FEATURE_EMB_FLASH) != 0) {
 		writeFeature("embedded-flash");
 	}
+
 	if ((features & CHIP_FEATURE_WIFI_BGN) != 0) {
 		writeFeature("wifi");
 	}
+
 	if ((features & CHIP_FEATURE_BT) != 0) {
 		writeFeature("bt");
 	}
+
 	if ((features & CHIP_FEATURE_BLE) != 0) {
 		writeFeature("ble");
 	}
+
 	if ((features & CHIP_FEATURE_IEEE802154) != 0) {
 		writeFeature("ieee802154");
 	}
+
 	if ((features & CHIP_FEATURE_EMB_PSRAM) != 0) {
 		writeFeature("embedded-psram");
 	}
+
 	if (first) {
 		context.write("none");
 	}
+
 	context.writeLine("]");
 }
 

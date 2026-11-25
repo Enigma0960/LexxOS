@@ -1,6 +1,6 @@
 # `exit`
 
-exit host simulation.
+Завершает симуляцию на компьютере.
 
 ## Справка shell
 
