@@ -100,7 +100,7 @@ void checkBoardDeviceProviders() {
 	board.userGpio.count = lexxos::platform::maxBoardUserGpioPins + 1;
 	expect(!lexxos::composition::registerBoardDevices(invalid, services, providers), "invalid GPIO rejected");
 	expect(calls == 0, "GPIO validation precedes providers");
-	board = {};
+	board.userGpio.count = 0;
 	expect(lexxos::composition::registerBoardDevices(invalid, services, {}), "empty composition");
 	expect(invalid.i2cBusCount() == 0, "empty list adds no buses");
 
@@ -117,5 +117,6 @@ void checkBoardDeviceProviders() {
 	expect(lexxos::composition::registerBoardDevices(separate, services), "separate physical buses");
 	expect(separate.i2cBus("debug") == &debugBus && separate.i2cBus("system") == &systemBus, "distinct bus wiring");
 	expect(debugBus.initializations == 1 && systemBus.initializations == 1, "ready bus not initialized twice");
-	board = {};
+	board.debugOledI2c = {};
+	board.interfaces.systemI2c = {};
 }

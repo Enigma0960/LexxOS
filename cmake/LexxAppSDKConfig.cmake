@@ -55,7 +55,7 @@ set_target_properties(lexx-sdk-runtime PROPERTIES
         LEXX_APP_AGGREGATE "${_lexx_app_aggregate}")
 
 function(lexxos_add_app name)
-    cmake_parse_arguments(APP "" "MEMORY;STACK;CAPABILITIES;MANIFEST;RESOURCE_DIRECTORY"
+    cmake_parse_arguments(APP "EXCLUDE_FROM_ALL" "MEMORY;STACK;CAPABILITIES;MANIFEST;RESOURCE_DIRECTORY"
             "SOURCES;C_SOURCES;INCLUDE_DIRECTORIES;RESOURCE_EXTRA_DEPS" ${ARGN})
     if (APP_UNPARSED_ARGUMENTS OR NOT APP_MANIFEST OR NOT (APP_SOURCES OR APP_C_SOURCES))
         message(FATAL_ERROR "lexxos_add_app(${name}) requires MANIFEST and SOURCES or C_SOURCES")
@@ -205,5 +205,7 @@ function(lexxos_add_app name)
             VERBATIM)
     add_custom_target(app-${name} DEPENDS "${LEXXOS_APPS_OUTPUT_DIR}/${name}.lexx")
     add_dependencies(app-${name} lexx-sdk-runtime)
-    add_dependencies(${_lexx_app_aggregate} app-${name})
+    if (NOT APP_EXCLUDE_FROM_ALL)
+        add_dependencies(${_lexx_app_aggregate} app-${name})
+    endif ()
 endfunction()

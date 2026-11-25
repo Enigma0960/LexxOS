@@ -90,6 +90,9 @@ lexxos_add_app(my_guest SOURCES main.cpp MANIFEST manifest.json)
 предоставляет заголовки для инструментов CMake, а `lexxos_add_app`
 собирает гостевой runtime и упаковывает приложение. [API гостевых приложений](../apps/sdk/README.md).
 
+С параметром `EXCLUDE_FROM_ALL` приложение собирается по явной цели
+`app-<имя>` и не входит в общую сборку приложений.
+
 ## LexxIDF
 
 Для внешнего проекта ESP-IDF достаточно указать `IDF_PATH` в окружении
